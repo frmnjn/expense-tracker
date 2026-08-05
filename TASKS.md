@@ -53,17 +53,17 @@ Checklist implementasi berdasarkan PRD.
 
 ## Authentication
 
-* [ ] Setup Google Service Account
-* [ ] Load credentials dari environment
-* [ ] Buat Google Sheets client
-* [ ] Test koneksi ke Google Sheets
+* [x] Setup Google Service Account
+* [x] Load credentials dari environment
+* [x] Buat Google Sheets client
+* [x] Test koneksi ke Google Sheets
 
 ---
 
 ## Repository Layer
 
-* [ ] Implement append row
-* [ ] Handle error Google API
+* [x] Implement append row
+* [x] Handle error Google API
 
 ---
 
