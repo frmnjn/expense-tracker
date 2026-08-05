@@ -11,10 +11,10 @@
 
 ## Backend
 
-- Go 1.25+
-- Gin
+- Java 25 (LTS)
+- Spring Boot 4
+- Maven
 - Google Sheets API
-- godotenv
 
 ## Dev
 

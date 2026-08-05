@@ -1,0 +1,47 @@
+package com.expensetracker.controller;
+
+import com.expensetracker.model.ApiResponse;
+import com.expensetracker.model.ExpenseRequest;
+import com.expensetracker.service.ExpenseService;
+import com.expensetracker.service.ValidationException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RestController;
+
+@RestController
+public class ExpenseController {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(ExpenseController.class);
+
+    private final ExpenseService expenseService;
+
+    public ExpenseController(ExpenseService expenseService) {
+        this.expenseService = expenseService;
+    }
+
+    @GetMapping("/health")
+    public ApiResponse health() {
+        return ApiResponse.ok();
+    }
+
+    @PostMapping("/expenses")
+    public ResponseEntity<ApiResponse> createExpense(@RequestBody ExpenseRequest request) {
+        try {
+            expenseService.createExpense(request);
+            return ResponseEntity.ok(ApiResponse.ok());
+        } catch (ValidationException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            LOGGER.error("internal error creating expense", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Internal server error"));
+        }
+    }
+}
