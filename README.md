@@ -11,7 +11,7 @@ Data tidak disimpan di database, melainkan langsung di Google Sheets menggunakan
 * Menambah pengeluaran
 * Validasi input
 * Menyimpan data ke Google Sheets
-* REST API menggunakan Go
+* REST API menggunakan Java Spring Boot
 * React Frontend
 * Docker Compose
 * Tanpa database
@@ -31,8 +31,9 @@ Data tidak disimpan di database, melainkan langsung di Google Sheets menggunakan
 
 ## Backend
 
-* Go
-* Gin
+* Java 25 (LTS)
+* Spring Boot
+* Maven
 
 ## Storage
 
@@ -58,7 +59,9 @@ expense-tracker/
 │
 ├── frontend/
 │
-└── backend/
+├── backend/
+│
+└── backend-golang/  (implementasi lama, tidak digunakan)
 ```
 
 ---
@@ -70,7 +73,7 @@ Pastikan sudah menginstall:
 * Docker
 * Docker Compose
 
-Tidak diperlukan instalasi Node.js maupun Go apabila menjalankan project menggunakan Docker.
+Tidak diperlukan instalasi Node.js, Java, maupun Maven apabila menjalankan project menggunakan Docker.
 
 ---
 

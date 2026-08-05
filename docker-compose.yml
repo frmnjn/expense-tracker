@@ -5,8 +5,6 @@ services:
       - "8080:8080"
     env_file:
       - ./backend/.env
-    environment:
-      GIN_MODE: release
     volumes:
       - ./backend/credentials.json:/app/credentials.json:ro
 

@@ -39,8 +39,8 @@ Membangun aplikasi yang memungkinkan pengguna:
 
 ## Backend
 
-* Go
-* Gin Framework
+* Java
+* Spring Boot
 
 ## Storage
 

@@ -1,13 +1,12 @@
-FROM golang:1.26-alpine AS build
+FROM maven:3.9-eclipse-temurin-25 AS build
 WORKDIR /app
-COPY go.mod go.sum ./
-RUN go mod download
-COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -o /app/server ./cmd/server
+COPY pom.xml .
+RUN mvn -q dependency:go-offline
+COPY src ./src
+RUN mvn -q package -DskipTests
 
-FROM alpine:latest
-RUN apk add --no-cache ca-certificates
+FROM eclipse-temurin:25-jre
 WORKDIR /app
-COPY --from=build /app/server /app/server
+COPY --from=build /app/target/app.jar app.jar
 EXPOSE 8080
-CMD ["/app/server"]
+ENTRYPOINT ["java", "-jar", "app.jar"]

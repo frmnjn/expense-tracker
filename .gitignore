@@ -5,3 +5,4 @@ credentials.json
 *.log
 .DS_Store
 project-personal-firman-budi-s-1f804135428a.json
+target/

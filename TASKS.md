@@ -31,8 +31,8 @@ Checklist implementasi berdasarkan PRD.
 
 ## Backend
 
-* [x] Inisialisasi Go Module
-* [x] Install Gin
+* [x] Inisialisasi project Java Spring Boot (Maven)
+* [x] Setup Spring Boot Web
 * [x] Setup project structure
 * [x] Setup routing
 * [x] Setup configuration loader
@@ -94,7 +94,7 @@ Checklist implementasi berdasarkan PRD.
 
 ---
 
-## Handler
+## Controller
 
 * [ ] POST /expenses
 

@@ -99,20 +99,28 @@ utils/
 
 Language
 
-Go
+Java
 
 Framework
 
-Gin
+Spring Boot
+
+Build Tool
+
+Maven
 
 Project Structure
 
 ```
-cmd/
+backend/
 
-internal/
+pom.xml
 
-handler/
+src/main/java/com/expensetracker/
+
+ExpenseTrackerApplication.java
+
+controller/
 
 service/
 
@@ -122,18 +130,20 @@ model/
 
 config/
 
-routes/
+src/main/resources/
 
-pkg/
+src/test/java/
 ```
 
 Rules
 
-* Handler hanya menerima HTTP Request.
+* Controller hanya menerima HTTP Request.
 * Business logic berada di Service.
 * Google Sheets hanya boleh diakses melalui package google.
-* Jangan akses Google Sheets langsung dari Handler.
-* Jangan letakkan business logic di main.go.
+* Jangan akses Google Sheets langsung dari Controller.
+* Jangan letakkan business logic di main application class.
+
+Catatan: `backend-golang/` berisi implementasi backend lama menggunakan Go dan tidak digunakan.
 
 ---
 
@@ -222,7 +232,7 @@ Contoh:
 
 ExpenseService
 
-ExpenseHandler
+ExpenseController
 
 GoogleSheetsClient
 

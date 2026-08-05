@@ -1,0 +1,17 @@
+server:
+  port: ${PORT:8080}
+
+spring:
+  application:
+    name: expense-tracker-backend
+  config:
+    import: optional:file:./.env
+
+logging:
+  structured:
+    format:
+      console: ecs
+
+google:
+  sheet-id: ${GOOGLE_SHEET_ID:}
+  application-credentials: ${GOOGLE_APPLICATION_CREDENTIALS:}
