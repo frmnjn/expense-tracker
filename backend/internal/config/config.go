@@ -7,8 +7,8 @@ import (
 )
 
 type Config struct {
-	Port                      string
-	GoogleSheetID             string
+	Port                             string
+	GoogleSheetID                    string
 	GoogleApplicationCredentialsPath string
 }
 
