@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import {
+  Box,
   Button,
   NumberInput,
   Paper,
@@ -92,6 +93,7 @@ function ExpenseForm() {
           <SegmentedControl
             value={mode}
             onChange={setMode}
+            fullWidth
             data={[
               { value: 'now', label: 'Waktu Sekarang' },
               { value: 'manual', label: 'Waktu Manual' },
@@ -107,6 +109,8 @@ function ExpenseForm() {
           valueFormat={DATE_TIME_FORMAT}
           required
           disabled={nowDisabled}
+          dropdownType="modal"
+          size="md"
         />
 
         <TextInput
@@ -116,6 +120,7 @@ function ExpenseForm() {
           onChange={(event) => setName(event.currentTarget.value)}
           maxLength={255}
           required
+          size="md"
         />
 
         <Select
@@ -127,6 +132,7 @@ function ExpenseForm() {
           searchable
           required
           disabled={optionsLoading}
+          size="md"
         />
 
         <Select
@@ -138,6 +144,7 @@ function ExpenseForm() {
           searchable
           required
           disabled={optionsLoading}
+          size="md"
         />
 
         <NumberInput
@@ -152,6 +159,7 @@ function ExpenseForm() {
           decimalSeparator=","
           suffix=",-"
           required
+          size="md"
         />
 
         <TextInput
@@ -160,11 +168,23 @@ function ExpenseForm() {
           value={description}
           onChange={(event) => setDescription(event.currentTarget.value)}
           maxLength={255}
+          size="md"
         />
 
-        <Button onClick={handleSubmit} loading={createExpense.isPending} disabled={submitDisabled}>
-          Save
-        </Button>
+        <Box
+          mt="md"
+          style={{
+            position: 'sticky',
+            bottom: 0,
+            paddingTop: 'var(--mantine-spacing-sm)',
+            paddingBottom: 'var(--mantine-spacing-sm)',
+            backgroundColor: 'var(--mantine-color-body)',
+          }}
+        >
+          <Button onClick={handleSubmit} loading={createExpense.isPending} disabled={submitDisabled} fullWidth size="md">
+            Save
+          </Button>
+        </Box>
       </Stack>
     </Paper>
   )

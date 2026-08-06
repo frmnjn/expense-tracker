@@ -10,6 +10,12 @@ import '@mantine/notifications/styles.css'
 import './index.css'
 import App from './App.tsx'
 
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js')
+  })
+}
+
 const queryClient = new QueryClient()
 
 createRoot(document.getElementById('root')!).render(
