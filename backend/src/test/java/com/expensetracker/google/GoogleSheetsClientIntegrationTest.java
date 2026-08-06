@@ -4,31 +4,77 @@ import org.junit.jupiter.api.Assumptions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class GoogleSheetsClientIntegrationTest {
 
     private static String credentialsPath;
     private static String spreadsheetId;
+    private static GoogleSheetsClient client;
 
     @BeforeAll
     static void setup() {
         credentialsPath = System.getenv("GOOGLE_APPLICATION_CREDENTIALS");
-        spreadsheetId = System.getenv("GOOGLE_SHEET_ID");
+        spreadsheetId = System.getenv("GOOGLE_TEST_SHEET_ID");
         Assumptions.assumeTrue(credentialsPath != null && !credentialsPath.isBlank()
                 && spreadsheetId != null && !spreadsheetId.isBlank(),
-                "google credentials not configured, skipping integration test");
+                "google test sheet not configured, skipping integration test");
+        client = new GoogleSheetsClient(credentialsPath, spreadsheetId, "Budget", "Bank");
     }
 
     @Test
     void ping_shouldAccessSpreadsheet() {
-        GoogleSheetsClient client = new GoogleSheetsClient(credentialsPath, spreadsheetId);
         assertDoesNotThrow(client::ping);
     }
 
     @Test
     void appendExpense_shouldAppendRow() {
-        GoogleSheetsClient client = new GoogleSheetsClient(credentialsPath, spreadsheetId);
-        assertDoesNotThrow(() -> client.appendExpense("2026-08-06", "Integration test", 1));
+        assertDoesNotThrow(() -> client.appendExpense(
+                "2026-JUL-AUG", "2026-08-06 14:30", "Integration test",
+                "Daily", "BCA", 1, null));
+    }
+
+    @Test
+    void createPeriodSheet_shouldCreateSheetWithHeaders() {
+        assertDoesNotThrow(() -> client.appendExpense(
+                "2026-INTEGRATION-TEST", "2026-08-06 14:30", "Integration test",
+                "Daily", "BCA", 1, null));
+        assertTrue(client.sheetExists("2026-INTEGRATION-TEST"));
+    }
+
+    @Test
+    void getOptions_shouldReturnLists() {
+        Assumptions.assumeTrue(client.sheetExists("Budget") && client.sheetExists("Bank"),
+                "budget/bank tabs not configured, skipping options test");
+        assertDoesNotThrow(() -> {
+            client.getOptions(client.getBudgetSheet());
+            client.getOptions(client.getBankSheet());
+        });
+    }
+
+    @Test
+    void reorderSheets_shouldPutNewestPeriodFirstAndBudgetBankLast() {
+        Assumptions.assumeTrue(client.sheetExists("Budget") && client.sheetExists("Bank"),
+                "budget/bank tabs not configured, skipping reorder test");
+        assertDoesNotThrow(() -> {
+            client.appendExpense(
+                    "2025-JUN-JUL", "2025-06-25 14:30", "Reorder test",
+                    "Daily", "BCA", 1, null);
+            client.appendExpense(
+                    "2026-JUL-AUG", "2026-08-06 14:30", "Reorder test",
+                    "Daily", "BCA", 1, null);
+            client.reorderSheets();
+        });
+        List<String> titles = client.getSheetTitlesInOrder();
+        int newestPeriodIndex = titles.indexOf("2026-JUL-AUG");
+        int oldestPeriodIndex = titles.indexOf("2025-JUN-JUL");
+        assertTrue(newestPeriodIndex != -1 && oldestPeriodIndex != -1);
+        assertTrue(newestPeriodIndex < oldestPeriodIndex);
+        assertEquals("Bank", titles.get(titles.size() - 1));
+        assertEquals("Budget", titles.get(titles.size() - 2));
     }
 }

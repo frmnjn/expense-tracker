@@ -9,6 +9,10 @@ Data tidak disimpan di database, melainkan langsung di Google Sheets menggunakan
 # Features
 
 * Menambah pengeluaran
+* Input waktu otomatis atau manual
+* Dropdown budget & bank dari Google Sheets
+* Sheet pengeluaran terpisah per periode
+* Urutan sheet otomatis (periode terbaru di kiri)
 * Validasi input
 * Menyimpan data ke Google Sheets
 * REST API menggunakan Java Spring Boot
@@ -81,29 +85,54 @@ Tidak diperlukan instalasi Node.js, Java, maupun Maven apabila menjalankan proje
 
 1. Buat Google Spreadsheet.
 
-2. Buat sebuah sheet bernama:
+2. Buat dua sheet untuk data dropdown dengan header di baris 1:
 
-```text
-Expenses
-```
+   * Sheet `Budget`, kolom A berisi daftar nama budget.
+   * Sheet `Bank`, kolom A berisi daftar nama bank.
 
-3. Buat header:
+3. Buat Google Cloud Service Account.
 
-| Date | Description | Amount |
-| ---- | ----------- | ------ |
+4. Aktifkan Google Sheets API.
 
-4. Buat Google Cloud Service Account.
+5. Download credential JSON.
 
-5. Aktifkan Google Sheets API.
+6. Share spreadsheet ke email Service Account dengan hak akses **Editor**.
 
-6. Download credential JSON.
-
-7. Share spreadsheet ke email Service Account dengan hak akses **Editor**.
-
-8. Simpan file credential sebagai:
+7. Simpan file credential sebagai:
 
 ```text
 backend/credentials.json
+```
+
+Sheet pengeluaran per periode (format nama `YYYY-MON-MON`, contoh `2026-JAN-FEB`) dibuat otomatis oleh backend beserta header.
+
+Urutan sheet otomatis diatur oleh backend: periode terbaru paling kiri, lalu periode lama ke kanan, dan tab `Budget`/`Bank` selalu paling kanan. Reorder dilakukan saat backend start dan saat sheet periode baru dibuat.
+
+## Testing Spreadsheet (opsional)
+
+Untuk mencegah test menulis ke spreadsheet produksi, buat spreadsheet terpisah untuk testing:
+
+1. Buat Google Spreadsheet terpisah.
+2. Buat tab `Budget` dan `Bank` (kolom A, header baris 1) — agar test `getOptions` berjalan.
+3. Share spreadsheet ke email Service Account yang sama dengan hak akses **Editor**.
+4. Isi ID spreadsheet testing pada `GOOGLE_TEST_SHEET_ID` di `backend/.env`.
+
+Jika `GOOGLE_TEST_SHEET_ID` kosong, integration test akan di-skip.
+
+## Mode Testing (smoke test dengan Docker)
+
+Untuk mencegah smoke test menulis ke spreadsheet produksi, jalankan backend dengan override compose yang memaksa memakai test spreadsheet:
+
+```bash
+docker compose --env-file backend/.env -f docker-compose.yml -f docker-compose.test.yml up --build
+```
+
+Backend akan memakai `GOOGLE_TEST_SHEET_ID` sebagai `GOOGLE_SHEET_ID`. Jika `GOOGLE_TEST_SHEET_ID` kosong, compose akan menolak berjalan.
+
+Mode normal tetap menggunakan:
+
+```bash
+docker compose up --build
 ```
 
 ---
@@ -123,7 +152,10 @@ Contoh:
 ```env
 PORT=8080
 GOOGLE_SHEET_ID=YOUR_GOOGLE_SHEET_ID
+GOOGLE_TEST_SHEET_ID=YOUR_TEST_GOOGLE_SHEET_ID
 GOOGLE_APPLICATION_CREDENTIALS=/app/credentials.json
+GOOGLE_BUDGET_SHEET=Budget
+GOOGLE_BANK_SHEET=Bank
 ```
 
 ---
@@ -180,9 +212,12 @@ Request
 
 ```json
 {
-  "date": "2026-08-06",
-  "description": "Makan Siang",
-  "amount": 35000
+  "dateTime": "2026-08-06 14:30",
+  "name": "Makan Siang",
+  "budget": "Daily",
+  "bank": "BCA",
+  "amount": 35000,
+  "description": "Catatan"
 }
 ```
 
@@ -196,21 +231,51 @@ Response
 
 ---
 
+## GET /options
+
+Response
+
+```json
+{
+  "success": true,
+  "data": {
+    "budgets": ["Daily", "Weekly"],
+    "banks": ["BCA", "Mandiri"]
+  }
+}
+```
+
+---
+
 # Validation Rules
 
-Description
+Waktu
+
+* Required
+* Format `yyyy-MM-dd HH:mm`
+
+Name
 
 * Required
 * Maksimal 255 karakter
 
-Amount
+Budget
+
+* Required
+
+Bank
+
+* Required
+
+Nominal (amount)
 
 * Required
 * Harus lebih besar dari 0
 
-Date
+Description
 
-* Required
+* Opsional
+* Maksimal 255 karakter
 
 ---
 

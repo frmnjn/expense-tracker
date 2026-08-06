@@ -29,6 +29,17 @@ public class ExpenseController {
         return ApiResponse.ok();
     }
 
+    @GetMapping("/options")
+    public ResponseEntity<ApiResponse> getOptions() {
+        try {
+            return ResponseEntity.ok(ApiResponse.ok(expenseService.getOptions()));
+        } catch (Exception e) {
+            LOGGER.error("internal error getting options", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Internal server error"));
+        }
+    }
+
     @PostMapping("/expenses")
     public ResponseEntity<ApiResponse> createExpense(@RequestBody ExpenseRequest request) {
         try {
