@@ -19,6 +19,7 @@ Data tidak disimpan di database, melainkan langsung di Google Sheets menggunakan
 * React Frontend
 * Docker Compose
 * Tanpa database
+* Mobile-friendly & PWA (bisa ditambahkan ke Home Screen dari HP)
 
 ---
 
@@ -171,8 +172,10 @@ frontend/.env
 Contoh:
 
 ```env
-VITE_API_URL=http://localhost:8080
+VITE_API_URL=/api
 ```
+
+Jika kosong, frontend memakai `/api` (default). Nilai ini relatif dan diproxy oleh nginx ke backend, sehingga tidak perlu diubah untuk akses dari HP. Untuk development lokal dengan Vite, set `VITE_API_URL=http://localhost:8080`.
 
 ---
 
@@ -201,6 +204,16 @@ Untuk menghentikan aplikasi:
 ```bash
 docker compose down
 ```
+
+## Akses dari HP
+
+Frontend sudah dikonfigurasi agar API dipanggil relatif (`/api`) dan diproxy oleh nginx ke backend, sehingga bisa diakses dari perangkat lain (termasuk HP) tanpa mengubah konfigurasi:
+
+1. Cari IP komputer di jaringan lokal (misal `192.168.1.10`).
+2. Dari HP, buka browser ke `http://<IP-KOMPUTER>:3000`.
+3. Pastikan HP dan komputer berada di jaringan yang sama.
+
+Untuk pengalaman seperti aplikasi native di HP, buka halaman tersebut lalu pilih **Add to Home Screen** (PWA).
 
 ---
 
