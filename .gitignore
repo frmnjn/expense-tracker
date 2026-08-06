@@ -6,3 +6,4 @@ credentials.json
 .DS_Store
 project-personal-firman-budi-s-1f804135428a.json
 target/
+deploy/nginx-expense.conf

@@ -303,6 +303,56 @@ Description
 
 ---
 
+# Deployment ke VPS
+
+## Prasyarat
+
+* Repo sudah di-clone di VPS.
+* `backend/.env` berisi `GOOGLE_SHEET_ID` produksi.
+* `backend/credentials.json` (Service Account) sudah ada di VPS. Kedua file tidak ikut di-track git (lihat `.gitignore`), jadi harus disiapkan manual di VPS.
+* DNS: `expense.frmnjn.my.id` → A record ke IP VPS.
+
+## 1. Build & jalankan (mode produksi)
+
+```bash
+docker compose -f docker-compose.prod.yml up --build -d
+```
+
+Perbedaan dengan mode dev:
+
+* Frontend hanya bind di `127.0.0.1:3000` (tidak terbuka ke publik, diakses lewat nginx).
+* Backend tidak expose port ke host sama sekali (hanya dipanggil frontend via network internal Docker).
+* `restart: unless-stopped` otomatis.
+
+## 2. Reverse proxy + SSL
+
+1. Install nginx & certbot di VPS:
+   ```bash
+   sudo apt update && sudo apt install -y nginx certbot python3-certbot-nginx
+   ```
+2. Copy konfigurasi nginx:
+   ```bash
+   sudo cp deploy/nginx-expense.conf /etc/nginx/sites-available/expense
+   sudo ln -s /etc/nginx/sites-available/expense /etc/nginx/sites-enabled/expense
+   ```
+3. Terbitkan sertifikat SSL (Let's Encrypt):
+   ```bash
+   sudo certbot --nginx -d expense.frmnjn.my.id
+   ```
+4. Verifikasi:
+   ```bash
+   sudo nginx -t && sudo systemctl reload nginx
+   ```
+
+## 3. Perbarui aplikasi setelah ada commit baru
+
+```bash
+git pull
+docker compose -f docker-compose.prod.yml up --build -d
+```
+
+---
+
 # Future Roadmap
 
 Versi berikutnya dapat menambahkan:

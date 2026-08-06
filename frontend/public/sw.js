@@ -1,4 +1,4 @@
-const CACHE_NAME = 'expense-tracker-v1'
+const CACHE_NAME = 'expense-tracker-v2'
 const APP_SHELL = ['/', '/index.html', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png']
 
 self.addEventListener('install', (event) => {
@@ -21,6 +21,19 @@ self.addEventListener('fetch', (event) => {
 
   if (url.pathname.startsWith('/api/')) {
     event.respondWith(fetch(event.request))
+    return
+  }
+
+  if (event.request.mode === 'navigate') {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          const clone = response.clone()
+          caches.open(CACHE_NAME).then((cache) => cache.put('/index.html', clone))
+          return response
+        })
+        .catch(() => caches.match('/index.html')),
+    )
     return
   }
 
