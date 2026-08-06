@@ -1,11 +1,7 @@
-import { Container, Title } from '@mantine/core'
+import ExpensePage from './pages/ExpensePage'
 
 function App() {
-  return (
-    <Container size="xs" py="xl">
-      <Title order={1}>Expense Tracker</Title>
-    </Container>
-  )
+  return <ExpensePage />
 }
 
 export default App

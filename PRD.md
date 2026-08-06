@@ -64,43 +64,76 @@ User dapat menambahkan satu pengeluaran.
 
 Field yang harus diisi:
 
-| Field       | Type   | Required |
-| ----------- | ------ | -------- |
-| Date        | Date   | Yes      |
-| Description | String | Yes      |
-| Amount      | Number | Yes      |
+| Field       | Type                 | Required |
+| ----------- | -------------------- | -------- |
+| Waktu       | Datetime             | Yes      |
+| Name        | String               | Yes      |
+| Budget      | String (dropdown)    | Yes      |
+| Bank        | String (dropdown)    | Yes      |
+| Nominal     | Number               | Yes      |
+| Description | String               | No       |
 
 Contoh:
 
-Date
+Waktu
 
-2026-08-06
+2026-08-06 14:30
+
+Name
+
+Makan Siang
+
+Budget
+
+Daily
+
+Bank
+
+BCA
+
+Nominal
+
+35000
 
 Description
 
-Makan siang
+Catatan (opsional)
 
-Amount
+Waktu dapat diisi secara otomatis menggunakan waktu sistem saat ini atau diisi manual.
 
-35000
+Budget dan Bank diambil dari dropdown yang datanya bersumber dari Google Sheets.
 
 ---
 
 ## Validation
 
-Description
+Waktu
+
+* wajib diisi
+* format `yyyy-MM-dd HH:mm`
+
+Name
 
 * wajib diisi
 * maksimal 255 karakter
 
-Amount
+Budget
+
+* wajib diisi
+
+Bank
+
+* wajib diisi
+
+Nominal
 
 * wajib diisi
 * harus lebih besar dari 0
 
-Date
+Description
 
-* wajib diisi
+* opsional
+* maksimal 255 karakter
 
 ---
 
@@ -137,25 +170,49 @@ Jika gagal:
 
 # Google Sheets Format
 
-Spreadsheet memiliki satu sheet bernama:
+Spreadsheet utama berisi data pengeluaran yang dipisah per periode.
 
-Expenses
+Setiap periode memiliki sheet sendiri dengan format nama:
 
-Kolom:
-
-| Date | Description | Amount |
-| ---- | ----------- | ------ |
+```text
+YYYY-MON-MON
+```
 
 Contoh:
 
-| Date       | Description | Amount |
-| ---------- | ----------- | ------ |
-| 2026-08-06 | Makan Siang | 35000  |
-| 2026-08-06 | Parkir      | 5000   |
+| Periode                  | Sheet Name    |
+| ------------------------ | ------------- |
+| 25 Jan 2026 - 24 Feb 2026 | 2026-JAN-FEB  |
+| 25 Feb 2026 - 24 Mar 2026 | 2026-FEB-MAR  |
+
+Periode berjalan dari tanggal 25 bulan X sampai 24 bulan X+1.
+
+Sheet baru otomatis dibuat oleh backend pada tanggal 25 beserta header.
+
+Kolom pada setiap sheet periode:
+
+| Waktu                | Name | Budget | Bank | Nominal | Description |
+| -------------------- | ---- | ------ | ---- | ------- | ----------- |
 
 Backend akan selalu melakukan append row.
 
 Tidak boleh menghapus data yang sudah ada.
+
+Urutan sheet pada spreadsheet otomatis diatur oleh backend:
+
+* Sheet periode terbaru paling kiri.
+* Sheet periode yang lebih lama berada di kanannya.
+* Sheet non-periode berada setelah sheet periode.
+* Tab `Budget` dan `Bank` selalu berada paling kanan.
+
+Reorder dilakukan saat backend start dan setiap kali sheet periode baru dibuat.
+
+Dropdown Budget dan Bank bersumber dari sheet khusus pada spreadsheet yang sama:
+
+| Tab    | Isi                                   |
+| ------ | ------------------------------------- |
+| Budget | Kolom A berisi daftar nama budget, header di baris 1 |
+| Bank   | Kolom A berisi daftar nama bank, header di baris 1 |
 
 ---
 
@@ -167,9 +224,12 @@ Request
 
 ```json
 {
-    "date":"2026-08-06",
-    "description":"Makan Siang",
-    "amount":35000
+    "dateTime": "2026-08-06 14:30",
+    "name": "Makan Siang",
+    "budget": "Daily",
+    "bank": "BCA",
+    "amount": 35000,
+    "description": "Catatan"
 }
 ```
 
@@ -177,7 +237,25 @@ Response
 
 ```json
 {
-    "success":true
+    "success": true
+}
+```
+
+---
+
+## GET /options
+
+Mengembalikan daftar budget dan bank untuk dropdown.
+
+Response
+
+```json
+{
+    "success": true,
+    "data": {
+        "budgets": ["Daily", "Weekly"],
+        "banks": ["BCA", "Mandiri"]
+    }
 }
 ```
 
@@ -187,8 +265,8 @@ Response
 
 ```json
 {
-    "success":false,
-    "message":"Description is required"
+    "success": false,
+    "message": "DateTime is required"
 }
 ```
 
@@ -198,12 +276,23 @@ Response
 
 Halaman hanya terdiri dari satu halaman.
 
+Saat aplikasi dibuka, user langsung melihat form pencatatan pengeluaran.
+
 Komponen:
 
-* Date Picker
-* Description Text Field
-* Amount Number Field
+* Input Waktu (opsi: waktu sistem saat ini atau manual)
+* Name Text Field
+* Budget Dropdown
+* Bank Dropdown
+* Nominal Number Field
+* Description Text Field (opsional)
 * Save Button
+
+Waktu menggunakan format:
+
+```text
+yyyy-MM-dd HH:mm
+```
 
 Setelah berhasil menyimpan:
 
@@ -262,6 +351,9 @@ Backend:
 ```text
 GOOGLE_APPLICATION_CREDENTIALS=/app/credentials.json
 GOOGLE_SHEET_ID=xxxxxxxxxxxxxxxx
+GOOGLE_TEST_SHEET_ID=xxxxxxxxxxxxxxxx (opsional, untuk integration test)
+GOOGLE_BUDGET_SHEET=Budget
+GOOGLE_BANK_SHEET=Bank
 PORT=8080
 ```
 
@@ -293,8 +385,9 @@ README.md
 
 * User dapat membuka aplikasi dari browser.
 * User dapat mengisi form pengeluaran.
+* User dapat memilih budget dan bank dari dropdown.
 * User dapat menekan tombol Save.
-* Data berhasil tersimpan ke Google Sheets.
+* Data berhasil tersimpan ke sheet periode yang benar pada Google Sheets.
 * Jika validasi gagal, tampilkan pesan error.
 * Aplikasi dapat dijalankan hanya dengan Docker Compose.
 * Tidak menggunakan database.

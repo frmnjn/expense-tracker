@@ -71,39 +71,45 @@ Checklist implementasi berdasarkan PRD.
 
 ## Model
 
-* [ ] ExpenseRequest
-* [ ] ExpenseResponse
+* [x] ExpenseRequest (dateTime, name, budget, bank, amount, description)
 
 ---
 
 ## Validation
 
-* [ ] Date wajib diisi
-* [ ] Description wajib diisi
-* [ ] Description maksimal 255 karakter
-* [ ] Amount wajib diisi
-* [ ] Amount > 0
+* [x] Waktu wajib diisi
+* [x] Waktu format yyyy-MM-dd HH:mm
+* [x] Name wajib diisi
+* [x] Name maksimal 255 karakter
+* [x] Budget wajib diisi
+* [x] Bank wajib diisi
+* [x] Amount wajib diisi
+* [x] Amount > 0
+* [x] Description opsional, maksimal 255 karakter
 
 ---
 
 ## Service
 
-* [ ] Validasi request
-* [ ] Mapping request
-* [ ] Simpan ke Google Sheets
+* [x] Validasi request
+* [x] Hitung nama sheet berdasarkan periode (cut off tanggal 25)
+* [x] Auto-reorder sheet (periode terbaru di kiri, Budget/Bank paling kanan)
+* [x] Mapping request
+* [x] Simpan ke sheet periode di Google Sheets
 
 ---
 
 ## Controller
 
-* [ ] POST /expenses
+* [x] POST /expenses
+* [x] GET /options
 
 ---
 
 ## Response
 
-* [ ] Success response
-* [ ] Error response
+* [x] Success response
+* [x] Error response
 
 ---
 
@@ -111,34 +117,38 @@ Checklist implementasi berdasarkan PRD.
 
 ## Layout
 
-* [ ] Halaman utama
-* [ ] Responsive layout
+* [x] Halaman utama
+* [x] Responsive layout
 
 ---
 
 ## Form
 
-* [ ] Date Picker
-* [ ] Description Input
-* [ ] Amount Input
-* [ ] Save Button
+* [x] Input Waktu (otomatis / manual)
+* [x] Name Input
+* [x] Budget Dropdown
+* [x] Bank Dropdown
+* [x] Nominal Input
+* [x] Description Input (opsional)
+* [x] Save Button
 
 ---
 
 ## API
 
-* [ ] Axios client
-* [ ] POST /expenses
+* [x] Axios client
+* [x] GET /options
+* [x] POST /expenses
 
 ---
 
 ## UX
 
-* [ ] Disable tombol saat submit
-* [ ] Loading indicator
-* [ ] Success notification
-* [ ] Error notification
-* [ ] Reset form setelah berhasil
+* [x] Disable tombol saat submit
+* [x] Loading indicator
+* [x] Success notification
+* [x] Error notification
+* [x] Reset form setelah berhasil
 
 ---
 
@@ -146,28 +156,33 @@ Checklist implementasi berdasarkan PRD.
 
 ## Backend
 
-* [ ] Unit Test Service
-* [ ] Unit Test Validation
+* [x] Unit Test Service (validasi)
+* [x] Unit Test penamaan sheet per periode
+* [x] Unit Test parse tanggal awal periode
+* [x] Integration Test reorder sheet
 
 ---
 
 ## Manual Testing
 
-* [ ] Submit data valid
-* [ ] Description kosong
-* [ ] Amount = 0
-* [ ] Amount negatif
-* [ ] Google Sheets berhasil menerima data
+* [x] Submit data valid
+* [x] Waktu kosong
+* [x] Budget kosong
+* [x] Bank kosong
+* [x] Amount = 0
+* [x] Amount negatif
+* [x] Data masuk ke sheet periode yang benar
+* [x] Google Sheets berhasil menerima data
 
 ---
 
 # Phase 6 - Docker Verification
 
-* [ ] docker compose up --build berhasil
-* [ ] Frontend dapat diakses
-* [ ] Backend dapat diakses
-* [ ] Frontend dapat memanggil Backend
-* [ ] Backend dapat menulis ke Google Sheets
+* [x] docker compose up --build berhasil
+* [x] Frontend dapat diakses
+* [x] Backend dapat diakses
+* [x] Frontend dapat memanggil Backend
+* [x] Backend dapat menulis ke Google Sheets
 
 ---
 
