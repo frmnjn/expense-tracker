@@ -8,6 +8,7 @@ import type {
   SummaryResponse,
   TopUpRequest,
   TopUpsResponse,
+  TrendResponse,
 } from '../types/expense'
 
 export async function createExpense(request: ExpenseRequest): Promise<ApiResponse<void>> {
@@ -47,6 +48,13 @@ export async function getTopUps(): Promise<TopUpsResponse> {
 export async function createTopUp(request: TopUpRequest): Promise<ApiResponse<void>> {
   const response = await apiClient.post<ApiResponse<void>>('/topups', request)
   return response.data
+}
+
+export async function getTrend(months = 3): Promise<TrendResponse> {
+  const response = await apiClient.get<ApiResponse<TrendResponse>>('/trend', {
+    params: { months },
+  })
+  return response.data.data ?? { periods: [] }
 }
 
 export async function updateExpense(id: string, request: ExpenseRequest): Promise<ApiResponse<void>> {

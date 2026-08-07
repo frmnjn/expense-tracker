@@ -63,6 +63,16 @@ export interface TopUpRequest {
   description?: string
 }
 
+export interface TrendPoint {
+  period: string
+  total: number
+  count: number
+}
+
+export interface TrendResponse {
+  periods: TrendPoint[]
+}
+
 export interface ApiResponse<T> {
   success: boolean
   message?: string

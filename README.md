@@ -19,6 +19,7 @@ Data tidak disimpan di database, melainkan langsung di Google Sheets menggunakan
 * Hapus pengeluaran (soft delete, saldo dikembalikan)
 * Preview perubahan saldo saat edit/hapus
 * Dashboard ringkasan per periode (total, saldo per budget, pengeluaran terbesar)
+* Dashboard 3 bulan terakhir (total + transaksi per periode, bar visual)
 * Top-up saldo via aplikasi (tambah saldo budget + riwayat)
 * Sheet pengeluaran terpisah per periode
 * Kolom nominal & saldo diformat currency IDR
@@ -349,6 +350,23 @@ Mengembalikan daftar top-up saldo.
   "data": {
     "topUps": [
       { "id": "abc123", "dateTime": "2026-08-07 10:00", "budget": "Daily", "amount": 50000, "description": "Gaji" }
+    ]
+  }
+}
+```
+
+---
+
+## GET /trend
+
+Ringkasan beberapa periode terakhir. Query param `months` (default 3).
+
+```json
+{
+  "success": true,
+  "data": {
+    "periods": [
+      { "period": "2026-JUL-AUG", "total": 30000, "count": 2 }
     ]
   }
 }

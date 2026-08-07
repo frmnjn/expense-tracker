@@ -502,3 +502,33 @@ Menampilkan daftar pengeluaran per periode, mengedit, dan menghapus (soft delete
 * [x] State "tidak ada hasil" jika filter kosong
 * [ ] Build & lint lolos
 * [ ] Cek di docker local
+
+---
+
+# Phase 15 - Dashboard 3 Bulan Terakhir
+
+## Docs
+
+* [x] Update PRD.md (endpoint /trend, UI 3 bulan terakhir)
+* [x] Update TASKS.md (checklist ini)
+* [x] Update README.md
+
+## Backend
+
+* [x] Model: `TrendPoint`, `TrendResponse`
+* [x] `ExpenseService.getTrend(months)` (periode terakhir, urut terlama ke terbaru)
+* [x] Controller: `GET /trend?months=`
+* [x] Unit test getTrend
+* [ ] Regenerasi native config (endpoint & model baru)
+
+## Frontend
+
+* [x] Types/service/hook: useTrend
+* [x] Section "3 Bulan Terakhir" di Dashboard (list + bar proporsional)
+* [ ] Build & lint lolos
+* [ ] Cek di docker local
+
+## Verifikasi
+
+* [x] GET /trend mengembalikan total & count per periode (test sheet)
+* [ ] Build & lint lolos
