@@ -90,6 +90,7 @@ docker run --rm \
             -H "Content-Type: application/json" \
             -d "{\"dateTime\":\"2026-01-01 09:00\",\"name\":\"native-config-gen\",\"budget\":\"Household\",\"amount\":1,\"description\":\"tracing agent\"}" >/dev/null
         curl -s "http://localhost:8080/expenses?period=2025-DEC-JAN" >/dev/null
+        curl -s "http://localhost:8080/summary?period=2025-DEC-JAN" >/dev/null
         sleep 3
         kill $APP 2>/dev/null
         wait $APP 2>/dev/null || true

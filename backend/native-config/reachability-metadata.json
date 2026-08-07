@@ -153,6 +153,12 @@
           "parameterTypes": []
         },
         {
+          "name": "getSummary",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        },
+        {
           "name": "health",
           "parameterTypes": []
         }
@@ -190,6 +196,22 @@
           "parameterTypes": []
         }
       ]
+    },
+    {
+      "type": "com.expensetracker.model.BudgetSummary",
+      "methods": [
+        {
+          "name": "amount",
+          "parameterTypes": []
+        },
+        {
+          "name": "budget",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.expensetracker.model.BudgetSummary[]"
     },
     {
       "type": "com.expensetracker.model.ExpenseRequest",
@@ -258,6 +280,27 @@
       "methods": [
         {
           "name": "periods",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.expensetracker.model.SummaryResponse",
+      "methods": [
+        {
+          "name": "byBudget",
+          "parameterTypes": []
+        },
+        {
+          "name": "count",
+          "parameterTypes": []
+        },
+        {
+          "name": "period",
+          "parameterTypes": []
+        },
+        {
+          "name": "total",
           "parameterTypes": []
         }
       ]
@@ -415,6 +458,12 @@
         },
         {
           "name": "setAuthenticate",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        },
+        {
+          "name": "setAuthorization",
           "parameterTypes": [
             "java.lang.String"
           ]
@@ -2096,6 +2145,9 @@
       "type": "java.lang.Comparable[]"
     },
     {
+      "type": "java.lang.Iterable"
+    },
+    {
       "type": "java.lang.Long"
     },
     {
@@ -2223,10 +2275,16 @@
       "type": "java.text.ListFormat"
     },
     {
+      "type": "java.util.AbstractCollection"
+    },
+    {
       "type": "java.util.AbstractMap"
     },
     {
       "type": "java.util.ArrayList"
+    },
+    {
+      "type": "java.util.Collection"
     },
     {
       "type": "java.util.Enumeration"
@@ -2235,7 +2293,19 @@
       "type": "java.util.HashSet"
     },
     {
+      "type": "java.util.ImmutableCollections$AbstractImmutableCollection"
+    },
+    {
+      "type": "java.util.ImmutableCollections$AbstractImmutableList"
+    },
+    {
+      "type": "java.util.ImmutableCollections$ListN"
+    },
+    {
       "type": "java.util.List"
+    },
+    {
+      "type": "java.util.RandomAccess"
     },
     {
       "type": "java.util.SequencedCollection"
