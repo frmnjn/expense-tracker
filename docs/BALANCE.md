@@ -9,7 +9,7 @@ Saldo disimpan sebagai kolom running pada tab `Budget` di Google Sheets (kolom B
 Alur:
 
 - Saldo dikurangi otomatis sebesar nominal setiap kali expense tersimpan.
-- Penambahan saldo (biasanya tiap gajian tanggal 25) dilakukan manual oleh user langsung di Google Sheets dengan mengedit nilai kolom B.
+- Penambahan saldo (biasanya tiap gajian tanggal 25) dilakukan melalui aplikasi (endpoint `POST /topups`) dan dicatat pada tab `TopUp`.
 - Saldo boleh bernilai negatif.
 
 ---
@@ -66,6 +66,7 @@ Endpoint ini tetap menjadi satu-satunya sumber data untuk dropdown Budget.
 ### ExpenseService
 
 - `createExpense(request)` — setelah `appendExpense` sukses ke sheet periode, memanggil `decrementBudget(budget, amount)`.
+- `createTopUp(request)` — mencatat top-up pada tab `TopUp`, lalu memanggil `adjustBudgetBalance(budget, +amount)`.
 
 ### Model
 
@@ -91,14 +92,20 @@ interface OptionsResponse {
   - saldo di kanan, rata kanan, font mono,
   - warna merah jika saldo negatif.
 - Kotak input hanya menampilkan nama budget yang dipilih.
-- Di bawah field Budget ditampilkan teks bantu `Sisa saldo: Rp X` (berwarna sesuai tanda).
 - Setelah Nominal diisi, muncul kartu preview:
   - `Sisa saldo: Rp X`
   - `Nominal: Rp Y`
   - `Saldo nanti: Rp X - Y` (hijau jika >= 0, merah jika < 0)
 - Preview di-disable jika budget belum dipilih atau nominal kosong / <= 0.
 
-Tidak ada form/endpoint top-up. Penambahan saldo dilakukan manual di Google Sheets.
+## Top-up
+
+Penambahan saldo dilakukan melalui aplikasi, bukan manual di Google Sheets:
+
+- Endpoint `POST /topups` (body: `budget`, `amount`, `description` opsional; `dateTime` opsional, default waktu sekarang).
+- Setiap top-up menambah saldo budget (kolom B) dan dicatat sebagai baris pada tab `TopUp` (`Waktu | Budget | Nominal | Description | ID | Deleted`).
+- `GET /topups` menampilkan riwayat top-up.
+- Di UI, top-up dipicu dari ikon `+` pada tiap kartu budget di Dashboard.
 
 ---
 

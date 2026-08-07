@@ -433,21 +433,21 @@ Menampilkan daftar pengeluaran per periode, mengedit, dan menghapus (soft delete
 * [x] `ExpenseService.getSummary(period)` (total, count, pengeluaran per budget)
 * [x] Controller: `GET /summary?period=`
 * [x] Unit test agregasi summary
-* [ ] Regenerasi native config (endpoint & model baru)
+* [x] Regenerasi native config (endpoint & model baru)
 
 ## Frontend
 
 * [x] Types `SummaryResponse`, `BudgetSummary`; service `getSummary`; hook `useSummary`
 * [x] Halaman `DashboardPage` (dropdown periode + kartu ringkasan + saldo per budget + pengeluaran terbesar)
 * [x] Rute `/` = form; `/dashboard` = dashboard; `/riwayat` = riwayat; update nav link di semua halaman
-* [ ] Build & lint lolos
-* [ ] Cek di docker local (test sheet)
+* [x] Build & lint lolos
+* [x] Cek di docker local (test sheet)
 
 ## Verifikasi
 
-* [ ] Backend build & test lolos
-* [ ] Frontend build & lint lolos
-* [ ] Dashboard menampilkan ringkasan sesuai data (test sheet)
+* [x] Backend build & test lolos
+* [x] Frontend build & lint lolos
+* [x] Dashboard menampilkan ringkasan sesuai data (test sheet)
 
 ---
 
@@ -468,20 +468,20 @@ Menampilkan daftar pengeluaran per periode, mengedit, dan menghapus (soft delete
 * [x] `ExpenseService.createTopUp` (append + adjustBudgetBalance(+amount)) / `getTopUps`
 * [x] Controller: `POST /topups`, `GET /topups`
 * [x] Unit test createTopUp
-* [ ] Regenerasi native config (endpoint & model baru)
+* [x] Regenerasi native config (endpoint & model baru)
 
 ## Frontend
 
 * [x] Types/service/hook: useTopUps, useCreateTopUp
 * [x] `TopUpModal` (pre-filled budget dari kartu, tanpa dropdown budget, tampil saldo saat ini)
 * [x] Ikon "+" di tiap kartu budget di Dashboard + riwayat top-up
-* [ ] Build & lint lolos
-* [ ] Cek di docker local
+* [x] Build & lint lolos
+* [x] Cek di docker local
 
 ## Verifikasi
 
 * [x] POST /topups menambah saldo & tercatat di tab TopUp (test sheet)
-* [ ] Build & lint lolos
+* [x] Build & lint lolos
 
 ---
 
@@ -500,8 +500,8 @@ Menampilkan daftar pengeluaran per periode, mengedit, dan menghapus (soft delete
 * [x] Sort (waktu naik/turun, nominal besar/kecil)
 * [x] Diterapkan di tabel desktop & list kartu mobile
 * [x] State "tidak ada hasil" jika filter kosong
-* [ ] Build & lint lolos
-* [ ] Cek di docker local
+* [x] Build & lint lolos
+* [x] Cek di docker local
 
 ---
 
@@ -519,16 +519,16 @@ Menampilkan daftar pengeluaran per periode, mengedit, dan menghapus (soft delete
 * [x] `ExpenseService.getTrend(months)` (periode terakhir, urut terlama ke terbaru)
 * [x] Controller: `GET /trend?months=`
 * [x] Unit test getTrend
-* [ ] Regenerasi native config (endpoint & model baru)
+* [x] Regenerasi native config (endpoint & model baru)
 
 ## Frontend
 
 * [x] Types/service/hook: useTrend
 * [x] Section "3 Bulan Terakhir" di Dashboard (list + bar proporsional)
-* [ ] Build & lint lolos
-* [ ] Cek di docker local
+* [x] Build & lint lolos
+* [x] Cek di docker local
 
 ## Verifikasi
 
 * [x] GET /trend mengembalikan total & count per periode (test sheet)
-* [ ] Build & lint lolos
+* [x] Build & lint lolos
