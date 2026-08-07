@@ -117,7 +117,9 @@ Tidak diperlukan instalasi Node.js, Java, maupun Maven apabila menjalankan proje
 
 # Database Setup (MySQL)
 
-Aplikasi memakai MySQL yang sudah ada di VPS (berbagi instance dengan WordPress). Perlu database dan user terpisah untuk expense tracker:
+Untuk **lokal**, `docker-compose.yml` sudah menyertakan service `mysql` sendiri (self-contained): schema + budget default dibuat otomatis saat pertama kali dijalankan (`scripts/initdb/01_init.sql`), dan backend terhubung ke service `mysql` tersebut. Tidak perlu setup manual untuk development lokal.
+
+Untuk **produksi**, aplikasi memakai MySQL yang sudah ada di VPS (berbagi instance dengan WordPress). Perlu database dan user terpisah untuk expense tracker:
 
 1. Buat database:
 

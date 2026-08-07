@@ -577,8 +577,9 @@ Memindahkan penyimpanan dari Google Sheets ke database MySQL (berbagi instance d
 
 ## Infra
 
-* [x] docker-compose: backend `extra_hosts` host.docker.internal + env DB dari `.env`
+* [x] docker-compose: backend `extra_hosts` host.docker.internal + env DB dari `.env` (produksi)
 * [x] `scripts/seed_budgets.py` (impor budget + saldo dari tab Budget)
+* [x] docker-compose lokal: service `mysql` self-contained + initdb (schema + budget default) + backend konek ke `mysql:3306`
 * [ ] Setup database & user `expense_tracker` di MySQL VPS
 * [ ] Seed tabel `budgets` (via script)
 
