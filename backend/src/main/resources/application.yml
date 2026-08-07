@@ -16,3 +16,4 @@ google:
   sheet-id: ${GOOGLE_SHEET_ID:}
   application-credentials: ${GOOGLE_APPLICATION_CREDENTIALS:}
   budget-sheet: ${GOOGLE_BUDGET_SHEET:Budget}
+  top-up-sheet: ${GOOGLE_TOP_UP_SHEET:TopUp}

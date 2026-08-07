@@ -23,7 +23,7 @@ class GoogleSheetsClientIntegrationTest {
         Assumptions.assumeTrue(credentialsPath != null && !credentialsPath.isBlank()
                 && spreadsheetId != null && !spreadsheetId.isBlank(),
                 "google test sheet not configured, skipping integration test");
-        client = new GoogleSheetsClient(credentialsPath, spreadsheetId, "Budget");
+        client = new GoogleSheetsClient(credentialsPath, spreadsheetId, "Budget", "TopUp");
     }
 
     @Test

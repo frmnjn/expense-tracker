@@ -19,9 +19,12 @@ public class AppConfig {
     @Value("${google.budget-sheet}")
     private String budgetSheet;
 
+    @Value("${google.top-up-sheet}")
+    private String topUpSheet;
+
     @Bean
     public GoogleSheetsClient googleSheetsClient() {
-        return new GoogleSheetsClient(applicationCredentials, sheetId, budgetSheet);
+        return new GoogleSheetsClient(applicationCredentials, sheetId, budgetSheet, topUpSheet);
     }
 
     @Bean

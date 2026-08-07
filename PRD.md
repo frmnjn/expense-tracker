@@ -339,6 +339,59 @@ Response
 
 ---
 
+## GET /topups
+
+Mengembalikan daftar top-up saldo.
+
+Response
+
+```json
+{
+    "success": true,
+    "data": {
+        "topUps": [
+            {
+                "id": "abc123",
+                "dateTime": "2026-08-07 10:00",
+                "budget": "Daily",
+                "amount": 50000,
+                "description": "Gaji"
+            }
+        ]
+    }
+}
+```
+
+---
+
+## POST /topups
+
+Menambahkan saldo pada suatu budget.
+
+Request
+
+```json
+{
+    "budget": "Daily",
+    "amount": 50000,
+    "description": "Gaji"
+}
+```
+
+`dateTime` opsional; jika kosong, menggunakan waktu sistem saat ini.
+
+Response
+
+```json
+{
+    "success": true
+}
+```
+
+Saldo budget bertambah sebesar nominal dan riwayat dicatat pada tab `TopUp`.
+
+---
+
 ## PUT /expenses/{id}
 
 Mengedit satu expense pada periode yang sesuai.
@@ -401,7 +454,9 @@ Komponen:
 * Dropdown periode
 * Kartu ringkasan: total pengeluaran, jumlah transaksi, jumlah budget bersaldo negatif
 * Daftar saldo per budget (saldo saat ini + pengeluaran pada periode)
+* Tombol "Tambah Saldo" (modal: pilih budget + nominal + deskripsi) untuk menambah saldo budget
 * Daftar pengeluaran terbesar (3 budget teratas)
+* Daftar riwayat top-up saldo
 
 Komponen halaman form:
 
@@ -521,6 +576,7 @@ GOOGLE_APPLICATION_CREDENTIALS=/app/credentials.json
 GOOGLE_SHEET_ID=xxxxxxxxxxxxxxxx
 GOOGLE_TEST_SHEET_ID=xxxxxxxxxxxxxxxx (opsional, untuk integration test)
 GOOGLE_BUDGET_SHEET=Budget
+GOOGLE_TOP_UP_SHEET=TopUp
 PORT=8080
 ```
 

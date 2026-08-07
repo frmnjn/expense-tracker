@@ -18,6 +18,7 @@ Data tidak disimpan di database, melainkan langsung di Google Sheets menggunakan
 * Hapus pengeluaran (soft delete, saldo dikembalikan)
 * Preview perubahan saldo saat edit/hapus
 * Dashboard ringkasan per periode (total, saldo per budget, pengeluaran terbesar)
+* Top-up saldo via aplikasi (tambah saldo budget + riwayat)
 * Sheet pengeluaran terpisah per periode
 * Kolom nominal & saldo diformat currency IDR
 * Urutan sheet otomatis (periode terbaru di kiri)
@@ -189,6 +190,7 @@ GOOGLE_SHEET_ID=YOUR_GOOGLE_SHEET_ID
 GOOGLE_TEST_SHEET_ID=YOUR_TEST_GOOGLE_SHEET_ID
 GOOGLE_APPLICATION_CREDENTIALS=/app/credentials.json
 GOOGLE_BUDGET_SHEET=Budget
+GOOGLE_TOP_UP_SHEET=TopUp
 ```
 
 ---
@@ -333,6 +335,29 @@ Response
 ```
 
 Baris yang dihapus (soft delete) tidak dikembalikan.
+
+---
+
+## GET /topups
+
+Mengembalikan daftar top-up saldo.
+
+```json
+{
+  "success": true,
+  "data": {
+    "topUps": [
+      { "id": "abc123", "dateTime": "2026-08-07 10:00", "budget": "Daily", "amount": 50000, "description": "Gaji" }
+    ]
+  }
+}
+```
+
+---
+
+## POST /topups
+
+Menambahkan saldo pada budget. Body: `{ "budget": "Daily", "amount": 50000, "description": "Gaji" }`. `dateTime` opsional (default waktu sekarang). Saldo budget bertambah dan riwayat dicatat di tab `TopUp`.
 
 ---
 

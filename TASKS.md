@@ -448,3 +448,37 @@ Menampilkan daftar pengeluaran per periode, mengedit, dan menghapus (soft delete
 * [ ] Backend build & test lolos
 * [ ] Frontend build & lint lolos
 * [ ] Dashboard menampilkan ringkasan sesuai data (test sheet)
+
+---
+
+# Phase 13 - Top-up Saldo
+
+## Docs
+
+* [x] Update PRD.md (endpoint /topups, UI tambah saldo, env GOOGLE_TOP_UP_SHEET)
+* [x] Update TASKS.md (checklist ini)
+* [x] Update README.md
+
+## Backend
+
+* [x] Config `google.top-up-sheet` (default `TopUp`)
+* [x] Model: `TopUpResponse`, `TopUpsResponse`, `TopUpRequest`
+* [x] Tab `TopUp` dibuat otomatis (header + format nominal) + reorder
+* [x] `GoogleSheetsClient.appendTopUp` / `getTopUps`
+* [x] `ExpenseService.createTopUp` (append + adjustBudgetBalance(+amount)) / `getTopUps`
+* [x] Controller: `POST /topups`, `GET /topups`
+* [x] Unit test createTopUp
+* [ ] Regenerasi native config (endpoint & model baru)
+
+## Frontend
+
+* [x] Types/service/hook: useTopUps, useCreateTopUp
+* [x] `TopUpModal` (pre-filled budget dari kartu, tanpa dropdown budget, tampil saldo saat ini)
+* [x] Ikon "+" di tiap kartu budget di Dashboard + riwayat top-up
+* [ ] Build & lint lolos
+* [ ] Cek di docker local
+
+## Verifikasi
+
+* [x] POST /topups menambah saldo & tercatat di tab TopUp (test sheet)
+* [ ] Build & lint lolos
