@@ -80,21 +80,35 @@
 						<buildArg>-H:ConfigurationFileDirectories=${project.basedir}/native-config</buildArg>
 					</buildArgs>
 				</configuration>
-				<executions>
-					<execution>
-						<id>add-reachability-metadata</id>
-						<goals>
-							<goal>add-reachability-metadata</goal>
-						</goals>
-					</execution>
-					<execution>
-						<id>native-compile</id>
-						<goals>
-							<goal>compile</goal>
-						</goals>
-					</execution>
-				</executions>
 			</plugin>
 		</plugins>
 	</build>
+
+	<profiles>
+		<profile>
+			<id>native</id>
+			<build>
+				<plugins>
+					<plugin>
+						<groupId>org.graalvm.buildtools</groupId>
+						<artifactId>native-maven-plugin</artifactId>
+						<executions>
+							<execution>
+								<id>add-reachability-metadata</id>
+								<goals>
+									<goal>add-reachability-metadata</goal>
+								</goals>
+							</execution>
+							<execution>
+								<id>native-compile</id>
+								<goals>
+									<goal>compile</goal>
+								</goals>
+							</execution>
+						</executions>
+					</plugin>
+				</plugins>
+			</build>
+		</profile>
+	</profiles>
 </project>

@@ -144,6 +144,10 @@
         {
           "name": "getOptions",
           "parameterTypes": []
+        },
+        {
+          "name": "health",
+          "parameterTypes": []
         }
       ]
     },
@@ -349,12 +353,6 @@
         },
         {
           "name": "setAuthenticate",
-          "parameterTypes": [
-            "java.lang.String"
-          ]
-        },
-        {
-          "name": "setAuthorization",
           "parameterTypes": [
             "java.lang.String"
           ]
@@ -581,6 +579,14 @@
       ]
     },
     {
+      "type": "com.google.api.services.sheets.v4.Sheets$Spreadsheets$BatchUpdate",
+      "fields": [
+        {
+          "name": "spreadsheetId"
+        }
+      ]
+    },
+    {
       "type": "com.google.api.services.sheets.v4.Sheets$Spreadsheets$Get",
       "fields": [
         {
@@ -644,6 +650,29 @@
       ]
     },
     {
+      "type": "com.google.api.services.sheets.v4.Sheets$Spreadsheets$Values$Update",
+      "fields": [
+        {
+          "name": "includeValuesInResponse"
+        },
+        {
+          "name": "range"
+        },
+        {
+          "name": "responseDateTimeRenderOption"
+        },
+        {
+          "name": "responseValueRenderOption"
+        },
+        {
+          "name": "spreadsheetId"
+        },
+        {
+          "name": "valueInputOption"
+        }
+      ]
+    },
+    {
       "type": "com.google.api.services.sheets.v4.SheetsRequest",
       "fields": [
         {
@@ -682,6 +711,29 @@
       ]
     },
     {
+      "type": "com.google.api.services.sheets.v4.model.AddSheetRequest",
+      "fields": [
+        {
+          "name": "properties"
+        }
+      ]
+    },
+    {
+      "type": "com.google.api.services.sheets.v4.model.AddSheetResponse",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        },
+        {
+          "name": "setProperties",
+          "parameterTypes": [
+            "com.google.api.services.sheets.v4.model.SheetProperties"
+          ]
+        }
+      ]
+    },
+    {
       "type": "com.google.api.services.sheets.v4.model.AppendValuesResponse",
       "methods": [
         {
@@ -714,6 +766,44 @@
         {
           "name": "<init>",
           "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.google.api.services.sheets.v4.model.BatchUpdateSpreadsheetRequest",
+      "fields": [
+        {
+          "name": "includeSpreadsheetInResponse"
+        },
+        {
+          "name": "requests"
+        },
+        {
+          "name": "responseIncludeGridData"
+        },
+        {
+          "name": "responseRanges"
+        }
+      ]
+    },
+    {
+      "type": "com.google.api.services.sheets.v4.model.BatchUpdateSpreadsheetResponse",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        },
+        {
+          "name": "setReplies",
+          "parameterTypes": [
+            "java.util.List"
+          ]
+        },
+        {
+          "name": "setSpreadsheetId",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
         }
       ]
     },
@@ -985,6 +1075,233 @@
       ]
     },
     {
+      "type": "com.google.api.services.sheets.v4.model.Request",
+      "fields": [
+        {
+          "name": "addBanding"
+        },
+        {
+          "name": "addChart"
+        },
+        {
+          "name": "addConditionalFormatRule"
+        },
+        {
+          "name": "addDataSource"
+        },
+        {
+          "name": "addDimensionGroup"
+        },
+        {
+          "name": "addFilterView"
+        },
+        {
+          "name": "addNamedRange"
+        },
+        {
+          "name": "addProtectedRange"
+        },
+        {
+          "name": "addSheet"
+        },
+        {
+          "name": "addSlicer"
+        },
+        {
+          "name": "addTable"
+        },
+        {
+          "name": "appendCells"
+        },
+        {
+          "name": "appendDimension"
+        },
+        {
+          "name": "autoFill"
+        },
+        {
+          "name": "autoResizeDimensions"
+        },
+        {
+          "name": "cancelDataSourceRefresh"
+        },
+        {
+          "name": "clearBasicFilter"
+        },
+        {
+          "name": "copyPaste"
+        },
+        {
+          "name": "createDeveloperMetadata"
+        },
+        {
+          "name": "cutPaste"
+        },
+        {
+          "name": "deleteBanding"
+        },
+        {
+          "name": "deleteConditionalFormatRule"
+        },
+        {
+          "name": "deleteDataSource"
+        },
+        {
+          "name": "deleteDeveloperMetadata"
+        },
+        {
+          "name": "deleteDimension"
+        },
+        {
+          "name": "deleteDimensionGroup"
+        },
+        {
+          "name": "deleteDuplicates"
+        },
+        {
+          "name": "deleteEmbeddedObject"
+        },
+        {
+          "name": "deleteFilterView"
+        },
+        {
+          "name": "deleteNamedRange"
+        },
+        {
+          "name": "deleteProtectedRange"
+        },
+        {
+          "name": "deleteRange"
+        },
+        {
+          "name": "deleteSheet"
+        },
+        {
+          "name": "deleteTable"
+        },
+        {
+          "name": "duplicateFilterView"
+        },
+        {
+          "name": "duplicateSheet"
+        },
+        {
+          "name": "findReplace"
+        },
+        {
+          "name": "insertDimension"
+        },
+        {
+          "name": "insertRange"
+        },
+        {
+          "name": "mergeCells"
+        },
+        {
+          "name": "moveDimension"
+        },
+        {
+          "name": "pasteData"
+        },
+        {
+          "name": "randomizeRange"
+        },
+        {
+          "name": "refreshDataSource"
+        },
+        {
+          "name": "repeatCell"
+        },
+        {
+          "name": "setBasicFilter"
+        },
+        {
+          "name": "setDataValidation"
+        },
+        {
+          "name": "sortRange"
+        },
+        {
+          "name": "textToColumns"
+        },
+        {
+          "name": "trimWhitespace"
+        },
+        {
+          "name": "unmergeCells"
+        },
+        {
+          "name": "updateBanding"
+        },
+        {
+          "name": "updateBorders"
+        },
+        {
+          "name": "updateCells"
+        },
+        {
+          "name": "updateChartSpec"
+        },
+        {
+          "name": "updateConditionalFormatRule"
+        },
+        {
+          "name": "updateDataSource"
+        },
+        {
+          "name": "updateDeveloperMetadata"
+        },
+        {
+          "name": "updateDimensionGroup"
+        },
+        {
+          "name": "updateDimensionProperties"
+        },
+        {
+          "name": "updateEmbeddedObjectBorder"
+        },
+        {
+          "name": "updateEmbeddedObjectPosition"
+        },
+        {
+          "name": "updateFilterView"
+        },
+        {
+          "name": "updateNamedRange"
+        },
+        {
+          "name": "updateProtectedRange"
+        },
+        {
+          "name": "updateSheetProperties"
+        },
+        {
+          "name": "updateSlicerSpec"
+        },
+        {
+          "name": "updateSpreadsheetProperties"
+        },
+        {
+          "name": "updateTable"
+        }
+      ]
+    },
+    {
+      "type": "com.google.api.services.sheets.v4.model.Response",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        },
+        {
+          "name": "setAddSheet",
+          "parameterTypes": [
+            "com.google.api.services.sheets.v4.model.AddSheetResponse"
+          ]
+        }
+      ]
+    },
+    {
       "type": "com.google.api.services.sheets.v4.model.Sheet",
       "methods": [
         {
@@ -1001,6 +1318,38 @@
     },
     {
       "type": "com.google.api.services.sheets.v4.model.SheetProperties",
+      "fields": [
+        {
+          "name": "dataSourceSheetProperties"
+        },
+        {
+          "name": "gridProperties"
+        },
+        {
+          "name": "hidden"
+        },
+        {
+          "name": "index"
+        },
+        {
+          "name": "rightToLeft"
+        },
+        {
+          "name": "sheetId"
+        },
+        {
+          "name": "sheetType"
+        },
+        {
+          "name": "tabColor"
+        },
+        {
+          "name": "tabColorStyle"
+        },
+        {
+          "name": "title"
+        }
+      ],
       "methods": [
         {
           "name": "<init>",
@@ -1212,6 +1561,17 @@
           "parameterTypes": [
             "java.lang.String"
           ]
+        }
+      ]
+    },
+    {
+      "type": "com.google.api.services.sheets.v4.model.UpdateSheetPropertiesRequest",
+      "fields": [
+        {
+          "name": "fields"
+        },
+        {
+          "name": "properties"
         }
       ]
     },
@@ -3307,6 +3667,9 @@
           "parameterTypes": []
         }
       ]
+    },
+    {
+      "type": "org.springframework.aot.generate.Generated"
     },
     {
       "type": "org.springframework.aot.hint.annotation.Reflective"
