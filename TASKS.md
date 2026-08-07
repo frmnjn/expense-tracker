@@ -416,3 +416,35 @@ Menampilkan daftar pengeluaran per periode, mengedit, dan menghapus (soft delete
 * [x] Build & lint lolos
 * [x] Toggle menyala/mati dan persist setelah reload
 * [x] Tabel/modal/kartu tetap terbaca di mode gelap
+
+---
+
+# Phase 12 - Dashboard
+
+## Docs
+
+* [x] Update PRD.md (endpoint /summary, UI Dashboard, rute `/` = dashboard)
+* [x] Update TASKS.md (checklist ini)
+* [x] Update README.md
+
+## Backend
+
+* [x] Model: `SummaryResponse`, `BudgetSummary`
+* [x] `ExpenseService.getSummary(period)` (total, count, pengeluaran per budget)
+* [x] Controller: `GET /summary?period=`
+* [x] Unit test agregasi summary
+* [ ] Regenerasi native config (endpoint & model baru)
+
+## Frontend
+
+* [x] Types `SummaryResponse`, `BudgetSummary`; service `getSummary`; hook `useSummary`
+* [x] Halaman `DashboardPage` (dropdown periode + kartu ringkasan + saldo per budget + pengeluaran terbesar)
+* [x] Rute `/` = form; `/dashboard` = dashboard; `/riwayat` = riwayat; update nav link di semua halaman
+* [ ] Build & lint lolos
+* [ ] Cek di docker local (test sheet)
+
+## Verifikasi
+
+* [ ] Backend build & test lolos
+* [ ] Frontend build & lint lolos
+* [ ] Dashboard menampilkan ringkasan sesuai data (test sheet)

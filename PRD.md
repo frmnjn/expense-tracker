@@ -310,6 +310,35 @@ Baris dengan `Deleted=TRUE` tidak dikembalikan.
 
 ---
 
+## GET /summary
+
+Mengembalikan ringkasan pengeluaran pada suatu periode.
+
+Query param:
+
+* `period` (wajib): nama sheet periode, contoh `2026-JUL-AUG`.
+
+Response
+
+```json
+{
+    "success": true,
+    "data": {
+        "period": "2026-JUL-AUG",
+        "total": 80000,
+        "count": 3,
+        "byBudget": [
+            { "budget": "Weekly", "amount": 50000 },
+            { "budget": "Daily", "amount": 30000 }
+        ]
+    }
+}
+```
+
+`byBudget` diurutkan dari pengeluaran terbesar.
+
+---
+
 ## PUT /expenses/{id}
 
 Mengedit satu expense pada periode yang sesuai.
@@ -357,14 +386,24 @@ Baris ditandai `Deleted=TRUE` dan saldo budget dikembalikan sebesar nominal.
 
 # UI
 
-Terdapat dua halaman:
+Terdapat tiga halaman:
 
-* Halaman utama (form pencatatan pengeluaran).
-* Halaman `Riwayat` (daftar, edit, dan hapus pengeluaran).
+* Halaman form pencatatan pengeluaran (`/`).
+* Halaman `Dashboard` (`/dashboard`) — ringkasan pengeluaran per periode.
+* Halaman `Riwayat` (`/riwayat`) — daftar, edit, dan hapus pengeluaran.
 
 Saat aplikasi dibuka, user langsung melihat form pencatatan pengeluaran.
 
-Komponen halaman utama:
+### Dashboard
+
+Komponen:
+
+* Dropdown periode
+* Kartu ringkasan: total pengeluaran, jumlah transaksi, jumlah budget bersaldo negatif
+* Daftar saldo per budget (saldo saat ini + pengeluaran pada periode)
+* Daftar pengeluaran terbesar (3 budget teratas)
+
+Komponen halaman form:
 
 * Input Waktu (opsi: waktu sistem saat ini atau manual)
 * Name Text Field

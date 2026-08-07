@@ -10,6 +10,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -161,6 +163,27 @@ class ExpenseServiceTest {
     @Test
     void getExpenses_missingPeriod_shouldReject() {
         ValidationException ex = assertThrows(ValidationException.class, () -> expenseService.getExpenses(""));
+        assertEquals("Period is required", ex.getMessage());
+    }
+
+    @Test
+    void getSummary_shouldAggregateTotalAndByBudget() {
+        when(googleSheetsClient.getExpenses("2026-JUL-AUG")).thenReturn(List.of(
+                new ExpenseResponse("1", "2026-08-01 09:00", "a", "Daily", 1000L, null),
+                new ExpenseResponse("2", "2026-08-02 09:00", "b", "Daily", 2000L, null),
+                new ExpenseResponse("3", "2026-08-03 09:00", "c", "Weekly", 5000L, null)));
+        var summary = expenseService.getSummary("2026-JUL-AUG");
+        assertEquals(8000L, summary.total());
+        assertEquals(3, summary.count());
+        assertEquals("Weekly", summary.byBudget().get(0).budget());
+        assertEquals(5000L, summary.byBudget().get(0).amount());
+        assertEquals("Daily", summary.byBudget().get(1).budget());
+        assertEquals(3000L, summary.byBudget().get(1).amount());
+    }
+
+    @Test
+    void getSummary_missingPeriod_shouldReject() {
+        ValidationException ex = assertThrows(ValidationException.class, () -> expenseService.getSummary(""));
         assertEquals("Period is required", ex.getMessage());
     }
 }
