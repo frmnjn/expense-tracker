@@ -23,8 +23,6 @@ import { useOptions } from '../hooks/useOptions'
 import { formatCurrency } from '../utils/currency'
 import type { Expense } from '../types/expense'
 
-const DATE_TIME_FORMAT = 'YYYY-MM-DD HH:mm'
-
 const balanceColor = (value: number) => (value < 0 ? 'red' : undefined)
 
 function HistoryPage() {
@@ -80,33 +78,51 @@ function HistoryPage() {
         mb="md"
       />
 
-      <Paper withBorder p="lg" radius="md" shadow="sm" pos="relative">
+      <Paper withBorder p={{ base: 'md', sm: 'lg' }} radius="md" shadow="sm" pos="relative">
         <LoadingOverlay visible={expensesLoading && !!period} zIndex={1000} overlayProps={{ radius: 'sm', blur: 1 }} />
         {expenses.length === 0 ? (
           <Text c="dimmed" ta="center" py="lg">
             {period ? 'Tidak ada pengeluaran pada periode ini.' : 'Pilih periode untuk melihat pengeluaran.'}
           </Text>
         ) : (
-          <Table highlightOnHover>
+          <Table
+            highlightOnHover
+            horizontalSpacing={4}
+            verticalSpacing="xs"
+            style={{ tableLayout: 'fixed', width: '100%', fontSize: 12.5 }}
+          >
             <Table.Thead>
               <Table.Tr>
-                <Table.Th>Waktu</Table.Th>
-                <Table.Th>Name</Table.Th>
-                <Table.Th>Budget</Table.Th>
-                <Table.Th ta="right">Nominal</Table.Th>
-                <Table.Th ta="right">Aksi</Table.Th>
+                <Table.Th style={{ width: '19%' }}>Waktu</Table.Th>
+                <Table.Th style={{ width: '31%' }}>Name</Table.Th>
+                <Table.Th style={{ width: '14%' }}>Budget</Table.Th>
+                <Table.Th ta="right" style={{ width: '21%' }}>
+                  Nominal
+                </Table.Th>
+                <Table.Th ta="right" style={{ width: '15%' }}>
+                  Aksi
+                </Table.Th>
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
               {expenses.map((expense) => (
                 <Table.Tr key={expense.id}>
-                  <Table.Td>{dayjs(expense.dateTime).format(DATE_TIME_FORMAT)}</Table.Td>
-                  <Table.Td>{expense.name}</Table.Td>
-                  <Table.Td>{expense.budget}</Table.Td>
-                  <Table.Td ta="right">{formatCurrency(expense.amount)}</Table.Td>
-                  <Table.Td ta="right">
-                    <Group gap="xs" justify="flex-end" wrap="nowrap">
+                  <Table.Td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {dayjs(expense.dateTime).format('DD/MM')}
+                  </Table.Td>
+                  <Table.Td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {expense.name}
+                  </Table.Td>
+                  <Table.Td style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {expense.budget}
+                  </Table.Td>
+                  <Table.Td ta="right" style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {formatCurrency(expense.amount)}
+                  </Table.Td>
+                  <Table.Td ta="right" style={{ whiteSpace: 'nowrap' }}>
+                    <Group gap={2} justify="flex-end" wrap="nowrap">
                       <ActionIcon
+                        size="sm"
                         variant="subtle"
                         color="blue"
                         disabled={!expense.id}
@@ -115,6 +131,7 @@ function HistoryPage() {
                         <span>✎</span>
                       </ActionIcon>
                       <ActionIcon
+                        size="sm"
                         variant="subtle"
                         color="red"
                         disabled={!expense.id}
