@@ -399,3 +399,20 @@ Menampilkan daftar pengeluaran per periode, mengedit, dan menghapus (soft delete
 * [x] Test sheet: buat -> edit nominal/ganti budget -> hapus -> cek saldo konsisten
 * [x] Soft delete: baris ditandai, tidak tampil di daftar, tidak dihapus fisik
 * [x] Saldo dropdown ter-update setelah edit/hapus
+
+---
+
+# Phase 11 - Dark Mode
+
+## Frontend
+
+* [x] `MantineProvider` pakai `colorSchemeManager` (localStorage, persist) & `defaultColorScheme="dark"`
+* [x] Komponen `ColorSchemeToggle` (toggle ☀️/🌙)
+* [x] Pasang toggle di halaman form (`/` & `/catat`) dan halaman Riwayat
+* [x] Alias rute `/catat` untuk halaman form
+
+## Verifikasi
+
+* [x] Build & lint lolos
+* [x] Toggle menyala/mati dan persist setelah reload
+* [x] Tabel/modal/kartu tetap terbaca di mode gelap

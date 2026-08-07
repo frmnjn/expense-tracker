@@ -21,6 +21,7 @@ import { notifications } from '@mantine/notifications'
 import dayjs from 'dayjs'
 import { useDeleteExpense, useExpenses, usePeriods, useUpdateExpense } from '../hooks/useExpenses'
 import { useOptions } from '../hooks/useOptions'
+import ColorSchemeToggle from '../components/ColorSchemeToggle'
 import { formatCurrency } from '../utils/currency'
 import type { Expense } from '../types/expense'
 
@@ -66,12 +67,15 @@ function HistoryPage() {
 
   return (
     <Container size="md" py="lg">
-      <Title order={2} mb="xs">
-        Riwayat Pengeluaran
-      </Title>
-      <Anchor href="/catat" mb="lg" display="inline-block">
-        Catat Pengeluaran
-      </Anchor>
+      <Group justify="space-between" align="flex-start" mb="xs">
+        <div>
+          <Title order={2}>Riwayat Pengeluaran</Title>
+          <Anchor href="/catat" display="inline-block">
+            Catat Pengeluaran
+          </Anchor>
+        </div>
+        <ColorSchemeToggle />
+      </Group>
 
       <Select
         label="Periode"

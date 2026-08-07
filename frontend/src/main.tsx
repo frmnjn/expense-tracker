@@ -1,7 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { MantineProvider } from '@mantine/core'
+import { localStorageColorSchemeManager, MantineProvider } from '@mantine/core'
 import { DatesProvider } from '@mantine/dates'
 import { Notifications } from '@mantine/notifications'
 import '@mantine/core/styles.css'
@@ -16,12 +16,13 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
   })
 }
 
+const colorSchemeManager = localStorageColorSchemeManager({ key: 'expense-color-scheme' })
 const queryClient = new QueryClient()
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <MantineProvider>
+      <MantineProvider colorSchemeManager={colorSchemeManager} defaultColorScheme="dark">
         <DatesProvider settings={{}}>
           <Notifications />
           <App />

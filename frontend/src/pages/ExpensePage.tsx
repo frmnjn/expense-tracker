@@ -1,6 +1,7 @@
 import { Anchor, Container, Group } from '@mantine/core'
 import ExpenseForm from '../components/ExpenseForm'
 import InstallButton from '../components/InstallButton'
+import ColorSchemeToggle from '../components/ColorSchemeToggle'
 
 function ExpensePage() {
   return (
@@ -21,7 +22,10 @@ function ExpensePage() {
         <Anchor href="/riwayat" size="sm">
           Riwayat
         </Anchor>
-        <InstallButton />
+        <Group gap="xs">
+          <ColorSchemeToggle />
+          <InstallButton />
+        </Group>
       </Group>
       <ExpenseForm />
     </Container>
