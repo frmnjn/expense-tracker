@@ -325,3 +325,52 @@ Sebuah task dianggap selesai jika:
 * Requirement pada PRD terpenuhi.
 * Kode mengikuti struktur project.
 * Tidak menambahkan fitur di luar scope.
+
+---
+
+# Runtime Backend (PENTING: JVM vs Native)
+
+Produksi memakai **GraalVM Native Image**, bukan JVM. Dua Dockerfile backend:
+
+| File | Pemakaian |
+|---|---|
+| `backend/Dockerfile` | Image JVM (fallback, pengembangan) |
+| `backend/Dockerfile.native` | Image native (produksi, `expense-tracker-backend-native:latest`) |
+
+Kedua `docker-compose.yml` & `docker-compose.prod.yml` memakai `image: expense-tracker-backend-native:latest`.
+
+## Konsekuensi untuk perubahan kode
+
+* **Native memakai analisis statis.** Semua refleksi/resource yang dipakai runtime harus terdaftar di `backend/native-config/reachability-metadata.json`.
+* Google Sheets client memakai refleksi berat (Gson + request `@Key`). `google-http-client` sudah bundling config, tapi **`google-api-services-sheets`/`google-api-client`/`google-oauth-client` tidak** → wajib lewat config tracing.
+* Jika menambah **endpoint/kelas yang memakai refleksi** atau **upgrade library Google**, jalankan ulang:
+  ```bash
+  ./backend/generate-native-config.sh   # regenerasi reachability-metadata (ke test sheet, aman)
+  ./build-native.sh                     # rebuild image native
+  ```
+* Verifikasi selalu dengan test sheet (`GOOGLE_TEST_SHEET_ID`), jangan menulis ke produksi.
+
+---
+
+# Alur Build & Deploy Native
+
+Build & deploy **hanya dari PC lokal** (bukan di VPS, karena butuh RAM ~7GB).
+
+```bash
+./build-native.sh     # build image native lokal (docker build Dockerfile.native)
+./deploy-native.sh    # export -> scp -> VPS git pull -> docker load -> up -d
+```
+
+`deploy-native.sh` berasumsi SSH key `root@expense.frmnjn.my.id` tanpa password sudah terdaftar.
+
+---
+
+# Git
+
+Buat perubahan sekecil mungkin.
+
+Jangan mengubah file yang tidak berhubungan.
+
+Jangan melakukan refactor besar ketika sedang mengerjakan fitur kecil.
+
+> **Jangan commit/push tanpa perintah eksplisit dari user.**

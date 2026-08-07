@@ -37,8 +37,10 @@ Data tidak disimpan di database, melainkan langsung di Google Sheets menggunakan
 ## Backend
 
 * Java 25 (LTS)
-* Spring Boot
+* Spring Boot 4
 * Maven
+* **GraalVM 25 Native Image** (produksi memakai native executable, bukan JVM)
+* Google Sheets API
 
 ## Storage
 
@@ -48,6 +50,7 @@ Data tidak disimpan di database, melainkan langsung di Google Sheets menggunakan
 
 * Docker
 * Docker Compose
+* nginx (reverse proxy + SSL)
 
 ---
 
@@ -62,12 +65,34 @@ expense-tracker/
 ├── STACK.md
 ├── README.md
 │
-├── frontend/
+├── frontend/          (React + Mantine, nginx proxy /api)
+├── backend/           (Spring Boot, GraalVM native)
+│   ├── Dockerfile         (image JVM, untuk pengembangan)
+│   ├── Dockerfile.native  (image native, untuk produksi)
+│   ├── native-config/     (reachability-metadata.json hasil tracing agent)
+│   ├── generate-native-config.sh  (regenerate config native)
+│   └── src/
 │
-├── backend/
+├── deploy/            (nginx config untuk VPS)
+├── build-native.sh    (build image native lokal)
+├── deploy-native.sh   (kirim image native ke VPS)
 │
 └── backend-golang/  (implementasi lama, tidak digunakan)
 ```
+
+## Runtime Backend: JVM vs Native
+
+Produksi memakai **GraalVM Native Image** (bukan JVM). Lihat `backend/Dockerfile.native`.
+
+| Metrik | JVM | Native |
+|---|---|---|
+| RSS | ~171 MiB | **~54 MiB** |
+| Startup | ~2.3 s | **0.58 s** |
+| mem_limit | 256m | 128m |
+
+`docker-compose.yml` & `docker-compose.prod.yml` memakai image `expense-tracker-backend-native:latest`.
+
+`backend/Dockerfile` (JVM) tetap dipertahankan sebagai fallback & untuk pengembangan.
 
 ---
 
@@ -305,26 +330,34 @@ Description
 
 # Deployment ke VPS
 
+> **Penting:** Produksi memakai **image native** yang di-build di lokal, lalu dikirim ke VPS via `deploy-native.sh`. VPS **tidak build native** (butuh RAM besar).
+
 ## Prasyarat
 
-* Repo sudah di-clone di VPS.
+* Repo sudah di-clone di VPS (`/root/expense-tracker`).
 * `backend/.env` berisi `GOOGLE_SHEET_ID` produksi.
 * `backend/credentials.json` (Service Account) sudah ada di VPS. Kedua file tidak ikut di-track git (lihat `.gitignore`), jadi harus disiapkan manual di VPS.
+* SSH key (`~/.ssh/id_ed25519`) terdaftar di `root@<VPS>` authorized_keys (tanpa password).
 * DNS: `expense.frmnjn.my.id` → A record ke IP VPS.
 
-## 1. Build & jalankan (mode produksi)
+## Alur deploy (native image)
+
+Dari PC lokal:
 
 ```bash
-docker compose -f docker-compose.prod.yml up --build -d
+./build-native.sh     # 1. Build image native: expense-tracker-backend-native:latest (~6 menit, RAM ~7GB)
+./deploy-native.sh    # 2. export tar.gz -> scp ke VPS -> git pull -> docker load -> up -d
 ```
 
-Perbedaan dengan mode dev:
+`deploy-native.sh` menangani:
+1. `docker save <image> | gzip > /tmp/backend-native.tar.gz`
+2. `scp` tar.gz ke VPS
+3. VPS: `git pull` (update compose file)
+4. VPS: `docker load`
+5. VPS: `docker compose -f docker-compose.prod.yml up -d --build` (rebuild frontend, backend pakai image native)
+6. Verifikasi `docker compose ps` + memory
 
-* Frontend hanya bind di `127.0.0.1:3000` (tidak terbuka ke publik, diakses lewat nginx).
-* Backend tidak expose port ke host sama sekali (hanya dipanggil frontend via network internal Docker).
-* `restart: unless-stopped` otomatis.
-
-## 2. Reverse proxy + SSL
+## Reverse proxy + SSL
 
 1. Install nginx & certbot di VPS:
    ```bash
@@ -344,12 +377,29 @@ Perbedaan dengan mode dev:
    sudo nginx -t && sudo systemctl reload nginx
    ```
 
-## 3. Perbarui aplikasi setelah ada commit baru
+nginx proxy ke `127.0.0.1:23824` (port frontend yang di-expose oleh `docker-compose.prod.yml`).
+
+## Mengelola config native (reachability-metadata)
+
+Backend Google Sheets butuh config refleksi untuk native image. File `backend/native-config/reachability-metadata.json` di-generate via tracing agent:
 
 ```bash
-git pull
-docker compose -f docker-compose.prod.yml up --build -d
+./backend/generate-native-config.sh   # build jar -> jalankan agent -> hit test sheet -> simpan config
 ```
+
+Jalankan ulang bila:
+* Upgrade versi library Google (`google-api-services-sheets`, `google-http-client`, dll)
+* Menambah endpoint baru yang memanggil Google Sheets
+
+> Aman: script memakai `GOOGLE_TEST_SHEET_ID`, bukan sheet produksi.
+
+## Rollback ke image JVM
+
+Jika native bermasalah, kembalikan ke image JVM:
+
+1. VPS: `docker compose -f docker-compose.prod.yml down`
+2. Ubah `docker-compose.prod.yml` backend dari `image:` kembali ke `build: ./backend`
+3. `docker compose -f docker-compose.prod.yml up -d --build`
 
 ---
 

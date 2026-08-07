@@ -300,16 +300,22 @@ Mengubah backend menjadi native executable (~50MB total) menggantikan JVM runtim
 * [x] POST `/expenses` berhasil ke test sheet
 * [x] Startup 0.58s
 
-## Distribusi ke VPS
+## Distribusi ke VPS (terverifikasi)
 
 * [x] `docker save expense-tracker-backend-native:latest | gzip > backend-native.tar.gz`
-* [ ] `scp`/SFTP `backend-native.tar.gz` ke VPS
-* [ ] Di VPS: `docker load < backend-native.tar.gz`
-* [ ] Update `docker-compose.prod.yml` di VPS (image native)
-* [ ] `docker compose up -d` + verifikasi health di produksi
-* [ ] Bandingkan memory VPS (docker stats) vs sebelum native
+* [x] `scp`/SFTP `backend-native.tar.gz` ke VPS
+* [x] Di VPS: `docker load < backend-native.tar.gz`
+* [x] Update `docker-compose.prod.yml` di VPS (image native)
+* [x] `docker compose up -d` + verifikasi health di produksi
+* [x] Bandingkan memory VPS (docker stats) vs sebelum native — **54.13 MiB** di produksi
+
+## Otomatisasi Build & Deploy
+
+* [x] `build-native.sh` — build image native lokal (docker build Dockerfile.native)
+* [x] `deploy-native.sh` — export image, scp ke VPS, git pull, docker load, up -d
+* [x] `backend/generate-native-config.sh` — regenerate reachability-metadata via tracing agent
 
 ## Rollback
 
-* [ ] Image JVM (`expense-tracker-backend:0.0.1-SNAPSHOT`) tetap tersimpan di VPS sebagai fallback
-* [ ] Dokumentasikan cara rollback: `docker compose -f docker-compose.prod.yml down && docker compose up -d` setelah mengembalikan konfigurasi image
+* [x] Image JVM (`expense-tracker-backend:0.0.1-SNAPSHOT`) tetap tersimpan di VPS sebagai fallback
+* [x] Dokumentasikan cara rollback: `docker compose -f docker-compose.prod.yml down && docker compose up -d` setelah mengembalikan konfigurasi image
