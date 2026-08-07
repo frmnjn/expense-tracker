@@ -1,8 +1,12 @@
 package com.expensetracker.service;
 
 import com.expensetracker.google.GoogleSheetsClient;
+import com.expensetracker.model.ExpenseRef;
 import com.expensetracker.model.ExpenseRequest;
+import com.expensetracker.model.ExpenseResponse;
+import com.expensetracker.model.ExpensesResponse;
 import com.expensetracker.model.OptionsResponse;
+import com.expensetracker.model.PeriodsResponse;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -36,6 +40,59 @@ public class ExpenseService {
                 request.amount(),
                 request.description());
         googleSheetsClient.decrementBudget(request.budget(), request.amount());
+    }
+
+    public PeriodsResponse getPeriods() {
+        return new PeriodsResponse(googleSheetsClient.getPeriodSheetTitles());
+    }
+
+    public ExpensesResponse getExpenses(String period) {
+        if (period == null || period.isBlank()) {
+            throw new ValidationException("Period is required");
+        }
+        return new ExpensesResponse(googleSheetsClient.getExpenses(period));
+    }
+
+    public void updateExpense(String id, ExpenseRequest request) {
+        validate(request);
+        ExpenseRef ref = requireExpense(id);
+        ExpenseResponse current = ref.expense();
+
+        String newBudget = request.budget();
+        long newAmount = request.amount();
+
+        if (!current.budget().equals(newBudget)) {
+            googleSheetsClient.adjustBudgetBalance(current.budget(), current.amount());
+            googleSheetsClient.adjustBudgetBalance(newBudget, -newAmount);
+        } else if (newAmount != current.amount()) {
+            googleSheetsClient.adjustBudgetBalance(current.budget(), current.amount() - newAmount);
+        }
+
+        googleSheetsClient.updateExpenseRow(
+                ref.sheetName(),
+                ref.rowIndex(),
+                request.dateTime(),
+                request.name(),
+                newBudget,
+                newAmount,
+                request.description());
+    }
+
+    public void deleteExpense(String id) {
+        ExpenseRef ref = requireExpense(id);
+        googleSheetsClient.adjustBudgetBalance(ref.expense().budget(), ref.expense().amount());
+        googleSheetsClient.softDeleteExpense(ref.sheetName(), ref.rowIndex());
+    }
+
+    private ExpenseRef requireExpense(String id) {
+        if (id == null || id.isBlank()) {
+            throw new ValidationException("Expense id is required");
+        }
+        ExpenseRef ref = googleSheetsClient.findExpense(id);
+        if (ref == null) {
+            throw new ValidationException("Expense not found");
+        }
+        return ref;
     }
 
     private void validate(ExpenseRequest request) {

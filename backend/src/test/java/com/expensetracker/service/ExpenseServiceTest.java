@@ -1,7 +1,9 @@
 package com.expensetracker.service;
 
 import com.expensetracker.google.GoogleSheetsClient;
+import com.expensetracker.model.ExpenseRef;
 import com.expensetracker.model.ExpenseRequest;
+import com.expensetracker.model.ExpenseResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -16,6 +18,7 @@ import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
 class ExpenseServiceTest {
@@ -113,5 +116,51 @@ class ExpenseServiceTest {
                 "2026-08-06 14:30", "Makan Siang", "Daily", 35000L, "x".repeat(256));
         ValidationException ex = assertThrows(ValidationException.class, () -> expenseService.createExpense(request));
         assertEquals("Description must be at most 255 characters", ex.getMessage());
+    }
+
+    private static ExpenseRef expenseRef() {
+        return new ExpenseRef("2026-JUL-AUG", 2,
+                new ExpenseResponse("id123", "2026-08-06 14:30", "Makan Siang", "Daily", 35000L, null));
+    }
+
+    @Test
+    void updateExpense_changeAmount_sameBudget_shouldAdjustBalanceByDelta() {
+        when(googleSheetsClient.findExpense("id123")).thenReturn(expenseRef());
+        ExpenseRequest request = new ExpenseRequest("2026-08-06 14:30", "Makan Siang", "Daily", 20000L, null);
+        assertDoesNotThrow(() -> expenseService.updateExpense("id123", request));
+        verify(googleSheetsClient).adjustBudgetBalance("Daily", 15000L);
+        verify(googleSheetsClient).updateExpenseRow(eq("2026-JUL-AUG"), eq(2), eq("2026-08-06 14:30"),
+                eq("Makan Siang"), eq("Daily"), eq(20000L), eq(null));
+    }
+
+    @Test
+    void updateExpense_changeBudget_shouldMoveBalanceBetweenBudgets() {
+        when(googleSheetsClient.findExpense("id123")).thenReturn(expenseRef());
+        ExpenseRequest request = new ExpenseRequest("2026-08-06 14:30", "Makan Siang", "Weekly", 35000L, null);
+        assertDoesNotThrow(() -> expenseService.updateExpense("id123", request));
+        verify(googleSheetsClient).adjustBudgetBalance("Daily", 35000L);
+        verify(googleSheetsClient).adjustBudgetBalance("Weekly", -35000L);
+    }
+
+    @Test
+    void updateExpense_notFound_shouldReject() {
+        when(googleSheetsClient.findExpense("missing")).thenReturn(null);
+        ValidationException ex = assertThrows(ValidationException.class,
+                () -> expenseService.updateExpense("missing", validRequest()));
+        assertEquals("Expense not found", ex.getMessage());
+    }
+
+    @Test
+    void deleteExpense_shouldReturnAmountToBudgetAndSoftDelete() {
+        when(googleSheetsClient.findExpense("id123")).thenReturn(expenseRef());
+        assertDoesNotThrow(() -> expenseService.deleteExpense("id123"));
+        verify(googleSheetsClient).adjustBudgetBalance("Daily", 35000L);
+        verify(googleSheetsClient).softDeleteExpense("2026-JUL-AUG", 2);
+    }
+
+    @Test
+    void getExpenses_missingPeriod_shouldReject() {
+        ValidationException ex = assertThrows(ValidationException.class, () -> expenseService.getExpenses(""));
+        assertEquals("Period is required", ex.getMessage());
     }
 }

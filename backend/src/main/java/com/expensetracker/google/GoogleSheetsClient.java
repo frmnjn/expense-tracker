@@ -21,6 +21,8 @@ import com.google.api.services.sheets.v4.model.UpdateSheetPropertiesRequest;
 import com.google.api.services.sheets.v4.model.ValueRange;
 import com.expensetracker.service.PeriodSheetName;
 import com.expensetracker.model.BudgetOption;
+import com.expensetracker.model.ExpenseRef;
+import com.expensetracker.model.ExpenseResponse;
 import com.google.auth.http.HttpCredentialsAdapter;
 import com.google.auth.oauth2.GoogleCredentials;
 import org.slf4j.Logger;
@@ -34,11 +36,13 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.UUID;
 
 public class GoogleSheetsClient {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(GoogleSheetsClient.class);
-    private static final List<Object> HEADERS = List.of("Waktu", "Name", "Budget", "Nominal", "Description");
+    private static final List<Object> HEADERS =
+            List.of("Waktu", "Name", "Budget", "Nominal", "Description", "ID", "Deleted");
 
     private final Sheets sheets;
     private final String spreadsheetId;
@@ -75,18 +79,20 @@ public class GoogleSheetsClient {
         }
     }
 
-    public void appendExpense(String sheetName, String dateTime, String name,
-                              String budget, long amount, String description) {
+    public String appendExpense(String sheetName, String dateTime, String name,
+                                String budget, long amount, String description) {
         ensureSheetExists(sheetName);
+        String id = UUID.randomUUID().toString();
         ValueRange body = new ValueRange()
                 .setValues(List.of(List.of(dateTime, name, budget, amount,
-                        description == null ? "" : description)));
+                        description == null ? "" : description, id, "FALSE")));
         try {
             sheets.spreadsheets().values()
-                    .append(spreadsheetId, sheetName + "!A:E", body)
+                    .append(spreadsheetId, sheetName + "!A:G", body)
                     .setValueInputOption("USER_ENTERED")
                     .setInsertDataOption("INSERT_ROWS")
                     .execute();
+            return id;
         } catch (IOException e) {
             LOGGER.error("error from google sheets api", e);
             throw new IllegalStateException("Failed to append expense to google sheets", e);
@@ -121,37 +127,71 @@ public class GoogleSheetsClient {
     }
 
     public void decrementBudget(String budget, long amount) {
+        adjustBudgetBalance(budget, -amount);
+    }
+
+    public void adjustBudgetBalance(String budget, long delta) {
+        int rowIndex = findBudgetRowIndex(budget);
+        if (rowIndex < 0) {
+            LOGGER.warn("budget not found for balance adjust: budget={}", budget);
+            return;
+        }
         try {
             ValueRange result = sheets.spreadsheets().values()
                     .get(spreadsheetId, budgetSheet + "!A:B")
                     .execute();
             List<List<Object>> values = result.getValues();
-            if (values == null) {
-                return;
-            }
-            int rowIndex = -1;
-            for (int i = 0; i < values.size(); i++) {
-                List<Object> row = values.get(i);
-                if (row != null && !row.isEmpty() && budget.equals(String.valueOf(row.get(0)).trim())) {
-                    rowIndex = i;
-                    break;
-                }
-            }
-            if (rowIndex < 0) {
-                LOGGER.warn("budget not found for decrement: budget={}", budget);
-                return;
-            }
-            long current = parseBalance(values.get(rowIndex).size() > 1
-                    ? values.get(rowIndex).get(1) : null);
-            long updated = current - amount;
+            long current = values != null && rowIndex < values.size() && values.get(rowIndex).size() > 1
+                    ? parseBalance(values.get(rowIndex).get(1)) : 0;
+            long updated = current + delta;
             ValueRange body = new ValueRange().setValues(List.of(List.of(updated)));
             sheets.spreadsheets().values()
                     .update(spreadsheetId, budgetSheet + "!B" + (rowIndex + 1), body)
                     .setValueInputOption("RAW")
                     .execute();
         } catch (IOException e) {
-            LOGGER.error("error decrementing budget in google sheets api", e);
-            throw new IllegalStateException("Failed to decrement budget in google sheets", e);
+            LOGGER.error("error adjusting budget balance in google sheets api", e);
+            throw new IllegalStateException("Failed to adjust budget balance in google sheets", e);
+        }
+    }
+
+    public long readBudgetBalance(String budget) {
+        int rowIndex = findBudgetRowIndex(budget);
+        if (rowIndex < 0) {
+            return 0;
+        }
+        try {
+            ValueRange result = sheets.spreadsheets().values()
+                    .get(spreadsheetId, budgetSheet + "!A:B")
+                    .execute();
+            List<List<Object>> values = result.getValues();
+            return values != null && rowIndex < values.size() && values.get(rowIndex).size() > 1
+                    ? parseBalance(values.get(rowIndex).get(1)) : 0;
+        } catch (IOException e) {
+            LOGGER.error("error reading budget balance in google sheets api", e);
+            throw new IllegalStateException("Failed to read budget balance in google sheets", e);
+        }
+    }
+
+    private int findBudgetRowIndex(String budget) {
+        try {
+            ValueRange result = sheets.spreadsheets().values()
+                    .get(spreadsheetId, budgetSheet + "!A:A")
+                    .execute();
+            List<List<Object>> values = result.getValues();
+            if (values == null) {
+                return -1;
+            }
+            for (int i = 0; i < values.size(); i++) {
+                List<Object> row = values.get(i);
+                if (row != null && !row.isEmpty() && budget.equals(String.valueOf(row.get(0)).trim())) {
+                    return i;
+                }
+            }
+            return -1;
+        } catch (IOException e) {
+            LOGGER.error("error finding budget row in google sheets api", e);
+            throw new IllegalStateException("Failed to find budget row in google sheets", e);
         }
     }
 
@@ -175,6 +215,135 @@ public class GoogleSheetsClient {
             LOGGER.warn("failed to parse balance value={}", value);
             return 0;
         }
+    }
+
+    public List<ExpenseResponse> getExpenses(String sheetName) {
+        try {
+            ValueRange result = sheets.spreadsheets().values()
+                    .get(spreadsheetId, sheetName + "!A:G")
+                    .execute();
+            List<ExpenseResponse> expenses = new ArrayList<>();
+            List<List<Object>> values = result.getValues();
+            if (values == null) {
+                return expenses;
+            }
+            for (int i = 1; i < values.size(); i++) {
+                List<Object> row = values.get(i);
+                if (row == null || row.isEmpty()) {
+                    continue;
+                }
+                if (isDeleted(row)) {
+                    continue;
+                }
+                expenses.add(toExpense(row, cell(row, 5)));
+            }
+            return expenses;
+        } catch (IOException e) {
+            LOGGER.error("error reading expenses from google sheets api", e);
+            throw new IllegalStateException("Failed to read expenses from google sheets", e);
+        }
+    }
+
+    public List<String> getPeriodSheetTitles() {
+        List<String> titles = getSheetTitlesInOrder();
+        List<String> periods = new ArrayList<>();
+        for (String title : titles) {
+            if (PeriodSheetName.parseStartDate(title).isPresent()) {
+                periods.add(title);
+            }
+        }
+        periods.sort(Comparator
+                .comparing((String title) -> PeriodSheetName.parseStartDate(title).orElse(LocalDate.MIN))
+                .reversed());
+        return periods;
+    }
+
+    public ExpenseRef findExpense(String id) {
+        for (String sheetName : getPeriodSheetTitles()) {
+            try {
+                ValueRange result = sheets.spreadsheets().values()
+                        .get(spreadsheetId, sheetName + "!A:G")
+                        .execute();
+                List<List<Object>> values = result.getValues();
+                if (values == null) {
+                    continue;
+                }
+                for (int i = 1; i < values.size(); i++) {
+                    List<Object> row = values.get(i);
+                    if (row == null || row.isEmpty()) {
+                        continue;
+                    }
+                    if (id.equals(cell(row, 5))) {
+                        return new ExpenseRef(sheetName, i, toExpense(row, id));
+                    }
+                }
+            } catch (IOException e) {
+                LOGGER.error("error finding expense in sheet {} via google sheets api", sheetName, e);
+                throw new IllegalStateException("Failed to find expense in google sheets", e);
+            }
+        }
+        return null;
+    }
+
+    public void updateExpenseRow(String sheetName, int rowIndex, String dateTime, String name,
+                                 String budget, long amount, String description) {
+        ValueRange body = new ValueRange().setValues(List.of(List.of(
+                dateTime, name, budget, amount, description == null ? "" : description)));
+        try {
+            sheets.spreadsheets().values()
+                    .update(spreadsheetId, sheetName + "!A" + (rowIndex + 1) + ":E" + (rowIndex + 1), body)
+                    .setValueInputOption("USER_ENTERED")
+                    .execute();
+        } catch (IOException e) {
+            LOGGER.error("error updating expense row in google sheets api", e);
+            throw new IllegalStateException("Failed to update expense row in google sheets", e);
+        }
+    }
+
+    public void softDeleteExpense(String sheetName, int rowIndex) {
+        ValueRange body = new ValueRange().setValues(List.of(List.of("TRUE")));
+        try {
+            sheets.spreadsheets().values()
+                    .update(spreadsheetId, sheetName + "!G" + (rowIndex + 1), body)
+                    .setValueInputOption("USER_ENTERED")
+                    .execute();
+        } catch (IOException e) {
+            LOGGER.error("error soft-deleting expense row in google sheets api", e);
+            throw new IllegalStateException("Failed to soft-delete expense row in google sheets", e);
+        }
+    }
+
+    private static boolean isDeleted(List<Object> row) {
+        String deleted = cell(row, 6);
+        return deleted != null && deleted.equalsIgnoreCase("TRUE");
+    }
+
+    private static String cell(List<Object> row, int index) {
+        if (row == null || index >= row.size() || row.get(index) == null) {
+            return null;
+        }
+        String value = String.valueOf(row.get(index)).trim();
+        return value.isEmpty() ? null : value;
+    }
+
+    private static long parseAmount(Object value) {
+        if (value == null) {
+            return 0;
+        }
+        if (value instanceof Number number) {
+            return number.longValue();
+        }
+        return parseBalance(value);
+    }
+
+    private static ExpenseResponse toExpense(List<Object> row, String id) {
+        return new ExpenseResponse(
+                id,
+                cell(row, 0) == null ? "" : cell(row, 0),
+                cell(row, 1) == null ? "" : cell(row, 1),
+                cell(row, 2) == null ? "" : cell(row, 2),
+                parseAmount(row.size() > 3 ? row.get(3) : null),
+                cell(row, 4));
     }
 
     public String getBudgetSheet() {
@@ -335,7 +504,7 @@ public class GoogleSheetsClient {
         ValueRange body = new ValueRange().setValues(List.of(HEADERS));
         try {
             sheets.spreadsheets().values()
-                    .update(spreadsheetId, sheetName + "!A1:F1", body)
+                    .update(spreadsheetId, sheetName + "!A1:G1", body)
                     .setValueInputOption("RAW")
                     .execute();
         } catch (IOException e) {

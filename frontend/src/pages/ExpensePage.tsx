@@ -1,4 +1,4 @@
-import { Container, Group } from '@mantine/core'
+import { Anchor, Container, Group } from '@mantine/core'
 import ExpenseForm from '../components/ExpenseForm'
 import InstallButton from '../components/InstallButton'
 
@@ -17,7 +17,10 @@ function ExpensePage() {
         },
       }}
     >
-      <Group justify="flex-end" mb="xs">
+      <Group justify="space-between" mb="xs">
+        <Anchor href="/riwayat" size="sm">
+          Riwayat
+        </Anchor>
         <InstallButton />
       </Group>
       <ExpenseForm />

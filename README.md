@@ -11,7 +11,14 @@ Data tidak disimpan di database, melainkan langsung di Google Sheets menggunakan
 * Menambah pengeluaran
 * Input waktu otomatis atau manual
 * Dropdown budget dari Google Sheets
+* Saldo per budget (otomatis berkurang saat pengeluaran, ditambah manual di sheet tiap gajian)
+* Preview "Saldo nanti" saat mengisi nominal
+* Daftar pengeluaran per periode (halaman Riwayat)
+* Edit pengeluaran
+* Hapus pengeluaran (soft delete, saldo dikembalikan)
+* Preview perubahan saldo saat edit/hapus
 * Sheet pengeluaran terpisah per periode
+* Kolom nominal & saldo diformat currency IDR
 * Urutan sheet otomatis (periode terbaru di kiri)
 * Validasi input
 * Menyimpan data ke Google Sheets
@@ -274,10 +281,68 @@ Response
 {
   "success": true,
   "data": {
-    "budgets": ["Daily", "Weekly"]
+    "budgets": [
+      { "name": "Daily", "balance": 500000 },
+      { "name": "Weekly", "balance": -10000 }
+    ]
   }
 }
 ```
+
+---
+
+## GET /periods
+
+Response
+
+```json
+{
+  "success": true,
+  "data": {
+    "periods": ["2026-JUL-AUG", "2026-AUG-SEP"]
+  }
+}
+```
+
+---
+
+## GET /expenses
+
+Query param `period` (nama sheet periode, wajib).
+
+Response
+
+```json
+{
+  "success": true,
+  "data": {
+    "expenses": [
+      {
+        "id": "abc123",
+        "dateTime": "2026-08-06 14:30",
+        "name": "Makan Siang",
+        "budget": "Daily",
+        "amount": 35000,
+        "description": "Catatan"
+      }
+    ]
+  }
+}
+```
+
+Baris yang dihapus (soft delete) tidak dikembalikan.
+
+---
+
+## PUT /expenses/{id}
+
+Body sama seperti `POST /expenses`. Mengedit pengeluaran dan menyesuaikan saldo budget.
+
+---
+
+## DELETE /expenses/{id}
+
+Menghapus (soft delete) pengeluaran dan mengembalikan saldo budget.
 
 ---
 
@@ -399,9 +464,6 @@ Jika native bermasalah, kembalikan ke image JVM:
 
 Versi berikutnya dapat menambahkan:
 
-* Daftar pengeluaran
-* Edit pengeluaran
-* Hapus pengeluaran
 * Kategori
 * Filter
 * Dashboard
