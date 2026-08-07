@@ -1,13 +1,43 @@
 services:
+  mysql:
+    image: mysql:8
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: expense_tracker
+      MYSQL_USER: expense
+      MYSQL_PASSWORD: expense-pass
+      MYSQL_ROOT_PASSWORD: root-pass
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./scripts/initdb:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "mysqladmin ping -h localhost -uexpense -pexpense-pass --silent && mysql -h localhost -uexpense -pexpense-pass -e 'SELECT 1' expense_tracker",
+        ]
+      interval: 5s
+      timeout: 5s
+      retries: 15
+      start_period: 20s
+
   backend:
     image: expense-tracker-backend-native:latest
+    restart: unless-stopped
     mem_limit: 128m
     ports:
       - "8080:8080"
     env_file:
       - ./backend/.env
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    environment:
+      DB_URL: jdbc:mysql://mysql:3306/expense_tracker?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      DB_USER: expense
+      DB_PASSWORD: expense-pass
+    depends_on:
+      mysql:
+        condition: service_healthy
 
   frontend:
     build:
@@ -18,3 +48,6 @@ services:
       - "3000:80"
     depends_on:
       - backend
+
+volumes:
+  mysql_data:
