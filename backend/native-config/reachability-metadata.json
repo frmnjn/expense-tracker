@@ -31,9 +31,6 @@
           "name": "applicationCredentials"
         },
         {
-          "name": "bankSheet"
-        },
-        {
           "name": "budgetSheet"
         },
         {
@@ -180,7 +177,6 @@
             "java.lang.String",
             "java.lang.String",
             "java.lang.String",
-            "java.lang.String",
             "java.lang.Long",
             "java.lang.String"
           ]
@@ -190,10 +186,6 @@
     {
       "type": "com.expensetracker.model.OptionsResponse",
       "methods": [
-        {
-          "name": "banks",
-          "parameterTypes": []
-        },
         {
           "name": "budgets",
           "parameterTypes": []
@@ -650,29 +642,6 @@
       ]
     },
     {
-      "type": "com.google.api.services.sheets.v4.Sheets$Spreadsheets$Values$Update",
-      "fields": [
-        {
-          "name": "includeValuesInResponse"
-        },
-        {
-          "name": "range"
-        },
-        {
-          "name": "responseDateTimeRenderOption"
-        },
-        {
-          "name": "responseValueRenderOption"
-        },
-        {
-          "name": "spreadsheetId"
-        },
-        {
-          "name": "valueInputOption"
-        }
-      ]
-    },
-    {
       "type": "com.google.api.services.sheets.v4.SheetsRequest",
       "fields": [
         {
@@ -707,29 +676,6 @@
         },
         {
           "name": "uploadType"
-        }
-      ]
-    },
-    {
-      "type": "com.google.api.services.sheets.v4.model.AddSheetRequest",
-      "fields": [
-        {
-          "name": "properties"
-        }
-      ]
-    },
-    {
-      "type": "com.google.api.services.sheets.v4.model.AddSheetResponse",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        },
-        {
-          "name": "setProperties",
-          "parameterTypes": [
-            "com.google.api.services.sheets.v4.model.SheetProperties"
-          ]
         }
       ]
     },
@@ -1292,12 +1238,6 @@
         {
           "name": "<init>",
           "parameterTypes": []
-        },
-        {
-          "name": "setAddSheet",
-          "parameterTypes": [
-            "com.google.api.services.sheets.v4.model.AddSheetResponse"
-          ]
         }
       ]
     },

@@ -21,9 +21,7 @@ public class ExpenseService {
     }
 
     public OptionsResponse getOptions() {
-        return new OptionsResponse(
-                googleSheetsClient.getOptions(googleSheetsClient.getBudgetSheet()),
-                googleSheetsClient.getOptions(googleSheetsClient.getBankSheet()));
+        return new OptionsResponse(googleSheetsClient.getOptions(googleSheetsClient.getBudgetSheet()));
     }
 
     public void createExpense(ExpenseRequest request) {
@@ -35,7 +33,6 @@ public class ExpenseService {
                 request.dateTime(),
                 request.name(),
                 request.budget(),
-                request.bank(),
                 request.amount(),
                 request.description());
     }
@@ -57,9 +54,6 @@ public class ExpenseService {
         }
         if (request.budget() == null || request.budget().isBlank()) {
             throw new ValidationException("Budget is required");
-        }
-        if (request.bank() == null || request.bank().isBlank()) {
-            throw new ValidationException("Bank is required");
         }
         if (request.amount() == null) {
             throw new ValidationException("Amount is required");

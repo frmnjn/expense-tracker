@@ -10,7 +10,7 @@ Data tidak disimpan di database, melainkan langsung di Google Sheets menggunakan
 
 * Menambah pengeluaran
 * Input waktu otomatis atau manual
-* Dropdown budget & bank dari Google Sheets
+* Dropdown budget dari Google Sheets
 * Sheet pengeluaran terpisah per periode
 * Urutan sheet otomatis (periode terbaru di kiri)
 * Validasi input
@@ -111,10 +111,9 @@ Tidak diperlukan instalasi Node.js, Java, maupun Maven apabila menjalankan proje
 
 1. Buat Google Spreadsheet.
 
-2. Buat dua sheet untuk data dropdown dengan header di baris 1:
+2. Buat satu sheet untuk data dropdown dengan header di baris 1:
 
    * Sheet `Budget`, kolom A berisi daftar nama budget.
-   * Sheet `Bank`, kolom A berisi daftar nama bank.
 
 3. Buat Google Cloud Service Account.
 
@@ -132,14 +131,14 @@ backend/credentials.json
 
 Sheet pengeluaran per periode (format nama `YYYY-MON-MON`, contoh `2026-JAN-FEB`) dibuat otomatis oleh backend beserta header.
 
-Urutan sheet otomatis diatur oleh backend: periode terbaru paling kiri, lalu periode lama ke kanan, dan tab `Budget`/`Bank` selalu paling kanan. Reorder dilakukan saat backend start dan saat sheet periode baru dibuat.
+Urutan sheet otomatis diatur oleh backend: periode terbaru paling kiri, lalu periode lama ke kanan, dan tab `Budget` selalu paling kanan. Reorder dilakukan saat backend start dan saat sheet periode baru dibuat.
 
 ## Testing Spreadsheet (opsional)
 
 Untuk mencegah test menulis ke spreadsheet produksi, buat spreadsheet terpisah untuk testing:
 
 1. Buat Google Spreadsheet terpisah.
-2. Buat tab `Budget` dan `Bank` (kolom A, header baris 1) — agar test `getOptions` berjalan.
+2. Buat tab `Budget` (kolom A, header baris 1) — agar test `getOptions` berjalan.
 3. Share spreadsheet ke email Service Account yang sama dengan hak akses **Editor**.
 4. Isi ID spreadsheet testing pada `GOOGLE_TEST_SHEET_ID` di `backend/.env`.
 
@@ -181,7 +180,6 @@ GOOGLE_SHEET_ID=YOUR_GOOGLE_SHEET_ID
 GOOGLE_TEST_SHEET_ID=YOUR_TEST_GOOGLE_SHEET_ID
 GOOGLE_APPLICATION_CREDENTIALS=/app/credentials.json
 GOOGLE_BUDGET_SHEET=Budget
-GOOGLE_BANK_SHEET=Bank
 ```
 
 ---
@@ -253,7 +251,6 @@ Request
   "dateTime": "2026-08-06 14:30",
   "name": "Makan Siang",
   "budget": "Daily",
-  "bank": "BCA",
   "amount": 35000,
   "description": "Catatan"
 }
@@ -277,8 +274,7 @@ Response
 {
   "success": true,
   "data": {
-    "budgets": ["Daily", "Weekly"],
-    "banks": ["BCA", "Mandiri"]
+    "budgets": ["Daily", "Weekly"]
   }
 }
 ```
@@ -298,10 +294,6 @@ Name
 * Maksimal 255 karakter
 
 Budget
-
-* Required
-
-Bank
 
 * Required
 

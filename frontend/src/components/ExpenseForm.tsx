@@ -24,7 +24,6 @@ function ExpenseForm() {
   const [dateTime, setDateTime] = useState<string>(dayjs().format(DATE_TIME_SECONDS_FORMAT))
   const [name, setName] = useState('')
   const [budget, setBudget] = useState<string | null>(null)
-  const [bank, setBank] = useState<string | null>(null)
   const [amount, setAmount] = useState<string | number>('')
   const [description, setDescription] = useState('')
 
@@ -35,7 +34,7 @@ function ExpenseForm() {
   const displayValue = nowDisabled ? dayjs().format(DATE_TIME_SECONDS_FORMAT) : dateTime
 
   const submitDisabled =
-    name.trim() === '' || !budget || !bank || Number(amount) <= 0 || createExpense.isPending
+    name.trim() === '' || !budget || Number(amount) <= 0 || createExpense.isPending
 
   const handleSubmit = () => {
     createExpense.mutate(
@@ -43,7 +42,6 @@ function ExpenseForm() {
         dateTime: dayjs(displayValue).format(DATE_TIME_FORMAT),
         name: name.trim(),
         budget: budget ?? '',
-        bank: bank ?? '',
         amount: Number(amount),
         description: description.trim() === '' ? undefined : description.trim(),
       },
@@ -56,7 +54,6 @@ function ExpenseForm() {
           })
           setName('')
           setBudget(null)
-          setBank(null)
           setAmount('')
           setDescription('')
           setDateTime(dayjs().format(DATE_TIME_SECONDS_FORMAT))
@@ -77,10 +74,6 @@ function ExpenseForm() {
 
   const budgetOptions = useMemo(
     () => (options?.budgets ?? []).map((value) => ({ value, label: value })),
-    [options],
-  )
-  const bankOptions = useMemo(
-    () => (options?.banks ?? []).map((value) => ({ value, label: value })),
     [options],
   )
 
@@ -129,18 +122,6 @@ function ExpenseForm() {
           data={budgetOptions}
           value={budget}
           onChange={setBudget}
-          searchable
-          required
-          disabled={optionsLoading}
-          size="md"
-        />
-
-        <Select
-          label="Bank"
-          placeholder={optionsLoading ? 'Memuat...' : 'Pilih bank'}
-          data={bankOptions}
-          value={bank}
-          onChange={setBank}
           searchable
           required
           disabled={optionsLoading}

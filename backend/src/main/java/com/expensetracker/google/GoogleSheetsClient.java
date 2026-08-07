@@ -32,17 +32,15 @@ import java.util.List;
 public class GoogleSheetsClient {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(GoogleSheetsClient.class);
-    private static final List<Object> HEADERS = List.of("Waktu", "Name", "Budget", "Bank", "Nominal", "Description");
+    private static final List<Object> HEADERS = List.of("Waktu", "Name", "Budget", "Nominal", "Description");
 
     private final Sheets sheets;
     private final String spreadsheetId;
     private final String budgetSheet;
-    private final String bankSheet;
 
-    public GoogleSheetsClient(String credentialsPath, String spreadsheetId, String budgetSheet, String bankSheet) {
+    public GoogleSheetsClient(String credentialsPath, String spreadsheetId, String budgetSheet) {
         this.spreadsheetId = spreadsheetId;
         this.budgetSheet = budgetSheet;
-        this.bankSheet = bankSheet;
         this.sheets = createSheetsService(credentialsPath);
     }
 
@@ -72,14 +70,14 @@ public class GoogleSheetsClient {
     }
 
     public void appendExpense(String sheetName, String dateTime, String name,
-                              String budget, String bank, long amount, String description) {
+                              String budget, long amount, String description) {
         ensureSheetExists(sheetName);
         ValueRange body = new ValueRange()
-                .setValues(List.of(List.of(dateTime, name, budget, bank, amount,
+                .setValues(List.of(List.of(dateTime, name, budget, amount,
                         description == null ? "" : description)));
         try {
             sheets.spreadsheets().values()
-                    .append(spreadsheetId, sheetName + "!A:F", body)
+                    .append(spreadsheetId, sheetName + "!A:E", body)
                     .setValueInputOption("USER_ENTERED")
                     .setInsertDataOption("INSERT_ROWS")
                     .execute();
@@ -118,10 +116,6 @@ public class GoogleSheetsClient {
         return budgetSheet;
     }
 
-    public String getBankSheet() {
-        return bankSheet;
-    }
-
     public void reorderSheets() {
         try {
             List<Sheet> existingSheets = sheets.spreadsheets().get(spreadsheetId).execute().getSheets();
@@ -149,15 +143,12 @@ public class GoogleSheetsClient {
             List<String> ordered = new ArrayList<>();
             ordered.addAll(periodSheets);
             for (String title : otherSheets) {
-                if (!budgetSheet.equals(title) && !bankSheet.equals(title)) {
+                if (!budgetSheet.equals(title)) {
                     ordered.add(title);
                 }
             }
             if (titles.contains(budgetSheet)) {
                 ordered.add(budgetSheet);
-            }
-            if (titles.contains(bankSheet)) {
-                ordered.add(bankSheet);
             }
 
             List<Request> requests = new ArrayList<>();

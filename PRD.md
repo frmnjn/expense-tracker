@@ -69,7 +69,6 @@ Field yang harus diisi:
 | Waktu       | Datetime             | Yes      |
 | Name        | String               | Yes      |
 | Budget      | String (dropdown)    | Yes      |
-| Bank        | String (dropdown)    | Yes      |
 | Nominal     | Number               | Yes      |
 | Description | String               | No       |
 
@@ -87,10 +86,6 @@ Budget
 
 Daily
 
-Bank
-
-BCA
-
 Nominal
 
 35000
@@ -101,7 +96,7 @@ Catatan (opsional)
 
 Waktu dapat diisi secara otomatis menggunakan waktu sistem saat ini atau diisi manual.
 
-Budget dan Bank diambil dari dropdown yang datanya bersumber dari Google Sheets.
+Budget diambil dari dropdown yang datanya bersumber dari Google Sheets.
 
 ---
 
@@ -118,10 +113,6 @@ Name
 * maksimal 255 karakter
 
 Budget
-
-* wajib diisi
-
-Bank
 
 * wajib diisi
 
@@ -191,8 +182,8 @@ Sheet baru otomatis dibuat oleh backend pada tanggal 25 beserta header.
 
 Kolom pada setiap sheet periode:
 
-| Waktu                | Name | Budget | Bank | Nominal | Description |
-| -------------------- | ---- | ------ | ---- | ------- | ----------- |
+| Waktu                | Name | Budget | Nominal | Description |
+| -------------------- | ---- | ------ | ------- | ----------- |
 
 Backend akan selalu melakukan append row.
 
@@ -203,16 +194,15 @@ Urutan sheet pada spreadsheet otomatis diatur oleh backend:
 * Sheet periode terbaru paling kiri.
 * Sheet periode yang lebih lama berada di kanannya.
 * Sheet non-periode berada setelah sheet periode.
-* Tab `Budget` dan `Bank` selalu berada paling kanan.
+* Tab `Budget` selalu berada paling kanan.
 
 Reorder dilakukan saat backend start dan setiap kali sheet periode baru dibuat.
 
-Dropdown Budget dan Bank bersumber dari sheet khusus pada spreadsheet yang sama:
+Dropdown Budget bersumber dari sheet khusus pada spreadsheet yang sama:
 
 | Tab    | Isi                                   |
 | ------ | ------------------------------------- |
 | Budget | Kolom A berisi daftar nama budget, header di baris 1 |
-| Bank   | Kolom A berisi daftar nama bank, header di baris 1 |
 
 ---
 
@@ -227,7 +217,6 @@ Request
     "dateTime": "2026-08-06 14:30",
     "name": "Makan Siang",
     "budget": "Daily",
-    "bank": "BCA",
     "amount": 35000,
     "description": "Catatan"
 }
@@ -245,7 +234,7 @@ Response
 
 ## GET /options
 
-Mengembalikan daftar budget dan bank untuk dropdown.
+Mengembalikan daftar budget untuk dropdown.
 
 Response
 
@@ -253,8 +242,7 @@ Response
 {
     "success": true,
     "data": {
-        "budgets": ["Daily", "Weekly"],
-        "banks": ["BCA", "Mandiri"]
+        "budgets": ["Daily", "Weekly"]
     }
 }
 ```
@@ -283,7 +271,6 @@ Komponen:
 * Input Waktu (opsi: waktu sistem saat ini atau manual)
 * Name Text Field
 * Budget Dropdown
-* Bank Dropdown
 * Nominal Number Field
 * Description Text Field (opsional)
 * Save Button
@@ -353,7 +340,6 @@ GOOGLE_APPLICATION_CREDENTIALS=/app/credentials.json
 GOOGLE_SHEET_ID=xxxxxxxxxxxxxxxx
 GOOGLE_TEST_SHEET_ID=xxxxxxxxxxxxxxxx (opsional, untuk integration test)
 GOOGLE_BUDGET_SHEET=Budget
-GOOGLE_BANK_SHEET=Bank
 PORT=8080
 ```
 
@@ -385,7 +371,7 @@ README.md
 
 * User dapat membuka aplikasi dari browser.
 * User dapat mengisi form pengeluaran.
-* User dapat memilih budget dan bank dari dropdown.
+* User dapat memilih budget dari dropdown.
 * User dapat menekan tombol Save.
 * Data berhasil tersimpan ke sheet periode yang benar pada Google Sheets.
 * Jika validasi gagal, tampilkan pesan error.
