@@ -169,6 +169,19 @@
       ]
     },
     {
+      "type": "com.expensetracker.model.BudgetOption",
+      "methods": [
+        {
+          "name": "balance",
+          "parameterTypes": []
+        },
+        {
+          "name": "name",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
       "type": "com.expensetracker.model.ExpenseRequest",
       "methods": [
         {
@@ -345,6 +358,12 @@
         },
         {
           "name": "setAuthenticate",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        },
+        {
+          "name": "setAuthorization",
           "parameterTypes": [
             "java.lang.String"
           ]
@@ -642,6 +661,29 @@
       ]
     },
     {
+      "type": "com.google.api.services.sheets.v4.Sheets$Spreadsheets$Values$Update",
+      "fields": [
+        {
+          "name": "includeValuesInResponse"
+        },
+        {
+          "name": "range"
+        },
+        {
+          "name": "responseDateTimeRenderOption"
+        },
+        {
+          "name": "responseValueRenderOption"
+        },
+        {
+          "name": "spreadsheetId"
+        },
+        {
+          "name": "valueInputOption"
+        }
+      ]
+    },
+    {
       "type": "com.google.api.services.sheets.v4.SheetsRequest",
       "fields": [
         {
@@ -676,6 +718,29 @@
         },
         {
           "name": "uploadType"
+        }
+      ]
+    },
+    {
+      "type": "com.google.api.services.sheets.v4.model.AddSheetRequest",
+      "fields": [
+        {
+          "name": "properties"
+        }
+      ]
+    },
+    {
+      "type": "com.google.api.services.sheets.v4.model.AddSheetResponse",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        },
+        {
+          "name": "setProperties",
+          "parameterTypes": [
+            "com.google.api.services.sheets.v4.model.SheetProperties"
+          ]
         }
       ]
     },
@@ -754,7 +819,89 @@
       ]
     },
     {
+      "type": "com.google.api.services.sheets.v4.model.CellData",
+      "fields": [
+        {
+          "name": "chipRuns"
+        },
+        {
+          "name": "dataSourceFormula"
+        },
+        {
+          "name": "dataSourceTable"
+        },
+        {
+          "name": "dataValidation"
+        },
+        {
+          "name": "effectiveFormat"
+        },
+        {
+          "name": "effectiveValue"
+        },
+        {
+          "name": "formattedValue"
+        },
+        {
+          "name": "hyperlink"
+        },
+        {
+          "name": "note"
+        },
+        {
+          "name": "pivotTable"
+        },
+        {
+          "name": "textFormatRuns"
+        },
+        {
+          "name": "userEnteredFormat"
+        },
+        {
+          "name": "userEnteredValue"
+        }
+      ]
+    },
+    {
       "type": "com.google.api.services.sheets.v4.model.CellFormat",
+      "fields": [
+        {
+          "name": "backgroundColor"
+        },
+        {
+          "name": "backgroundColorStyle"
+        },
+        {
+          "name": "borders"
+        },
+        {
+          "name": "horizontalAlignment"
+        },
+        {
+          "name": "hyperlinkDisplayType"
+        },
+        {
+          "name": "numberFormat"
+        },
+        {
+          "name": "padding"
+        },
+        {
+          "name": "textDirection"
+        },
+        {
+          "name": "textFormat"
+        },
+        {
+          "name": "textRotation"
+        },
+        {
+          "name": "verticalAlignment"
+        },
+        {
+          "name": "wrapStrategy"
+        }
+      ],
       "methods": [
         {
           "name": "<init>",
@@ -962,6 +1109,23 @@
     },
     {
       "type": "com.google.api.services.sheets.v4.model.GridRange",
+      "fields": [
+        {
+          "name": "endColumnIndex"
+        },
+        {
+          "name": "endRowIndex"
+        },
+        {
+          "name": "sheetId"
+        },
+        {
+          "name": "startColumnIndex"
+        },
+        {
+          "name": "startRowIndex"
+        }
+      ],
       "methods": [
         {
           "name": "<init>",
@@ -975,6 +1139,17 @@
         {
           "name": "<init>",
           "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.google.api.services.sheets.v4.model.NumberFormat",
+      "fields": [
+        {
+          "name": "pattern"
+        },
+        {
+          "name": "type"
         }
       ]
     },
@@ -1017,6 +1192,20 @@
         {
           "name": "<init>",
           "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.google.api.services.sheets.v4.model.RepeatCellRequest",
+      "fields": [
+        {
+          "name": "cell"
+        },
+        {
+          "name": "fields"
+        },
+        {
+          "name": "range"
         }
       ]
     },
@@ -1238,6 +1427,12 @@
         {
           "name": "<init>",
           "parameterTypes": []
+        },
+        {
+          "name": "setAddSheet",
+          "parameterTypes": [
+            "com.google.api.services.sheets.v4.model.AddSheetResponse"
+          ]
         }
       ]
     },

@@ -8,6 +8,11 @@ import com.google.api.services.sheets.v4.Sheets;
 import com.google.api.services.sheets.v4.SheetsScopes;
 import com.google.api.services.sheets.v4.model.AddSheetRequest;
 import com.google.api.services.sheets.v4.model.BatchUpdateSpreadsheetRequest;
+import com.google.api.services.sheets.v4.model.CellData;
+import com.google.api.services.sheets.v4.model.CellFormat;
+import com.google.api.services.sheets.v4.model.GridRange;
+import com.google.api.services.sheets.v4.model.NumberFormat;
+import com.google.api.services.sheets.v4.model.RepeatCellRequest;
 import com.google.api.services.sheets.v4.model.Request;
 import com.google.api.services.sheets.v4.model.Sheet;
 import com.google.api.services.sheets.v4.model.SheetProperties;
@@ -15,6 +20,7 @@ import com.google.api.services.sheets.v4.model.Spreadsheet;
 import com.google.api.services.sheets.v4.model.UpdateSheetPropertiesRequest;
 import com.google.api.services.sheets.v4.model.ValueRange;
 import com.expensetracker.service.PeriodSheetName;
+import com.expensetracker.model.BudgetOption;
 import com.google.auth.http.HttpCredentialsAdapter;
 import com.google.auth.oauth2.GoogleCredentials;
 import org.slf4j.Logger;
@@ -87,28 +93,87 @@ public class GoogleSheetsClient {
         }
     }
 
-    public List<String> getOptions(String sheetName) {
+    public List<BudgetOption> getOptions(String sheetName) {
         try {
             ValueRange result = sheets.spreadsheets().values()
-                    .get(spreadsheetId, sheetName + "!A:A")
+                    .get(spreadsheetId, sheetName + "!A:B")
                     .execute();
-            List<String> options = new ArrayList<>();
+            List<BudgetOption> options = new ArrayList<>();
             if (result.getValues() == null) {
                 return options;
             }
             for (int i = 1; i < result.getValues().size(); i++) {
                 List<Object> row = result.getValues().get(i);
-                if (row != null && !row.isEmpty() && row.get(0) != null) {
-                    String value = String.valueOf(row.get(0)).trim();
-                    if (!value.isBlank()) {
-                        options.add(value);
-                    }
+                if (row == null || row.isEmpty() || row.get(0) == null) {
+                    continue;
                 }
+                String name = String.valueOf(row.get(0)).trim();
+                if (name.isBlank()) {
+                    continue;
+                }
+                options.add(new BudgetOption(name, parseBalance(row.size() > 1 ? row.get(1) : null)));
             }
             return options;
         } catch (IOException e) {
             LOGGER.error("error reading options from google sheets api", e);
             throw new IllegalStateException("Failed to read options from google sheets", e);
+        }
+    }
+
+    public void decrementBudget(String budget, long amount) {
+        try {
+            ValueRange result = sheets.spreadsheets().values()
+                    .get(spreadsheetId, budgetSheet + "!A:B")
+                    .execute();
+            List<List<Object>> values = result.getValues();
+            if (values == null) {
+                return;
+            }
+            int rowIndex = -1;
+            for (int i = 0; i < values.size(); i++) {
+                List<Object> row = values.get(i);
+                if (row != null && !row.isEmpty() && budget.equals(String.valueOf(row.get(0)).trim())) {
+                    rowIndex = i;
+                    break;
+                }
+            }
+            if (rowIndex < 0) {
+                LOGGER.warn("budget not found for decrement: budget={}", budget);
+                return;
+            }
+            long current = parseBalance(values.get(rowIndex).size() > 1
+                    ? values.get(rowIndex).get(1) : null);
+            long updated = current - amount;
+            ValueRange body = new ValueRange().setValues(List.of(List.of(updated)));
+            sheets.spreadsheets().values()
+                    .update(spreadsheetId, budgetSheet + "!B" + (rowIndex + 1), body)
+                    .setValueInputOption("RAW")
+                    .execute();
+        } catch (IOException e) {
+            LOGGER.error("error decrementing budget in google sheets api", e);
+            throw new IllegalStateException("Failed to decrement budget in google sheets", e);
+        }
+    }
+
+    private static long parseBalance(Object value) {
+        if (value == null) {
+            return 0;
+        }
+        String raw = String.valueOf(value).trim();
+        if (raw.isEmpty()) {
+            return 0;
+        }
+        boolean negative = raw.startsWith("-") || raw.startsWith("(");
+        String digits = raw.replaceAll("[^0-9]", "");
+        if (digits.isEmpty()) {
+            return 0;
+        }
+        try {
+            long parsed = Long.parseLong(digits);
+            return negative ? -parsed : parsed;
+        } catch (NumberFormatException e) {
+            LOGGER.warn("failed to parse balance value={}", value);
+            return 0;
         }
     }
 
@@ -229,9 +294,40 @@ public class GoogleSheetsClient {
         try {
             sheets.spreadsheets().batchUpdate(spreadsheetId, batch).execute();
             writeHeaders(sheetName);
+            formatCurrencyColumn(sheetName, 3);
             reorderSheets();
         } catch (IOException e) {
             throw new IllegalStateException("Failed to create sheet " + sheetName, e);
+        }
+    }
+
+    public void formatBudgetBalanceColumn() {
+        formatCurrencyColumn(budgetSheet, 1);
+    }
+
+    private void formatCurrencyColumn(String sheetName, int columnIndex) {
+        try {
+            Spreadsheet spreadsheet = sheets.spreadsheets().get(spreadsheetId).execute();
+            Integer sheetId = findSheetId(spreadsheet.getSheets(), sheetName);
+            if (sheetId == null) {
+                return;
+            }
+            CellFormat currencyFormat = new CellFormat()
+                    .setNumberFormat(new NumberFormat()
+                            .setType("CURRENCY")
+                            .setPattern("Rp #,##0"));
+            RepeatCellRequest repeat = new RepeatCellRequest()
+                    .setCell(new CellData().setUserEnteredFormat(currencyFormat))
+                    .setFields("userEnteredFormat.numberFormat")
+                    .setRange(new GridRange()
+                            .setSheetId(sheetId)
+                            .setStartColumnIndex(columnIndex)
+                            .setEndColumnIndex(columnIndex + 1));
+            BatchUpdateSpreadsheetRequest batch = new BatchUpdateSpreadsheetRequest()
+                    .setRequests(List.of(new Request().setRepeatCell(repeat)));
+            sheets.spreadsheets().batchUpdate(spreadsheetId, batch).execute();
+        } catch (IOException e) {
+            LOGGER.error("failed to format currency column {} in sheet {}", columnIndex, sheetName, e);
         }
     }
 

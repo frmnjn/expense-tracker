@@ -2,19 +2,23 @@ import { useMemo, useState } from 'react'
 import {
   Box,
   Button,
+  Group,
   NumberInput,
   Paper,
   SegmentedControl,
   Select,
   Stack,
+  Text,
   TextInput,
   Title,
 } from '@mantine/core'
 import { DateTimePicker } from '@mantine/dates'
 import { notifications } from '@mantine/notifications'
+import { useQueryClient } from '@tanstack/react-query'
 import dayjs from 'dayjs'
 import { useCreateExpense } from '../hooks/useCreateExpense'
 import { useOptions } from '../hooks/useOptions'
+import { formatCurrency } from '../utils/currency'
 
 const DATE_TIME_FORMAT = 'YYYY-MM-DD HH:mm'
 const DATE_TIME_SECONDS_FORMAT = 'YYYY-MM-DD HH:mm:ss'
@@ -29,6 +33,7 @@ function ExpenseForm() {
 
   const { data: options, isPending: optionsLoading } = useOptions()
   const createExpense = useCreateExpense()
+  const queryClient = useQueryClient()
 
   const nowDisabled = mode === 'now'
   const displayValue = nowDisabled ? dayjs().format(DATE_TIME_SECONDS_FORMAT) : dateTime
@@ -52,6 +57,7 @@ function ExpenseForm() {
             message: 'Pengeluaran berhasil disimpan',
             color: 'green',
           })
+          queryClient.invalidateQueries({ queryKey: ['options'] })
           setName('')
           setBudget(null)
           setAmount('')
@@ -72,10 +78,19 @@ function ExpenseForm() {
     )
   }
 
+  const balanceOf = (name: string): number | undefined =>
+    options?.budgets.find((b) => b.name === name)?.balance
+
   const budgetOptions = useMemo(
-    () => (options?.budgets ?? []).map((value) => ({ value, label: value })),
+    () => (options?.budgets ?? []).map((value) => ({ value: value.name, label: value.name })),
     [options],
   )
+
+  const selectedBalance = budget ? balanceOf(budget) : undefined
+  const amountNumber = Number(amount)
+  const showPreview = selectedBalance !== undefined && amountNumber > 0
+  const projectedBalance = showPreview ? selectedBalance - amountNumber : 0
+  const balanceColor = (value: number) => (value < 0 ? 'red' : undefined)
 
   return (
     <Paper withBorder p="lg" radius="md" shadow="sm">
@@ -126,6 +141,17 @@ function ExpenseForm() {
           required
           disabled={optionsLoading}
           size="md"
+          renderOption={({ option }) => {
+            const balance = balanceOf(option.value)
+            return (
+              <Group flex="1" justify="space-between" wrap="nowrap" gap="md">
+                <Text truncate>{option.label}</Text>
+                <Text ta="end" ff="monospace" c={balanceColor(balance ?? 0)}>
+                  {balance === undefined ? '-' : formatCurrency(balance)}
+                </Text>
+              </Group>
+            )
+          }}
         />
 
         <NumberInput
@@ -142,6 +168,33 @@ function ExpenseForm() {
           required
           size="md"
         />
+
+        {showPreview && (
+          <Paper withBorder p="sm" radius="md" bg="var(--mantine-color-body)">
+            <Stack gap="4">
+              <Group justify="space-between">
+                <Text size="sm" c="dimmed">
+                  Sisa saldo
+                </Text>
+                <Text size="sm">{formatCurrency(selectedBalance)}</Text>
+              </Group>
+              <Group justify="space-between">
+                <Text size="sm" c="dimmed">
+                  Nominal
+                </Text>
+                <Text size="sm">-{formatCurrency(amountNumber)}</Text>
+              </Group>
+              <Group justify="space-between">
+                <Text size="sm" fw={500}>
+                  Saldo nanti
+                </Text>
+                <Text size="sm" fw={700} c={balanceColor(projectedBalance)} ff="monospace">
+                  {formatCurrency(projectedBalance)}
+                </Text>
+              </Group>
+            </Stack>
+          </Paper>
+        )}
 
         <TextInput
           label="Description (opsional)"

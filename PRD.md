@@ -202,7 +202,13 @@ Dropdown Budget bersumber dari sheet khusus pada spreadsheet yang sama:
 
 | Tab    | Isi                                   |
 | ------ | ------------------------------------- |
-| Budget | Kolom A berisi daftar nama budget, header di baris 1 |
+| Budget | Kolom A berisi daftar nama budget, kolom B berisi saldo, header di baris 1 |
+
+Saldo pada kolom B merupakan saldo running dan boleh bernilai negatif.
+
+Penambahan saldo (misalnya tiap gajian tanggal 25) dilakukan manual oleh user langsung di Google Sheets dengan mengedit nilai kolom B.
+
+Setiap expense yang tersimpan akan otomatis mengurangi saldo budget terkait sebesar nominalnya.
 
 ---
 
@@ -234,7 +240,7 @@ Response
 
 ## GET /options
 
-Mengembalikan daftar budget untuk dropdown.
+Mengembalikan daftar budget beserta saldonya untuk dropdown.
 
 Response
 
@@ -242,7 +248,10 @@ Response
 {
     "success": true,
     "data": {
-        "budgets": ["Daily", "Weekly"]
+        "budgets": [
+            { "name": "Daily", "balance": 500000 },
+            { "name": "Weekly", "balance": -10000 }
+        ]
     }
 }
 ```
@@ -274,6 +283,25 @@ Komponen:
 * Nominal Number Field
 * Description Text Field (opsional)
 * Save Button
+
+### Budget Dropdown & Preview Saldo
+
+Dropdown Budget ditampilkan dua kolom:
+
+* nama budget di kiri
+* saldo di kanan (rata kanan, font mono, merah jika negatif)
+
+Di bawah field Budget ditampilkan sisa saldo budget yang terpilih.
+
+Setelah Nominal diisi, muncul kartu preview:
+
+* Sisa saldo saat ini
+* Nominal
+* Saldo nanti (sisa saldo dikurangi nominal), hijau jika >= 0 dan merah jika negatif
+
+Preview dinonaktifkan selama budget belum dipilih atau nominal kosong / <= 0.
+
+Budget boleh bernilai negatif.
 
 Waktu menggunakan format:
 
