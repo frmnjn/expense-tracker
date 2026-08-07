@@ -72,14 +72,17 @@ public class ExpenseService {
         }
         List<ExpenseResponse> expenses = googleSheetsClient.getExpenses(period);
         long total = 0;
-        Map<String, Long> byBudget = new LinkedHashMap<>();
+        Map<String, Long> amountByBudget = new LinkedHashMap<>();
+        Map<String, Integer> countByBudget = new LinkedHashMap<>();
         for (ExpenseResponse expense : expenses) {
             long amount = expense.amount() == null ? 0 : expense.amount();
             total += amount;
-            byBudget.merge(expense.budget(), amount, Long::sum);
+            amountByBudget.merge(expense.budget(), amount, Long::sum);
+            countByBudget.merge(expense.budget(), 1, Integer::sum);
         }
-        List<BudgetSummary> list = byBudget.entrySet().stream()
-                .map(e -> new BudgetSummary(e.getKey(), e.getValue()))
+        List<BudgetSummary> list = amountByBudget.entrySet().stream()
+                .map(e -> new BudgetSummary(e.getKey(), e.getValue(),
+                        countByBudget.getOrDefault(e.getKey(), 0)))
                 .sorted(Comparator.comparingLong(BudgetSummary::amount).reversed())
                 .toList();
         return new SummaryResponse(period, total, expenses.size(), list);

@@ -328,8 +328,8 @@ Response
         "total": 80000,
         "count": 3,
         "byBudget": [
-            { "budget": "Weekly", "amount": 50000 },
-            { "budget": "Daily", "amount": 30000 }
+            { "budget": "Weekly", "amount": 50000, "count": 1 },
+            { "budget": "Daily", "amount": 30000, "count": 2 }
         ]
     }
 }
@@ -478,11 +478,12 @@ Saat aplikasi dibuka, user langsung melihat form pencatatan pengeluaran.
 Komponen:
 
 * Dropdown periode
-* Kartu ringkasan: total pengeluaran, jumlah transaksi, jumlah budget bersaldo negatif
-* Daftar saldo per budget (saldo saat ini + pengeluaran pada periode)
-* Tombol "Tambah Saldo" (modal: pilih budget + nominal + deskripsi) untuk menambah saldo budget
-* Daftar pengeluaran terbesar (3 budget teratas)
-* Daftar riwayat top-up saldo
+* Daftar saldo per budget — tiap kartu menampilkan:
+  * nama budget, dengan badge urutan (1–3) jika masuk pengeluaran terbesar periode
+  * saldo saat ini (merah jika negatif)
+  * ikon `+` untuk menambah saldo (modal: nominal + deskripsi)
+  * ikon `📋` untuk membuka riwayat top-up budget tersebut
+  * saat periode dipilih: jumlah transaksi + pengeluaran periode budget tersebut
 * Ringkasan 3 bulan terakhir (total + transaksi per periode, dengan bar visual)
 
 Komponen halaman form:

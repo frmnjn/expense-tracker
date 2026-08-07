@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import {
   ActionIcon,
   Anchor,
+  Badge,
   Box,
   Container,
   Group,
@@ -16,33 +17,20 @@ import {
 import { useMediaQuery } from '@mantine/hooks'
 import { usePeriods, useSummary, useTrend } from '../hooks/useExpenses'
 import { useOptions } from '../hooks/useOptions'
-import { useTopUps } from '../hooks/useTopUps'
 import ColorSchemeToggle from '../components/ColorSchemeToggle'
 import TopUpModal from '../components/TopUpModal'
+import TopUpHistoryModal from '../components/TopUpHistoryModal'
 import { formatCurrency } from '../utils/currency'
 import type { BudgetSummary } from '../types/expense'
 
 const balanceColor = (value: number) => (value < 0 ? 'red' : undefined)
 
-function StatCard({ label, value, color }: { label: string; value: string; color?: string }) {
-  return (
-    <Paper withBorder p="lg" radius="md" shadow="sm">
-      <Text size="sm" c="dimmed">
-        {label}
-      </Text>
-      <Text size="xl" fw={700} ff="monospace" c={color}>
-        {value}
-      </Text>
-    </Paper>
-  )
-}
-
 function DashboardPage() {
   const { data: periodsData, isPending: periodsLoading } = usePeriods()
   const { data: options } = useOptions()
-  const { data: topUpsData } = useTopUps()
   const [period, setPeriod] = useState<string | null>(null)
   const [selectedTopUpBudget, setSelectedTopUpBudget] = useState<string | null>(null)
+  const [selectedTopUpHistoryBudget, setSelectedTopUpHistoryBudget] = useState<string | null>(null)
   const { data: summary, isPending: summaryLoading } = useSummary(period)
   const { data: trend } = useTrend(3)
   const isMobile = useMediaQuery('(max-width: 48em)')
@@ -50,9 +38,11 @@ function DashboardPage() {
   const periods = useMemo(() => (periodsData?.periods ?? []).map((p) => ({ value: p, label: p })), [periodsData])
 
   const balanceOf = (name: string): number | undefined => options?.budgets.find((b) => b.name === name)?.balance
-  const negativeCount = (options?.budgets ?? []).filter((b) => b.balance < 0).length
-  const spendingOf = new Map<string, number>((summary?.byBudget ?? []).map((b: BudgetSummary) => [b.budget, b.amount]))
-  const topUps = useMemo(() => (topUpsData?.topUps ?? []).slice().reverse(), [topUpsData])
+
+  const byBudget = summary?.byBudget ?? []
+  const budgetInfo = (name: string): BudgetSummary | undefined => byBudget.find((b) => b.budget === name)
+  const rankOf = new Map<string, number>()
+  byBudget.slice(0, 3).forEach((b, i) => rankOf.set(b.budget, i + 1))
 
   const allBudgets = useMemo(() => {
     const names = new Set<string>([
@@ -62,8 +52,50 @@ function DashboardPage() {
     return Array.from(names).sort()
   }, [options, summary])
 
-  const topBudgets = summary?.byBudget.slice(0, 3) ?? []
   const selectedTopUpBalance = selectedTopUpBudget ? balanceOf(selectedTopUpBudget) : undefined
+
+  const renderBudgetCard = (name: string) => {
+    const balance = balanceOf(name)
+    const rank = rankOf.get(name)
+    const info = budgetInfo(name)
+    return (
+      <Paper key={name} withBorder p="sm" radius="md">
+        <Group justify="space-between" mb={4}>
+          <Group gap="xs" wrap="nowrap">
+            {rank && (
+              <Badge size="sm" variant="light" color="blue" circle>
+                {rank}
+              </Badge>
+            )}
+            <Text fw={600} style={{ wordBreak: 'break-word' }}>
+              {name}
+            </Text>
+          </Group>
+          <Group gap="xs" wrap="nowrap">
+            <Text fw={700} ff="monospace" c={balance !== undefined ? balanceColor(balance) : undefined}>
+              {balance !== undefined ? formatCurrency(balance) : '-'}
+            </Text>
+            <ActionIcon
+              size="sm"
+              variant="subtle"
+              color="blue"
+              onClick={() => setSelectedTopUpHistoryBudget(name)}
+            >
+              <span>📋</span>
+            </ActionIcon>
+            <ActionIcon size="sm" variant="subtle" color="green" onClick={() => setSelectedTopUpBudget(name)}>
+              <span>+</span>
+            </ActionIcon>
+          </Group>
+        </Group>
+        {info && (
+          <Text size="sm" c="dimmed">
+            {info.count} transaksi · {formatCurrency(info.amount)}
+          </Text>
+        )}
+      </Paper>
+    )
+  }
 
   return (
     <Container size="md" py="lg">
@@ -103,144 +135,13 @@ function DashboardPage() {
           {allBudgets.length === 0 ? (
             <Text c="dimmed">Belum ada budget.</Text>
           ) : isMobile ? (
-            <Stack gap="sm">
-              {allBudgets.map((name) => {
-                const balance = balanceOf(name)
-                const spending = spendingOf.get(name)
-                return (
-                  <Paper key={name} withBorder p="sm" radius="md">
-                    <Group justify="space-between" mb={4}>
-                      <Text fw={600} style={{ wordBreak: 'break-word' }}>
-                        {name}
-                      </Text>
-                      <Group gap="xs" wrap="nowrap">
-                        <Text
-                          fw={700}
-                          ff="monospace"
-                          c={balance !== undefined ? balanceColor(balance) : undefined}
-                        >
-                          {balance !== undefined ? formatCurrency(balance) : '-'}
-                        </Text>
-                        <ActionIcon
-                          size="sm"
-                          variant="subtle"
-                          color="green"
-                          onClick={() => setSelectedTopUpBudget(name)}
-                        >
-                          <span>+</span>
-                        </ActionIcon>
-                      </Group>
-                    </Group>
-                    {spending !== undefined && (
-                      <Text size="sm" c="dimmed">
-                        Pengeluaran periode: {formatCurrency(spending)}
-                      </Text>
-                    )}
-                  </Paper>
-                )
-              })}
-            </Stack>
+            <Stack gap="sm">{allBudgets.map(renderBudgetCard)}</Stack>
           ) : (
             <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">
-              {allBudgets.map((name) => {
-                const balance = balanceOf(name)
-                const spending = spendingOf.get(name)
-                return (
-                  <Paper key={name} withBorder p="sm" radius="md">
-                    <Group justify="space-between" mb={4}>
-                      <Text fw={600} style={{ wordBreak: 'break-word' }}>
-                        {name}
-                      </Text>
-                      <Group gap="xs" wrap="nowrap">
-                        <Text
-                          fw={700}
-                          ff="monospace"
-                          c={balance !== undefined ? balanceColor(balance) : undefined}
-                        >
-                          {balance !== undefined ? formatCurrency(balance) : '-'}
-                        </Text>
-                        <ActionIcon
-                          size="sm"
-                          variant="subtle"
-                          color="green"
-                          onClick={() => setSelectedTopUpBudget(name)}
-                        >
-                          <span>+</span>
-                        </ActionIcon>
-                      </Group>
-                    </Group>
-                    {spending !== undefined && (
-                      <Text size="sm" c="dimmed">
-                        Pengeluaran periode: {formatCurrency(spending)}
-                      </Text>
-                    )}
-                  </Paper>
-                )
-              })}
+              {allBudgets.map(renderBudgetCard)}
             </SimpleGrid>
           )}
         </Paper>
-
-        {!period ? (
-          <Text c="dimmed" ta="center" py="lg">
-            Pilih periode untuk melihat ringkasan pengeluaran.
-          </Text>
-        ) : (
-          <>
-            <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="md">
-              <StatCard label="Total Pengeluaran" value={formatCurrency(summary?.total ?? 0)} />
-              <StatCard label="Jumlah Transaksi" value={String(summary?.count ?? 0)} />
-              <StatCard
-                label="Budget Saldo Negatif"
-                value={String(negativeCount)}
-                color={negativeCount > 0 ? 'red' : undefined}
-              />
-            </SimpleGrid>
-
-            <Paper withBorder p={{ base: 'md', sm: 'lg' }} radius="md" shadow="sm">
-              <Title order={4} mb="sm">
-                Pengeluaran Terbesar
-              </Title>
-              {topBudgets.length === 0 ? (
-                <Text c="dimmed">Belum ada pengeluaran pada periode ini.</Text>
-              ) : (
-                <Stack gap="xs">
-                  {topBudgets.map((b, i) => (
-                    <Group key={b.budget} justify="space-between">
-                      <Text>
-                        {i + 1}. {b.budget}
-                      </Text>
-                      <Text ff="monospace">{formatCurrency(b.amount)}</Text>
-                    </Group>
-                  ))}
-                </Stack>
-              )}
-            </Paper>
-          </>
-        )}
-
-        {topUps.length > 0 && (
-          <Paper withBorder p={{ base: 'md', sm: 'lg' }} radius="md" shadow="sm">
-            <Title order={4} mb="sm">
-              Riwayat Top-up
-            </Title>
-            <Stack gap="xs">
-              {topUps.map((t) => (
-                <Group key={t.id} justify="space-between">
-                  <div>
-                    <Text size="sm">{t.budget}</Text>
-                    <Text size="xs" c="dimmed">
-                      {t.dateTime}
-                    </Text>
-                  </div>
-                  <Text ff="monospace" fw={600} c="green">
-                    +{formatCurrency(t.amount)}
-                  </Text>
-                </Group>
-              ))}
-            </Stack>
-          </Paper>
-        )}
 
         {trend && trend.periods.length > 0 && (
           <Paper withBorder p={{ base: 'md', sm: 'lg' }} radius="md" shadow="sm">
@@ -280,6 +181,12 @@ function DashboardPage() {
           budget={selectedTopUpBudget ?? ''}
           balance={selectedTopUpBalance}
           onClose={() => setSelectedTopUpBudget(null)}
+        />
+
+        <TopUpHistoryModal
+          opened={!!selectedTopUpHistoryBudget}
+          budget={selectedTopUpHistoryBudget ?? ''}
+          onClose={() => setSelectedTopUpHistoryBudget(null)}
         />
       </Stack>
     </Container>

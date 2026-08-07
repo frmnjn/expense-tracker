@@ -178,8 +178,10 @@ class ExpenseServiceTest {
         assertEquals(3, summary.count());
         assertEquals("Weekly", summary.byBudget().get(0).budget());
         assertEquals(5000L, summary.byBudget().get(0).amount());
+        assertEquals(1, summary.byBudget().get(0).count());
         assertEquals("Daily", summary.byBudget().get(1).budget());
         assertEquals(3000L, summary.byBudget().get(1).amount());
+        assertEquals(2, summary.byBudget().get(1).count());
     }
 
     @Test

@@ -532,3 +532,24 @@ Menampilkan daftar pengeluaran per periode, mengedit, dan menghapus (soft delete
 
 * [x] GET /trend mengembalikan total & count per periode (test sheet)
 * [x] Build & lint lolos
+
+---
+
+# Phase 16 - Restrukturisasi Dashboard
+
+## Backend
+
+* [x] `BudgetSummary` tambah field `count`; `getSummary` menghitung jumlah transaksi per budget
+
+## Frontend
+
+* [x] Hapus kartu stat (total, transaksi, budget negatif) & section pengeluaran terbesar & riwayat top-up flat
+* [x] Kartu budget: badge urutan terbesar (1–3), saldo, ikon `+` & `📋`, jumlah transaksi + pengeluaran periode
+* [x] `TopUpHistoryModal` (ikon 📋 → riwayat top-up per budget, terbaru di atas)
+* [x] Pindah "3 Bulan Terakhir" ke bawah "Saldo per Budget"
+* [x] Build & lint lolos
+
+## Verifikasi
+
+* [x] `/summary` mengembalikan `count` per budget (test sheet)
+* [x] Cek di docker local

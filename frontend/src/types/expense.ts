@@ -35,6 +35,7 @@ export interface ExpensesResponse {
 export interface BudgetSummary {
   budget: string
   amount: number
+  count: number
 }
 
 export interface SummaryResponse {
