@@ -220,6 +220,10 @@
         {
           "name": "budget",
           "parameterTypes": []
+        },
+        {
+          "name": "count",
+          "parameterTypes": []
         }
       ]
     },
