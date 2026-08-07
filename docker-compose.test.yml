@@ -1,4 +1,0 @@
-services:
-  backend:
-    environment:
-      GOOGLE_SHEET_ID: ${GOOGLE_TEST_SHEET_ID:?GOOGLE_TEST_SHEET_ID wajib diisi untuk mode testing}

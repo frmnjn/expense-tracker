@@ -1,8 +1,10 @@
 package com.expensetracker.service;
 
-import com.expensetracker.google.GoogleSheetsClient;
+import com.expensetracker.data.BudgetRepository;
+import com.expensetracker.data.ExpenseData;
+import com.expensetracker.data.ExpenseRepository;
+import com.expensetracker.data.TopUpRepository;
 import com.expensetracker.model.BudgetSummary;
-import com.expensetracker.model.ExpenseRef;
 import com.expensetracker.model.ExpenseRequest;
 import com.expensetracker.model.ExpenseResponse;
 import com.expensetracker.model.ExpensesResponse;
@@ -10,14 +12,13 @@ import com.expensetracker.model.OptionsResponse;
 import com.expensetracker.model.PeriodsResponse;
 import com.expensetracker.model.SummaryResponse;
 import com.expensetracker.model.TopUpRequest;
-import com.expensetracker.model.TopUpResponse;
 import com.expensetracker.model.TopUpsResponse;
 import com.expensetracker.model.TrendPoint;
 import com.expensetracker.model.TrendResponse;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -25,60 +26,69 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Service
 public class ExpenseService {
 
-    private static final DateTimeFormatter DATE_TIME_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+    private final BudgetRepository budgetRepository;
+    private final ExpenseRepository expenseRepository;
+    private final TopUpRepository topUpRepository;
 
-    private final GoogleSheetsClient googleSheetsClient;
-
-    public ExpenseService(GoogleSheetsClient googleSheetsClient) {
-        this.googleSheetsClient = googleSheetsClient;
+    public ExpenseService(BudgetRepository budgetRepository,
+                          ExpenseRepository expenseRepository,
+                          TopUpRepository topUpRepository) {
+        this.budgetRepository = budgetRepository;
+        this.expenseRepository = expenseRepository;
+        this.topUpRepository = topUpRepository;
     }
 
     public OptionsResponse getOptions() {
-        return new OptionsResponse(googleSheetsClient.getOptions(googleSheetsClient.getBudgetSheet()));
+        return new OptionsResponse(budgetRepository.getOptions());
     }
 
+    @Transactional
     public void createExpense(ExpenseRequest request) {
         validate(request);
-        LocalDateTime dateTime = LocalDateTime.parse(request.dateTime(), DATE_TIME_FORMAT);
-        String sheetName = PeriodSheetName.forDate(dateTime.toLocalDate());
-        googleSheetsClient.appendExpense(
-                sheetName,
-                request.dateTime(),
+        LocalDateTime dateTime = LocalDateTime.parse(request.dateTime(), PeriodSheetName.FORMATTER);
+        Long budgetId = requireBudgetId(request.budget());
+        expenseRepository.insert(
+                UUID.randomUUID().toString(),
+                PeriodSheetName.forDate(dateTime.toLocalDate()),
+                PeriodSheetName.periodStart(dateTime.toLocalDate()),
+                dateTime,
+                budgetId,
                 request.name(),
-                request.budget(),
                 request.amount(),
                 request.description());
-        googleSheetsClient.decrementBudget(request.budget(), request.amount());
+        budgetRepository.adjustBalance(request.budget(), -request.amount());
     }
 
     public PeriodsResponse getPeriods() {
-        return new PeriodsResponse(googleSheetsClient.getPeriodSheetTitles());
+        return new PeriodsResponse(expenseRepository.getPeriods());
     }
 
     public ExpensesResponse getExpenses(String period) {
         if (period == null || period.isBlank()) {
             throw new ValidationException("Period is required");
         }
-        return new ExpensesResponse(googleSheetsClient.getExpenses(period));
+        return new ExpensesResponse(expenseRepository.getExpenses(period).stream()
+                .map(this::toResponse)
+                .toList());
     }
 
     public SummaryResponse getSummary(String period) {
         if (period == null || period.isBlank()) {
             throw new ValidationException("Period is required");
         }
-        List<ExpenseResponse> expenses = googleSheetsClient.getExpenses(period);
+        List<ExpenseData> expenses = expenseRepository.getExpenses(period);
         long total = 0;
         Map<String, Long> amountByBudget = new LinkedHashMap<>();
         Map<String, Integer> countByBudget = new LinkedHashMap<>();
-        for (ExpenseResponse expense : expenses) {
-            long amount = expense.amount() == null ? 0 : expense.amount();
-            total += amount;
-            amountByBudget.merge(expense.budget(), amount, Long::sum);
-            countByBudget.merge(expense.budget(), 1, Integer::sum);
+        for (ExpenseData expense : expenses) {
+            total += expense.amount();
+            amountByBudget.merge(expense.budgetName(), expense.amount(), Long::sum);
+            countByBudget.merge(expense.budgetName(), 1, Integer::sum);
         }
         List<BudgetSummary> list = amountByBudget.entrySet().stream()
                 .map(e -> new BudgetSummary(e.getKey(), e.getValue(),
@@ -89,14 +99,14 @@ public class ExpenseService {
     }
 
     public TopUpsResponse getTopUps() {
-        return new TopUpsResponse(googleSheetsClient.getTopUps());
+        return new TopUpsResponse(topUpRepository.getTopUps());
     }
 
     public TrendResponse getTrend(int months) {
         if (months < 1) {
             throw new ValidationException("Months must be greater than 0");
         }
-        List<String> newest = googleSheetsClient.getPeriodSheetTitles();
+        List<String> newest = expenseRepository.getPeriods();
         if (newest.size() > months) {
             newest = newest.subList(0, months);
         }
@@ -105,16 +115,14 @@ public class ExpenseService {
 
         List<TrendPoint> points = new ArrayList<>();
         for (String period : ascending) {
-            List<ExpenseResponse> expenses = googleSheetsClient.getExpenses(period);
-            long total = 0;
-            for (ExpenseResponse expense : expenses) {
-                total += expense.amount() == null ? 0 : expense.amount();
-            }
-            points.add(new TrendPoint(period, total, expenses.size()));
+            points.add(new TrendPoint(period,
+                    expenseRepository.totalForPeriod(period),
+                    expenseRepository.countForPeriod(period)));
         }
         return new TrendResponse(points);
     }
 
+    @Transactional
     public void createTopUp(TopUpRequest request) {
         if (request.budget() == null || request.budget().isBlank()) {
             throw new ValidationException("Budget is required");
@@ -130,58 +138,82 @@ public class ExpenseService {
         }
         String dateTime = request.dateTime();
         if (dateTime == null || dateTime.isBlank()) {
-            dateTime = LocalDateTime.now().format(DATE_TIME_FORMAT);
+            dateTime = LocalDateTime.now().format(PeriodSheetName.FORMATTER);
         } else {
             try {
-                LocalDateTime.parse(dateTime, DATE_TIME_FORMAT);
+                LocalDateTime.parse(dateTime, PeriodSheetName.FORMATTER);
             } catch (DateTimeParseException e) {
                 throw new ValidationException("DateTime must be in yyyy-MM-dd HH:mm format");
             }
         }
-        googleSheetsClient.appendTopUp(dateTime, request.budget(), request.amount(), request.description());
-        googleSheetsClient.adjustBudgetBalance(request.budget(), request.amount());
+        Long budgetId = requireBudgetId(request.budget());
+        topUpRepository.insert(
+                UUID.randomUUID().toString(),
+                LocalDateTime.parse(dateTime, PeriodSheetName.FORMATTER),
+                budgetId,
+                request.amount(),
+                request.description());
+        budgetRepository.adjustBalance(request.budget(), request.amount());
     }
 
+    @Transactional
     public void updateExpense(String id, ExpenseRequest request) {
         validate(request);
-        ExpenseRef ref = requireExpense(id);
-        ExpenseResponse current = ref.expense();
+        ExpenseData current = requireExpense(id);
+        LocalDateTime dateTime = LocalDateTime.parse(request.dateTime(), PeriodSheetName.FORMATTER);
+        Long newBudgetId = requireBudgetId(request.budget());
 
-        String newBudget = request.budget();
-        long newAmount = request.amount();
-
-        if (!current.budget().equals(newBudget)) {
-            googleSheetsClient.adjustBudgetBalance(current.budget(), current.amount());
-            googleSheetsClient.adjustBudgetBalance(newBudget, -newAmount);
-        } else if (newAmount != current.amount()) {
-            googleSheetsClient.adjustBudgetBalance(current.budget(), current.amount() - newAmount);
+        if (!current.budgetName().equals(request.budget())) {
+            budgetRepository.adjustBalance(current.budgetName(), current.amount());
+            budgetRepository.adjustBalance(request.budget(), -request.amount());
+        } else if (request.amount() != current.amount()) {
+            budgetRepository.adjustBalance(current.budgetName(), current.amount() - request.amount());
         }
 
-        googleSheetsClient.updateExpenseRow(
-                ref.sheetName(),
-                ref.rowIndex(),
-                request.dateTime(),
+        expenseRepository.update(
+                id,
+                PeriodSheetName.periodStart(dateTime.toLocalDate()),
+                dateTime,
+                newBudgetId,
                 request.name(),
-                newBudget,
-                newAmount,
+                request.amount(),
                 request.description());
     }
 
+    @Transactional
     public void deleteExpense(String id) {
-        ExpenseRef ref = requireExpense(id);
-        googleSheetsClient.adjustBudgetBalance(ref.expense().budget(), ref.expense().amount());
-        googleSheetsClient.softDeleteExpense(ref.sheetName(), ref.rowIndex());
+        ExpenseData current = requireExpense(id);
+        budgetRepository.adjustBalance(current.budgetName(), current.amount());
+        expenseRepository.softDelete(id);
     }
 
-    private ExpenseRef requireExpense(String id) {
+    private ExpenseData requireExpense(String id) {
         if (id == null || id.isBlank()) {
             throw new ValidationException("Expense id is required");
         }
-        ExpenseRef ref = googleSheetsClient.findExpense(id);
-        if (ref == null) {
+        ExpenseData expense = expenseRepository.findById(id);
+        if (expense == null) {
             throw new ValidationException("Expense not found");
         }
-        return ref;
+        return expense;
+    }
+
+    private Long requireBudgetId(String name) {
+        Long id = budgetRepository.findIdByName(name);
+        if (id == null) {
+            throw new ValidationException("Budget not found: " + name);
+        }
+        return id;
+    }
+
+    private ExpenseResponse toResponse(ExpenseData expense) {
+        return new ExpenseResponse(
+                expense.id(),
+                expense.dateTime(),
+                expense.name(),
+                expense.budgetName(),
+                expense.amount(),
+                expense.description());
     }
 
     private void validate(ExpenseRequest request) {
@@ -189,7 +221,7 @@ public class ExpenseService {
             throw new ValidationException("DateTime is required");
         }
         try {
-            LocalDateTime.parse(request.dateTime(), DATE_TIME_FORMAT);
+            LocalDateTime.parse(request.dateTime(), PeriodSheetName.FORMATTER);
         } catch (DateTimeParseException e) {
             throw new ValidationException("DateTime must be in yyyy-MM-dd HH:mm format");
         }

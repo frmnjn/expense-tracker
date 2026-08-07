@@ -5,8 +5,8 @@ services:
     mem_limit: 128m
     env_file:
       - ./backend/.env
-    volumes:
-      - ./backend/credentials.json:/app/credentials.json:ro
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   frontend:
     build:

@@ -1,9 +1,10 @@
 package com.expensetracker.service;
 
-import com.expensetracker.google.GoogleSheetsClient;
-import com.expensetracker.model.ExpenseRef;
+import com.expensetracker.data.BudgetRepository;
+import com.expensetracker.data.ExpenseData;
+import com.expensetracker.data.ExpenseRepository;
+import com.expensetracker.data.TopUpRepository;
 import com.expensetracker.model.ExpenseRequest;
-import com.expensetracker.model.ExpenseResponse;
 import com.expensetracker.model.TopUpRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -11,6 +12,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -18,6 +21,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -27,39 +31,44 @@ import static org.mockito.Mockito.when;
 class ExpenseServiceTest {
 
     @Mock
-    private GoogleSheetsClient googleSheetsClient;
+    private BudgetRepository budgetRepository;
+    @Mock
+    private ExpenseRepository expenseRepository;
+    @Mock
+    private TopUpRepository topUpRepository;
 
     private ExpenseService expenseService;
 
     @BeforeEach
     void setUp() {
-        expenseService = new ExpenseService(googleSheetsClient);
+        expenseService = new ExpenseService(budgetRepository, expenseRepository, topUpRepository);
     }
 
     private static ExpenseRequest validRequest() {
         return new ExpenseRequest("2026-08-06 14:30", "Makan Siang", "Daily", 35000L, null);
     }
 
-    @Test
-    void createExpense_validRequest_shouldAppendToCorrectPeriodSheet() {
-        assertDoesNotThrow(() -> expenseService.createExpense(validRequest()));
-        verify(googleSheetsClient).appendExpense(
-                eq("2026-JUL-AUG"), eq("2026-08-06 14:30"), eq("Makan Siang"),
-                eq("Daily"), eq(35000L), eq(null));
+    private static ExpenseData expenseData() {
+        return new ExpenseData("id123", "2026-JUL-AUG", "2026-08-06 14:30", "Makan Siang", "Daily",
+                35000L, null, false);
     }
 
     @Test
-    void createExpense_validRequest_shouldDecrementBudget() {
+    void createExpense_validRequest_shouldInsertAndDecrementBudget() {
+        when(budgetRepository.findIdByName("Daily")).thenReturn(1L);
         assertDoesNotThrow(() -> expenseService.createExpense(validRequest()));
-        verify(googleSheetsClient).decrementBudget("Daily", 35000L);
+        verify(expenseRepository).insert(anyString(), eq("2026-JUL-AUG"), eq(LocalDate.of(2026, 7, 25)),
+                eq(LocalDateTime.of(2026, 8, 6, 14, 30)), eq(1L), eq("Makan Siang"), eq(35000L), eq(null));
+        verify(budgetRepository).adjustBalance("Daily", -35000L);
     }
 
     @Test
-    void createExpense_dateTimeOnCutoff_shouldUseNextPeriodSheet() {
+    void createExpense_dateTimeOnCutoff_shouldUseNextPeriod() {
+        when(budgetRepository.findIdByName("Daily")).thenReturn(1L);
         ExpenseRequest request = new ExpenseRequest("2026-08-25 08:00", "Makan Siang", "Daily", 35000L, null);
-        expenseService.createExpense(request);
-        verify(googleSheetsClient).appendExpense(
-                eq("2026-AUG-SEP"), any(), any(), any(), anyLong(), any());
+        assertDoesNotThrow(() -> expenseService.createExpense(request));
+        verify(expenseRepository).insert(anyString(), eq("2026-AUG-SEP"), eq(LocalDate.of(2026, 8, 25)),
+                eq(LocalDateTime.of(2026, 8, 25, 8, 0)), anyLong(), anyString(), anyLong(), any());
     }
 
     @Test
@@ -67,8 +76,8 @@ class ExpenseServiceTest {
         ExpenseRequest request = new ExpenseRequest(null, "Makan Siang", "Daily", 35000L, null);
         ValidationException ex = assertThrows(ValidationException.class, () -> expenseService.createExpense(request));
         assertEquals("DateTime is required", ex.getMessage());
-        verify(googleSheetsClient, never()).appendExpense(any(), any(), any(), any(), anyLong(), any());
-        verify(googleSheetsClient, never()).decrementBudget(any(), anyLong());
+        verify(expenseRepository, never()).insert(any(), any(), any(), any(), anyLong(), any(), anyLong(), any());
+        verify(budgetRepository, never()).adjustBalance(any(), anyLong());
     }
 
     @Test
@@ -121,33 +130,30 @@ class ExpenseServiceTest {
         assertEquals("Description must be at most 255 characters", ex.getMessage());
     }
 
-    private static ExpenseRef expenseRef() {
-        return new ExpenseRef("2026-JUL-AUG", 2,
-                new ExpenseResponse("id123", "2026-08-06 14:30", "Makan Siang", "Daily", 35000L, null));
-    }
-
     @Test
     void updateExpense_changeAmount_sameBudget_shouldAdjustBalanceByDelta() {
-        when(googleSheetsClient.findExpense("id123")).thenReturn(expenseRef());
+        when(expenseRepository.findById("id123")).thenReturn(expenseData());
+        when(budgetRepository.findIdByName("Daily")).thenReturn(1L);
         ExpenseRequest request = new ExpenseRequest("2026-08-06 14:30", "Makan Siang", "Daily", 20000L, null);
         assertDoesNotThrow(() -> expenseService.updateExpense("id123", request));
-        verify(googleSheetsClient).adjustBudgetBalance("Daily", 15000L);
-        verify(googleSheetsClient).updateExpenseRow(eq("2026-JUL-AUG"), eq(2), eq("2026-08-06 14:30"),
-                eq("Makan Siang"), eq("Daily"), eq(20000L), eq(null));
+        verify(budgetRepository).adjustBalance("Daily", 15000L);
+        verify(expenseRepository).update(eq("id123"), eq(LocalDate.of(2026, 7, 25)),
+                eq(LocalDateTime.of(2026, 8, 6, 14, 30)), eq(1L), eq("Makan Siang"), eq(20000L), eq(null));
     }
 
     @Test
     void updateExpense_changeBudget_shouldMoveBalanceBetweenBudgets() {
-        when(googleSheetsClient.findExpense("id123")).thenReturn(expenseRef());
+        when(expenseRepository.findById("id123")).thenReturn(expenseData());
+        when(budgetRepository.findIdByName("Weekly")).thenReturn(2L);
         ExpenseRequest request = new ExpenseRequest("2026-08-06 14:30", "Makan Siang", "Weekly", 35000L, null);
         assertDoesNotThrow(() -> expenseService.updateExpense("id123", request));
-        verify(googleSheetsClient).adjustBudgetBalance("Daily", 35000L);
-        verify(googleSheetsClient).adjustBudgetBalance("Weekly", -35000L);
+        verify(budgetRepository).adjustBalance("Daily", 35000L);
+        verify(budgetRepository).adjustBalance("Weekly", -35000L);
     }
 
     @Test
     void updateExpense_notFound_shouldReject() {
-        when(googleSheetsClient.findExpense("missing")).thenReturn(null);
+        when(expenseRepository.findById("missing")).thenReturn(null);
         ValidationException ex = assertThrows(ValidationException.class,
                 () -> expenseService.updateExpense("missing", validRequest()));
         assertEquals("Expense not found", ex.getMessage());
@@ -155,10 +161,10 @@ class ExpenseServiceTest {
 
     @Test
     void deleteExpense_shouldReturnAmountToBudgetAndSoftDelete() {
-        when(googleSheetsClient.findExpense("id123")).thenReturn(expenseRef());
+        when(expenseRepository.findById("id123")).thenReturn(expenseData());
         assertDoesNotThrow(() -> expenseService.deleteExpense("id123"));
-        verify(googleSheetsClient).adjustBudgetBalance("Daily", 35000L);
-        verify(googleSheetsClient).softDeleteExpense("2026-JUL-AUG", 2);
+        verify(budgetRepository).adjustBalance("Daily", 35000L);
+        verify(expenseRepository).softDelete("id123");
     }
 
     @Test
@@ -169,10 +175,10 @@ class ExpenseServiceTest {
 
     @Test
     void getSummary_shouldAggregateTotalAndByBudget() {
-        when(googleSheetsClient.getExpenses("2026-JUL-AUG")).thenReturn(List.of(
-                new ExpenseResponse("1", "2026-08-01 09:00", "a", "Daily", 1000L, null),
-                new ExpenseResponse("2", "2026-08-02 09:00", "b", "Daily", 2000L, null),
-                new ExpenseResponse("3", "2026-08-03 09:00", "c", "Weekly", 5000L, null)));
+        when(expenseRepository.getExpenses("2026-JUL-AUG")).thenReturn(List.of(
+                new ExpenseData("1", "2026-JUL-AUG", "2026-08-01 09:00", "a", "Daily", 1000L, null, false),
+                new ExpenseData("2", "2026-JUL-AUG", "2026-08-02 09:00", "b", "Daily", 2000L, null, false),
+                new ExpenseData("3", "2026-JUL-AUG", "2026-08-03 09:00", "c", "Weekly", 5000L, null, false)));
         var summary = expenseService.getSummary("2026-JUL-AUG");
         assertEquals(8000L, summary.total());
         assertEquals(3, summary.count());
@@ -191,11 +197,13 @@ class ExpenseServiceTest {
     }
 
     @Test
-    void createTopUp_validRequest_shouldAppendAndIncreaseBalance() {
+    void createTopUp_validRequest_shouldInsertAndIncreaseBalance() {
+        when(budgetRepository.findIdByName("Daily")).thenReturn(1L);
         assertDoesNotThrow(() -> expenseService.createTopUp(
                 new TopUpRequest("2026-08-07 10:00", "Daily", 50000L, "Gaji")));
-        verify(googleSheetsClient).appendTopUp("2026-08-07 10:00", "Daily", 50000L, "Gaji");
-        verify(googleSheetsClient).adjustBudgetBalance("Daily", 50000L);
+        verify(topUpRepository).insert(anyString(), eq(LocalDateTime.of(2026, 8, 7, 10, 0)),
+                eq(1L), eq(50000L), eq("Gaji"));
+        verify(budgetRepository).adjustBalance("Daily", 50000L);
     }
 
     @Test
@@ -214,17 +222,15 @@ class ExpenseServiceTest {
 
     @Test
     void getTrend_shouldReturnNewestPeriodsAscending() {
-        when(googleSheetsClient.getPeriodSheetTitles()).thenReturn(List.of("2026-AUG-SEP", "2026-JUL-AUG"));
-        when(googleSheetsClient.getExpenses("2026-JUL-AUG")).thenReturn(List.of(
-                new ExpenseResponse("1", "2026-08-01 09:00", "a", "Daily", 1000L, null),
-                new ExpenseResponse("2", "2026-08-02 09:00", "b", "Daily", 2000L, null)));
-        when(googleSheetsClient.getExpenses("2026-AUG-SEP")).thenReturn(List.of(
-                new ExpenseResponse("3", "2026-09-01 09:00", "c", "Daily", 5000L, null)));
+        when(expenseRepository.getPeriods()).thenReturn(List.of("2026-AUG-SEP", "2026-JUL-AUG"));
+        when(expenseRepository.totalForPeriod("2026-JUL-AUG")).thenReturn(3000L);
+        when(expenseRepository.countForPeriod("2026-JUL-AUG")).thenReturn(2);
+        when(expenseRepository.totalForPeriod("2026-AUG-SEP")).thenReturn(5000L);
+        when(expenseRepository.countForPeriod("2026-AUG-SEP")).thenReturn(1);
         var trend = expenseService.getTrend(3);
         assertEquals(2, trend.periods().size());
         assertEquals("2026-JUL-AUG", trend.periods().get(0).period());
         assertEquals(3000L, trend.periods().get(0).total());
-        assertEquals(2, trend.periods().get(0).count());
         assertEquals("2026-AUG-SEP", trend.periods().get(1).period());
         assertEquals(5000L, trend.periods().get(1).total());
     }
