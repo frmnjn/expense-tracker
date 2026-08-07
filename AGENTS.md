@@ -302,6 +302,12 @@ Prioritas:
 
 Tidak perlu animasi.
 
+## Responsive Mobile
+
+* Di layar kecil, **ganti layout** daripada memaksa kolom dikecilkan.
+* Contoh: untuk daftar baris padat (tabel), gunakan `useMediaQuery('(max-width: 48em)')` dan render **list kartu** (`Stack` + `Paper`) di mobile, bukan tabel yang kolomnya diperkecil/di-ellipsis.
+* Pastikan tombol aksi (edit/hapus) selalu terlihat di layar HP, tidak pernah off-screen / butuh scroll horizontal.
+
 ---
 
 # Future Features
