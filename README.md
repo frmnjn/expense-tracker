@@ -511,9 +511,7 @@ Jika native bermasalah, kembalikan ke image JVM:
 Versi berikutnya dapat menambahkan:
 
 * Kategori
-* Filter
-* Dashboard
-* Grafik
+* Grafik tren yang lebih detail
 * Multi-user
 * Authentication
 

@@ -529,6 +529,8 @@ Komponen:
 * Tombol Edit (membuka modal berisi form yang sudah terisi)
 * Tombol Hapus (dengan konfirmasi)
 
+Search, filter, dan sort muncul setelah periode dipilih.
+
 Preview saldo pada edit & hapus:
 
 * Hapus: menampilkan saldo budget saat ini dan saldo nanti (bertambah sebesar nominal).
@@ -657,27 +659,20 @@ Versi pertama belum mendukung:
 
 * Login
 * Authentication
-* Filter
-* Search
 * Category
 * Upload bukti pembayaran
-* Dashboard
-* Grafik
+* Grafik tren yang detail
 * Multi user
 
 ---
 
 # Future Improvements
 
-* Daftar pengeluaran
-* Edit pengeluaran
-* Hapus pengeluaran
 * Kategori
 * Bulanan
-* Dashboard
+* Grafik tren yang lebih detail
 * Export PDF
 * Export Excel
 * Authentication
 * Multi-user
-* Dark Mode
 * PWA
