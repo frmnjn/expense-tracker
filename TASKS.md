@@ -197,3 +197,110 @@ Project dianggap selesai apabila:
 * [ ] Backend berjalan normal
 * [ ] Data berhasil tersimpan ke Google Sheets
 * [ ] Tidak ada fitur di luar PRD
+
+---
+
+# Phase 7 - JVM Tuning
+
+Optimasi memory backend dengan membatasi resource JVM.
+
+Hasil pengukuran (apples-to-apples, image sama):
+
+| Metrik | Baseline (tanpa flag) | Dengan tuning | Penghematan |
+|---|---|---|---|
+| RSS | 197.6 MB | 170.8 MB | 27 MB |
+| Pss_Anon | 170.8 MB | 144.9 MB | 26 MB |
+
+Breakdown JVM tuned: heap 38MB + metaspace 45MB + codecache 10MB + native ~55MB.
+
+## Konfigurasi JVM
+
+* [x] Tambah flag JVM di ENTRYPOINT Dockerfile backend
+* [x] Batasi heap (-Xms, -Xmx)
+* [x] Batasi Metaspace (-XX:MaxMetaspaceSize)
+* [x] Batasi CodeCache (-XX:ReservedCodeCacheSize)
+* [x] Gunakan SerialGC (-XX:+UseSerialGC)
+* [x] Nonaktifkan komponen yang tidak dipakai (headless, JMX)
+
+## Docker
+
+* [x] Tambah mem_limit backend di docker-compose.yml
+* [x] Tambah mem_limit backend di docker-compose.prod.yml
+
+## Verifikasi
+
+* [x] Build ulang image backend
+* [x] Bandingkan memory usage via docker stats
+* [x] Health endpoint tetap berjalan
+* [x] GET /options tetap berjalan
+* [x] POST /expenses tetap berjalan
+
+---
+
+# Phase 8 - GraalVM Native Image
+
+Mengubah backend menjadi native executable (~50MB total) menggantikan JVM runtime (~170MB).
+
+## Konteks & Target
+
+* Phase 7 (JVM tuning) hanya menghemat 27MB; bottleneck adalah class loading + metaspace yang tidak bisa dikurangi flag JVM.
+* Target: RSS backend turun dari 170MB menjadi ~50MB, startup < 1 detik.
+* Dukungan resmi: Spring Boot 4.1.0 + GraalVM 25 + Native Build Tools 1.1.1 (Java 25).
+* Distribusi ke VPS: docker save -> scp/SFTP -> docker load (tanpa registry, sudah diputuskan).
+
+## Risiko & Mitigasi
+
+| Risiko | Mitigasi |
+|---|---|
+| Refleksi Gson pada model Google Sheets (ValueRange, Sheet, Spreadsheet) | Gunakan tracing agent untuk generate metadata saat build, atau RuntimeHintsRegistrar manual |
+| Query params hilang di native (issue #23642 google-api-services) | Validasi GET /options & POST /expenses saat verifikasi; perbarui google-http-client bila perlu |
+| Build lambat (5-15 menit) & butuh ~4GB RAM | Build lokal dulu; cukup RAM tersedia (5.7GB) |
+| Native tidak bisa pakai JVM flag (Xmx dll) | Tidak diperlukan; native sudah efisien, cukup mem_limit kecil |
+| Image builder besar | Image akhir (runtime) harus minimal; builder tidak di-ship |
+
+## Keputusan Build
+
+* Build dua tahap:
+  * Tahap 1: compile jar dengan `maven:3.9-eclipse-temurin-25`
+  * Tahap 2: proses AOT + native-image dengan image GraalVM 25
+  * Runtime: base image minimal berbasis glibc (jangan Alpine/musl, native-image linked terhadap glibc)
+* Aktifkan profile `native` di Maven (native-maven-plugin).
+* Hasil: image `expense-tracker-backend:0.0.1-SNAPSHOT-native`.
+
+## Konfigurasi Backend
+
+* [ ] Tambah `native-maven-plugin` di pom.xml (profil native)
+* [ ] Pastikan plugin spring-boot-maven-plugin support AOT (profile native)
+* [ ] Jalankan build dengan tracing agent untuk capture metadata Gson/Google (bila tidak tersedia dari library)
+* [ ] Generate native executable: `mvn -Pnative native:compile` (validasi manual dulu di local)
+* [ ] Buat `Dockerfile.native` multi-stage (build + runtime minimal)
+* [ ] Verifikasi executable native berjalan di local (health, options, POST ke test sheet)
+
+## Docker
+
+* [ ] `docker build -f backend/Dockerfile.native -t expense-tracker-backend-native:local .`
+* [ ] Ukur RSS native via docker stats (target ~50MB)
+* [ ] Update `docker-compose.prod.yml`: backend pakai image native + mem_limit lebih kecil (mis. 128m)
+* [ ] Bypass mem_limit JVM di `docker-compose.yml` tetap aman karena native tidak butuh flag
+
+## Verifikasi Fungsional (wajib test sheet, jangan produksi)
+
+* [ ] `/health` OK
+* [ ] `/options` mengembalikan budget & bank yang benar (uji refleksi Gson)
+* [ ] POST `/expenses` berhasil ke test sheet
+* [ ] GET data expense setelah POST (pastikan tidak kehilangan query params)
+* [ ] Reorder sheet tetap bekerja (uji API batchUpdate)
+
+## Distribusi ke VPS
+
+* [ ] `docker save expense-tracker-backend-native:local | gzip > backend-native.tar.gz`
+* [ ] `scp`/SFTP `backend-native.tar.gz` ke VPS
+* [ ] Di VPS: `docker load < backend-native.tar.gz`
+* [ ] Update `docker-compose.prod.yml` di VPS (image native)
+* [ ] `docker compose up -d` + verifikasi health di produksi
+* [ ] Bandingkan memory VPS (docker stats) vs sebelum native
+
+## Rollback
+
+* [ ] Image JVM (`expense-tracker-backend:0.0.1-SNAPSHOT`) tetap tersimpan di VPS sebagai fallback
+* [ ] Dokumentasikan cara rollback: `docker compose -f docker-compose.prod.yml down && docker compose up -d` setelah mengembalikan konfigurasi build
