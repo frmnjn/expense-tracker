@@ -8,5 +8,5 @@ export async function createExpense(request: ExpenseRequest): Promise<ApiRespons
 
 export async function getOptions(): Promise<OptionsResponse> {
   const response = await apiClient.get<ApiResponse<OptionsResponse>>('/options')
-  return response.data.data ?? { budgets: [], banks: [] }
+  return response.data.data ?? { budgets: [] }
 }

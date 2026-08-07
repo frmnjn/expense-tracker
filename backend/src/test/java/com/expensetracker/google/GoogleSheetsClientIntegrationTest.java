@@ -23,7 +23,7 @@ class GoogleSheetsClientIntegrationTest {
         Assumptions.assumeTrue(credentialsPath != null && !credentialsPath.isBlank()
                 && spreadsheetId != null && !spreadsheetId.isBlank(),
                 "google test sheet not configured, skipping integration test");
-        client = new GoogleSheetsClient(credentialsPath, spreadsheetId, "Budget", "Bank");
+        client = new GoogleSheetsClient(credentialsPath, spreadsheetId, "Budget");
     }
 
     @Test
@@ -35,38 +35,35 @@ class GoogleSheetsClientIntegrationTest {
     void appendExpense_shouldAppendRow() {
         assertDoesNotThrow(() -> client.appendExpense(
                 "2026-JUL-AUG", "2026-08-06 14:30", "Integration test",
-                "Daily", "BCA", 1, null));
+                "Daily", 1, null));
     }
 
     @Test
     void createPeriodSheet_shouldCreateSheetWithHeaders() {
         assertDoesNotThrow(() -> client.appendExpense(
                 "2026-INTEGRATION-TEST", "2026-08-06 14:30", "Integration test",
-                "Daily", "BCA", 1, null));
+                "Daily", 1, null));
         assertTrue(client.sheetExists("2026-INTEGRATION-TEST"));
     }
 
     @Test
     void getOptions_shouldReturnLists() {
-        Assumptions.assumeTrue(client.sheetExists("Budget") && client.sheetExists("Bank"),
-                "budget/bank tabs not configured, skipping options test");
-        assertDoesNotThrow(() -> {
-            client.getOptions(client.getBudgetSheet());
-            client.getOptions(client.getBankSheet());
-        });
+        Assumptions.assumeTrue(client.sheetExists("Budget"),
+                "budget tab not configured, skipping options test");
+        assertDoesNotThrow(() -> client.getOptions(client.getBudgetSheet()));
     }
 
     @Test
-    void reorderSheets_shouldPutNewestPeriodFirstAndBudgetBankLast() {
-        Assumptions.assumeTrue(client.sheetExists("Budget") && client.sheetExists("Bank"),
-                "budget/bank tabs not configured, skipping reorder test");
+    void reorderSheets_shouldPutNewestPeriodFirstAndBudgetLast() {
+        Assumptions.assumeTrue(client.sheetExists("Budget"),
+                "budget tab not configured, skipping reorder test");
         assertDoesNotThrow(() -> {
             client.appendExpense(
                     "2025-JUN-JUL", "2025-06-25 14:30", "Reorder test",
-                    "Daily", "BCA", 1, null);
+                    "Daily", 1, null);
             client.appendExpense(
                     "2026-JUL-AUG", "2026-08-06 14:30", "Reorder test",
-                    "Daily", "BCA", 1, null);
+                    "Daily", 1, null);
             client.reorderSheets();
         });
         List<String> titles = client.getSheetTitlesInOrder();
@@ -74,7 +71,6 @@ class GoogleSheetsClientIntegrationTest {
         int oldestPeriodIndex = titles.indexOf("2025-JUN-JUL");
         assertTrue(newestPeriodIndex != -1 && oldestPeriodIndex != -1);
         assertTrue(newestPeriodIndex < oldestPeriodIndex);
-        assertEquals("Bank", titles.get(titles.size() - 1));
-        assertEquals("Budget", titles.get(titles.size() - 2));
+        assertEquals("Budget", titles.get(titles.size() - 1));
     }
 }

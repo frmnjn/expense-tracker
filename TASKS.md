@@ -71,7 +71,7 @@ Checklist implementasi berdasarkan PRD.
 
 ## Model
 
-* [x] ExpenseRequest (dateTime, name, budget, bank, amount, description)
+* [x] ExpenseRequest (dateTime, name, budget, amount, description)
 
 ---
 
@@ -93,7 +93,7 @@ Checklist implementasi berdasarkan PRD.
 
 * [x] Validasi request
 * [x] Hitung nama sheet berdasarkan periode (cut off tanggal 25)
-* [x] Auto-reorder sheet (periode terbaru di kiri, Budget/Bank paling kanan)
+* [x] Auto-reorder sheet (periode terbaru di kiri, Budget paling kanan)
 * [x] Mapping request
 * [x] Simpan ke sheet periode di Google Sheets
 
@@ -296,7 +296,7 @@ Mengubah backend menjadi native executable (~50MB total) menggantikan JVM runtim
 ## Verifikasi Fungsional (test sheet, bukan produksi)
 
 * [x] `/health` OK
-* [x] `/options` mengembalikan budget & bank yang benar (uji refleksi Gson)
+* [x] `/options` mengembalikan budget yang benar (uji refleksi Gson)
 * [x] POST `/expenses` berhasil ke test sheet
 * [x] Startup 0.58s
 

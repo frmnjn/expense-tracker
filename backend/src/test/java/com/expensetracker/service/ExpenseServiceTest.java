@@ -31,7 +31,7 @@ class ExpenseServiceTest {
     }
 
     private static ExpenseRequest validRequest() {
-        return new ExpenseRequest("2026-08-06 14:30", "Makan Siang", "Daily", "BCA", 35000L, null);
+        return new ExpenseRequest("2026-08-06 14:30", "Makan Siang", "Daily", 35000L, null);
     }
 
     @Test
@@ -39,70 +39,63 @@ class ExpenseServiceTest {
         assertDoesNotThrow(() -> expenseService.createExpense(validRequest()));
         verify(googleSheetsClient).appendExpense(
                 eq("2026-JUL-AUG"), eq("2026-08-06 14:30"), eq("Makan Siang"),
-                eq("Daily"), eq("BCA"), eq(35000L), eq(null));
+                eq("Daily"), eq(35000L), eq(null));
     }
 
     @Test
     void createExpense_dateTimeOnCutoff_shouldUseNextPeriodSheet() {
-        ExpenseRequest request = new ExpenseRequest("2026-08-25 08:00", "Makan Siang", "Daily", "BCA", 35000L, null);
+        ExpenseRequest request = new ExpenseRequest("2026-08-25 08:00", "Makan Siang", "Daily", 35000L, null);
         expenseService.createExpense(request);
         verify(googleSheetsClient).appendExpense(
-                eq("2026-AUG-SEP"), any(), any(), any(), any(), anyLong(), any());
+                eq("2026-AUG-SEP"), any(), any(), any(), anyLong(), any());
     }
 
     @Test
     void createExpense_missingDateTime_shouldReject() {
-        ExpenseRequest request = new ExpenseRequest(null, "Makan Siang", "Daily", "BCA", 35000L, null);
+        ExpenseRequest request = new ExpenseRequest(null, "Makan Siang", "Daily", 35000L, null);
         ValidationException ex = assertThrows(ValidationException.class, () -> expenseService.createExpense(request));
         assertEquals("DateTime is required", ex.getMessage());
-        verify(googleSheetsClient, never()).appendExpense(any(), any(), any(), any(), any(), anyLong(), any());
+        verify(googleSheetsClient, never()).appendExpense(any(), any(), any(), any(), anyLong(), any());
     }
 
     @Test
     void createExpense_invalidDateTimeFormat_shouldReject() {
-        ExpenseRequest request = new ExpenseRequest("06-08-2026", "Makan Siang", "Daily", "BCA", 35000L, null);
+        ExpenseRequest request = new ExpenseRequest("06-08-2026", "Makan Siang", "Daily", 35000L, null);
         ValidationException ex = assertThrows(ValidationException.class, () -> expenseService.createExpense(request));
         assertEquals("DateTime must be in yyyy-MM-dd HH:mm format", ex.getMessage());
     }
 
     @Test
     void createExpense_missingName_shouldReject() {
-        ExpenseRequest request = new ExpenseRequest("2026-08-06 14:30", null, "Daily", "BCA", 35000L, null);
+        ExpenseRequest request = new ExpenseRequest("2026-08-06 14:30", null, "Daily", 35000L, null);
         ValidationException ex = assertThrows(ValidationException.class, () -> expenseService.createExpense(request));
         assertEquals("Name is required", ex.getMessage());
     }
 
     @Test
     void createExpense_nameTooLong_shouldReject() {
-        ExpenseRequest request = new ExpenseRequest("2026-08-06 14:30", "x".repeat(256), "Daily", "BCA", 35000L, null);
+        ExpenseRequest request = new ExpenseRequest("2026-08-06 14:30", "x".repeat(256), "Daily", 35000L, null);
         ValidationException ex = assertThrows(ValidationException.class, () -> expenseService.createExpense(request));
         assertEquals("Name must be at most 255 characters", ex.getMessage());
     }
 
     @Test
     void createExpense_missingBudget_shouldReject() {
-        ExpenseRequest request = new ExpenseRequest("2026-08-06 14:30", "Makan Siang", null, "BCA", 35000L, null);
+        ExpenseRequest request = new ExpenseRequest("2026-08-06 14:30", "Makan Siang", null, 35000L, null);
         ValidationException ex = assertThrows(ValidationException.class, () -> expenseService.createExpense(request));
         assertEquals("Budget is required", ex.getMessage());
     }
 
     @Test
-    void createExpense_missingBank_shouldReject() {
-        ExpenseRequest request = new ExpenseRequest("2026-08-06 14:30", "Makan Siang", "Daily", null, 35000L, null);
-        ValidationException ex = assertThrows(ValidationException.class, () -> expenseService.createExpense(request));
-        assertEquals("Bank is required", ex.getMessage());
-    }
-
-    @Test
     void createExpense_missingAmount_shouldReject() {
-        ExpenseRequest request = new ExpenseRequest("2026-08-06 14:30", "Makan Siang", "Daily", "BCA", null, null);
+        ExpenseRequest request = new ExpenseRequest("2026-08-06 14:30", "Makan Siang", "Daily", null, null);
         ValidationException ex = assertThrows(ValidationException.class, () -> expenseService.createExpense(request));
         assertEquals("Amount is required", ex.getMessage());
     }
 
     @Test
     void createExpense_zeroAmount_shouldReject() {
-        ExpenseRequest request = new ExpenseRequest("2026-08-06 14:30", "Makan Siang", "Daily", "BCA", 0L, null);
+        ExpenseRequest request = new ExpenseRequest("2026-08-06 14:30", "Makan Siang", "Daily", 0L, null);
         ValidationException ex = assertThrows(ValidationException.class, () -> expenseService.createExpense(request));
         assertEquals("Amount must be greater than 0", ex.getMessage());
     }
@@ -110,7 +103,7 @@ class ExpenseServiceTest {
     @Test
     void createExpense_descriptionTooLong_shouldReject() {
         ExpenseRequest request = new ExpenseRequest(
-                "2026-08-06 14:30", "Makan Siang", "Daily", "BCA", 35000L, "x".repeat(256));
+                "2026-08-06 14:30", "Makan Siang", "Daily", 35000L, "x".repeat(256));
         ValidationException ex = assertThrows(ValidationException.class, () -> expenseService.createExpense(request));
         assertEquals("Description must be at most 255 characters", ex.getMessage());
     }

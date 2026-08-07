@@ -16,4 +16,3 @@ google:
   sheet-id: ${GOOGLE_SHEET_ID:}
   application-credentials: ${GOOGLE_APPLICATION_CREDENTIALS:}
   budget-sheet: ${GOOGLE_BUDGET_SHEET:Budget}
-  bank-sheet: ${GOOGLE_BANK_SHEET:Bank}
