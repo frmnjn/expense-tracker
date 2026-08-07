@@ -17,6 +17,7 @@ Data tidak disimpan di database, melainkan langsung di Google Sheets menggunakan
 * Edit pengeluaran
 * Hapus pengeluaran (soft delete, saldo dikembalikan)
 * Preview perubahan saldo saat edit/hapus
+* Dashboard ringkasan per periode (total, saldo per budget, pengeluaran terbesar)
 * Sheet pengeluaran terpisah per periode
 * Kolom nominal & saldo diformat currency IDR
 * Urutan sheet otomatis (periode terbaru di kiri)

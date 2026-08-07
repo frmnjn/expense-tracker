@@ -5,6 +5,7 @@ import type {
   ExpensesResponse,
   OptionsResponse,
   PeriodsResponse,
+  SummaryResponse,
 } from '../types/expense'
 
 export async function createExpense(request: ExpenseRequest): Promise<ApiResponse<void>> {
@@ -27,6 +28,13 @@ export async function getExpenses(period: string): Promise<ExpensesResponse> {
     params: { period },
   })
   return response.data.data ?? { expenses: [] }
+}
+
+export async function getSummary(period: string): Promise<SummaryResponse> {
+  const response = await apiClient.get<ApiResponse<SummaryResponse>>('/summary', {
+    params: { period },
+  })
+  return response.data.data ?? { period, total: 0, count: 0, byBudget: [] }
 }
 
 export async function updateExpense(id: string, request: ExpenseRequest): Promise<ApiResponse<void>> {

@@ -70,6 +70,21 @@ public class ExpenseController {
         }
     }
 
+    @GetMapping("/summary")
+    public ResponseEntity<ApiResponse> getSummary(@RequestParam("period") String period) {
+        try {
+            return ResponseEntity.ok(ApiResponse.ok(expenseService.getSummary(period)));
+        } catch (ValidationException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            LOGGER.error("internal error getting summary", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Internal server error"));
+        }
+    }
+
     @PostMapping("/expenses")
     public ResponseEntity<ApiResponse> createExpense(@RequestBody ExpenseRequest request) {
         try {

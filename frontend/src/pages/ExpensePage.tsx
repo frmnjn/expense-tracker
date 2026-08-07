@@ -19,9 +19,14 @@ function ExpensePage() {
       }}
     >
       <Group justify="space-between" mb="xs">
-        <Anchor href="/riwayat" size="sm">
-          Riwayat
-        </Anchor>
+        <Group gap="md">
+          <Anchor href="/dashboard" size="sm">
+            Dashboard
+          </Anchor>
+          <Anchor href="/riwayat" size="sm">
+            Riwayat
+          </Anchor>
+        </Group>
         <Group gap="xs">
           <ColorSchemeToggle />
           <InstallButton />

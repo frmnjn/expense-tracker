@@ -32,6 +32,18 @@ export interface ExpensesResponse {
   expenses: Expense[]
 }
 
+export interface BudgetSummary {
+  budget: string
+  amount: number
+}
+
+export interface SummaryResponse {
+  period: string
+  total: number
+  count: number
+  byBudget: BudgetSummary[]
+}
+
 export interface ApiResponse<T> {
   success: boolean
   message?: string

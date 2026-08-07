@@ -1,17 +1,23 @@
 package com.expensetracker.service;
 
 import com.expensetracker.google.GoogleSheetsClient;
+import com.expensetracker.model.BudgetSummary;
 import com.expensetracker.model.ExpenseRef;
 import com.expensetracker.model.ExpenseRequest;
 import com.expensetracker.model.ExpenseResponse;
 import com.expensetracker.model.ExpensesResponse;
 import com.expensetracker.model.OptionsResponse;
 import com.expensetracker.model.PeriodsResponse;
+import com.expensetracker.model.SummaryResponse;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.Comparator;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 @Service
 public class ExpenseService {
@@ -51,6 +57,25 @@ public class ExpenseService {
             throw new ValidationException("Period is required");
         }
         return new ExpensesResponse(googleSheetsClient.getExpenses(period));
+    }
+
+    public SummaryResponse getSummary(String period) {
+        if (period == null || period.isBlank()) {
+            throw new ValidationException("Period is required");
+        }
+        List<ExpenseResponse> expenses = googleSheetsClient.getExpenses(period);
+        long total = 0;
+        Map<String, Long> byBudget = new LinkedHashMap<>();
+        for (ExpenseResponse expense : expenses) {
+            long amount = expense.amount() == null ? 0 : expense.amount();
+            total += amount;
+            byBudget.merge(expense.budget(), amount, Long::sum);
+        }
+        List<BudgetSummary> list = byBudget.entrySet().stream()
+                .map(e -> new BudgetSummary(e.getKey(), e.getValue()))
+                .sorted(Comparator.comparingLong(BudgetSummary::amount).reversed())
+                .toList();
+        return new SummaryResponse(period, total, expenses.size(), list);
     }
 
     public void updateExpense(String id, ExpenseRequest request) {

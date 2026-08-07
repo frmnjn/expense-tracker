@@ -70,9 +70,14 @@ function HistoryPage() {
       <Group justify="space-between" align="flex-start" mb="xs">
         <div>
           <Title order={2}>Riwayat Pengeluaran</Title>
-          <Anchor href="/catat" display="inline-block">
-            Catat Pengeluaran
-          </Anchor>
+          <Group gap="md">
+            <Anchor href="/dashboard" display="inline-block">
+              Dashboard
+            </Anchor>
+            <Anchor href="/catat" display="inline-block">
+              Catat Pengeluaran
+            </Anchor>
+          </Group>
         </div>
         <ColorSchemeToggle />
       </Group>
