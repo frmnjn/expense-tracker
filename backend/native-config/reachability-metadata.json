@@ -26,27 +26,9 @@
     },
     {
       "type": "com.expensetracker.config.AppConfig",
-      "fields": [
-        {
-          "name": "applicationCredentials"
-        },
-        {
-          "name": "budgetSheet"
-        },
-        {
-          "name": "sheetId"
-        },
-        {
-          "name": "topUpSheet"
-        }
-      ],
       "methods": [
         {
           "name": "corsConfigurer",
-          "parameterTypes": []
-        },
-        {
-          "name": "googleSheetsClient",
           "parameterTypes": []
         }
       ]
@@ -112,21 +94,6 @@
       ]
     },
     {
-      "type": "com.expensetracker.config.SheetOrderInitializer",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": [
-            "com.expensetracker.google.GoogleSheetsClient"
-          ]
-        },
-        {
-          "name": "onApplicationReady",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
       "type": "com.expensetracker.controller.ExpenseController",
       "methods": [
         {
@@ -178,7 +145,94 @@
       ]
     },
     {
-      "type": "com.expensetracker.google.GoogleSheetsClient"
+      "type": "com.expensetracker.data.BudgetRepository",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "org.springframework.jdbc.core.JdbcTemplate"
+          ]
+        },
+        {
+          "name": "findIdByName",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        },
+        {
+          "name": "getOptions",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.expensetracker.data.BudgetRepository$$SpringCGLIB$$0",
+      "fields": [
+        {
+          "name": "CGLIB$CALLBACK_FILTER"
+        },
+        {
+          "name": "CGLIB$FACTORY_DATA"
+        }
+      ]
+    },
+    {
+      "type": "com.expensetracker.data.ExpenseRepository",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "org.springframework.jdbc.core.JdbcTemplate"
+          ]
+        },
+        {
+          "name": "getExpenses",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        },
+        {
+          "name": "getPeriods",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.expensetracker.data.ExpenseRepository$$SpringCGLIB$$0",
+      "fields": [
+        {
+          "name": "CGLIB$CALLBACK_FILTER"
+        },
+        {
+          "name": "CGLIB$FACTORY_DATA"
+        }
+      ]
+    },
+    {
+      "type": "com.expensetracker.data.TopUpRepository",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "org.springframework.jdbc.core.JdbcTemplate"
+          ]
+        },
+        {
+          "name": "getTopUps",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.expensetracker.data.TopUpRepository$$SpringCGLIB$$0",
+      "fields": [
+        {
+          "name": "CGLIB$CALLBACK_FILTER"
+        },
+        {
+          "name": "CGLIB$FACTORY_DATA"
+        }
+      ]
     },
     {
       "type": "com.expensetracker.model.ApiResponse",
@@ -198,34 +252,10 @@
       ]
     },
     {
-      "type": "com.expensetracker.model.BudgetOption",
-      "methods": [
-        {
-          "name": "balance",
-          "parameterTypes": []
-        },
-        {
-          "name": "name",
-          "parameterTypes": []
-        }
-      ]
+      "type": "com.expensetracker.model.BudgetOption"
     },
     {
-      "type": "com.expensetracker.model.BudgetSummary",
-      "methods": [
-        {
-          "name": "amount",
-          "parameterTypes": []
-        },
-        {
-          "name": "budget",
-          "parameterTypes": []
-        },
-        {
-          "name": "count",
-          "parameterTypes": []
-        }
-      ]
+      "type": "com.expensetracker.model.BudgetSummary"
     },
     {
       "type": "com.expensetracker.model.BudgetSummary[]"
@@ -246,33 +276,10 @@
       ]
     },
     {
-      "type": "com.expensetracker.model.ExpenseResponse",
-      "methods": [
-        {
-          "name": "amount",
-          "parameterTypes": []
-        },
-        {
-          "name": "budget",
-          "parameterTypes": []
-        },
-        {
-          "name": "dateTime",
-          "parameterTypes": []
-        },
-        {
-          "name": "description",
-          "parameterTypes": []
-        },
-        {
-          "name": "id",
-          "parameterTypes": []
-        },
-        {
-          "name": "name",
-          "parameterTypes": []
-        }
-      ]
+      "type": "com.expensetracker.model.ExpenseResponse"
+    },
+    {
+      "type": "com.expensetracker.model.ExpenseResponse[]"
     },
     {
       "type": "com.expensetracker.model.ExpensesResponse",
@@ -323,29 +330,10 @@
       ]
     },
     {
-      "type": "com.expensetracker.model.TopUpResponse",
-      "methods": [
-        {
-          "name": "amount",
-          "parameterTypes": []
-        },
-        {
-          "name": "budget",
-          "parameterTypes": []
-        },
-        {
-          "name": "dateTime",
-          "parameterTypes": []
-        },
-        {
-          "name": "description",
-          "parameterTypes": []
-        },
-        {
-          "name": "id",
-          "parameterTypes": []
-        }
-      ]
+      "type": "com.expensetracker.model.TopUpRequest"
+    },
+    {
+      "type": "com.expensetracker.model.TopUpResponse"
     },
     {
       "type": "com.expensetracker.model.TopUpsResponse",
@@ -357,21 +345,7 @@
       ]
     },
     {
-      "type": "com.expensetracker.model.TrendPoint",
-      "methods": [
-        {
-          "name": "count",
-          "parameterTypes": []
-        },
-        {
-          "name": "period",
-          "parameterTypes": []
-        },
-        {
-          "name": "total",
-          "parameterTypes": []
-        }
-      ]
+      "type": "com.expensetracker.model.TrendPoint"
     },
     {
       "type": "com.expensetracker.model.TrendResponse",
@@ -388,8 +362,57 @@
         {
           "name": "<init>",
           "parameterTypes": [
-            "com.expensetracker.google.GoogleSheetsClient"
+            "com.expensetracker.data.BudgetRepository",
+            "com.expensetracker.data.ExpenseRepository",
+            "com.expensetracker.data.TopUpRepository"
           ]
+        },
+        {
+          "name": "createExpense",
+          "parameterTypes": [
+            "com.expensetracker.model.ExpenseRequest"
+          ]
+        },
+        {
+          "name": "getExpenses",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        },
+        {
+          "name": "getOptions",
+          "parameterTypes": []
+        },
+        {
+          "name": "getPeriods",
+          "parameterTypes": []
+        },
+        {
+          "name": "getSummary",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        },
+        {
+          "name": "getTopUps",
+          "parameterTypes": []
+        },
+        {
+          "name": "getTrend",
+          "parameterTypes": [
+            "int"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "com.expensetracker.service.ExpenseService$$SpringCGLIB$$0",
+      "fields": [
+        {
+          "name": "CGLIB$CALLBACK_FILTER"
+        },
+        {
+          "name": "CGLIB$FACTORY_DATA"
         }
       ]
     },
@@ -421,1578 +444,25 @@
       "type": "com.fasterxml.jackson.dataformat.yaml.YAMLFactory"
     },
     {
-      "type": "com.google.api.client.googleapis.services.AbstractGoogleClientRequest"
-    },
-    {
-      "type": "com.google.api.client.googleapis.services.json.AbstractGoogleJsonClientRequest"
-    },
-    {
-      "type": "com.google.api.client.http.GenericUrl"
-    },
-    {
-      "type": "com.google.api.client.http.HttpHeaders",
-      "fields": [
-        {
-          "name": "accept"
-        },
-        {
-          "name": "acceptEncoding"
-        },
-        {
-          "name": "age"
-        },
-        {
-          "name": "authenticate"
-        },
-        {
-          "name": "authorization"
-        },
-        {
-          "name": "cacheControl"
-        },
-        {
-          "name": "contentEncoding"
-        },
-        {
-          "name": "contentLength"
-        },
-        {
-          "name": "contentMD5"
-        },
-        {
-          "name": "contentRange"
-        },
-        {
-          "name": "contentType"
-        },
-        {
-          "name": "cookie"
-        },
-        {
-          "name": "date"
-        },
-        {
-          "name": "etag"
-        },
-        {
-          "name": "expires"
-        },
-        {
-          "name": "ifMatch"
-        },
-        {
-          "name": "ifModifiedSince"
-        },
-        {
-          "name": "ifNoneMatch"
-        },
-        {
-          "name": "ifRange"
-        },
-        {
-          "name": "ifUnmodifiedSince"
-        },
-        {
-          "name": "lastModified"
-        },
-        {
-          "name": "location"
-        },
-        {
-          "name": "mimeVersion"
-        },
-        {
-          "name": "range"
-        },
-        {
-          "name": "retryAfter"
-        },
-        {
-          "name": "userAgent"
-        },
-        {
-          "name": "warning"
-        }
-      ],
-      "methods": [
-        {
-          "name": "setAccept",
-          "parameterTypes": [
-            "java.lang.String"
-          ]
-        },
-        {
-          "name": "setAcceptEncoding",
-          "parameterTypes": [
-            "java.lang.String"
-          ]
-        },
-        {
-          "name": "setAge",
-          "parameterTypes": [
-            "java.lang.Long"
-          ]
-        },
-        {
-          "name": "setAuthenticate",
-          "parameterTypes": [
-            "java.lang.String"
-          ]
-        },
-        {
-          "name": "setAuthorization",
-          "parameterTypes": [
-            "java.util.List"
-          ]
-        },
-        {
-          "name": "setCacheControl",
-          "parameterTypes": [
-            "java.lang.String"
-          ]
-        },
-        {
-          "name": "setContentEncoding",
-          "parameterTypes": [
-            "java.lang.String"
-          ]
-        },
-        {
-          "name": "setContentLength",
-          "parameterTypes": [
-            "java.lang.Long"
-          ]
-        },
-        {
-          "name": "setContentMD5",
-          "parameterTypes": [
-            "java.lang.String"
-          ]
-        },
-        {
-          "name": "setContentRange",
-          "parameterTypes": [
-            "java.lang.String"
-          ]
-        },
-        {
-          "name": "setContentType",
-          "parameterTypes": [
-            "java.lang.String"
-          ]
-        },
-        {
-          "name": "setCookie",
-          "parameterTypes": [
-            "java.lang.String"
-          ]
-        },
-        {
-          "name": "setDate",
-          "parameterTypes": [
-            "java.lang.String"
-          ]
-        },
-        {
-          "name": "setETag",
-          "parameterTypes": [
-            "java.lang.String"
-          ]
-        },
-        {
-          "name": "setExpires",
-          "parameterTypes": [
-            "java.lang.String"
-          ]
-        },
-        {
-          "name": "setIfMatch",
-          "parameterTypes": [
-            "java.lang.String"
-          ]
-        },
-        {
-          "name": "setIfModifiedSince",
-          "parameterTypes": [
-            "java.lang.String"
-          ]
-        },
-        {
-          "name": "setIfNoneMatch",
-          "parameterTypes": [
-            "java.lang.String"
-          ]
-        },
-        {
-          "name": "setIfRange",
-          "parameterTypes": [
-            "java.lang.String"
-          ]
-        },
-        {
-          "name": "setIfUnmodifiedSince",
-          "parameterTypes": [
-            "java.lang.String"
-          ]
-        },
-        {
-          "name": "setLastModified",
-          "parameterTypes": [
-            "java.lang.String"
-          ]
-        },
-        {
-          "name": "setLocation",
-          "parameterTypes": [
-            "java.lang.String"
-          ]
-        },
-        {
-          "name": "setMimeVersion",
-          "parameterTypes": [
-            "java.lang.String"
-          ]
-        },
-        {
-          "name": "setRange",
-          "parameterTypes": [
-            "java.lang.String"
-          ]
-        },
-        {
-          "name": "setRetryAfter",
-          "parameterTypes": [
-            "java.lang.String"
-          ]
-        },
-        {
-          "name": "setUserAgent",
-          "parameterTypes": [
-            "java.lang.String"
-          ]
-        }
-      ]
-    },
-    {
-      "type": "com.google.api.client.json.GenericJson",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "com.google.api.client.json.webtoken.JsonWebSignature$Header",
-      "fields": [
-        {
-          "name": "algorithm"
-        },
-        {
-          "name": "critical"
-        },
-        {
-          "name": "jwk"
-        },
-        {
-          "name": "jwkUrl"
-        },
-        {
-          "name": "keyId"
-        },
-        {
-          "name": "x509Certificates"
-        },
-        {
-          "name": "x509Thumbprint"
-        },
-        {
-          "name": "x509Url"
-        }
-      ]
-    },
-    {
-      "type": "com.google.api.client.json.webtoken.JsonWebToken$Header",
-      "fields": [
-        {
-          "name": "contentType"
-        },
-        {
-          "name": "type"
-        }
-      ]
-    },
-    {
-      "type": "com.google.api.client.json.webtoken.JsonWebToken$Payload",
-      "fields": [
-        {
-          "name": "audience"
-        },
-        {
-          "name": "expirationTimeSeconds"
-        },
-        {
-          "name": "issuedAtTimeSeconds"
-        },
-        {
-          "name": "issuer"
-        },
-        {
-          "name": "jwtId"
-        },
-        {
-          "name": "notBeforeTimeSeconds"
-        },
-        {
-          "name": "subject"
-        },
-        {
-          "name": "type"
-        }
-      ]
-    },
-    {
-      "type": "com.google.api.client.util.GenericData",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "com.google.api.services.sheets.v4.Sheets$Spreadsheets$BatchUpdate",
-      "fields": [
-        {
-          "name": "spreadsheetId"
-        }
-      ]
-    },
-    {
-      "type": "com.google.api.services.sheets.v4.Sheets$Spreadsheets$Get",
-      "fields": [
-        {
-          "name": "excludeTablesInBandedRanges"
-        },
-        {
-          "name": "includeGridData"
-        },
-        {
-          "name": "ranges"
-        },
-        {
-          "name": "spreadsheetId"
-        }
-      ]
-    },
-    {
-      "type": "com.google.api.services.sheets.v4.Sheets$Spreadsheets$Values$Append",
-      "fields": [
-        {
-          "name": "includeValuesInResponse"
-        },
-        {
-          "name": "insertDataOption"
-        },
-        {
-          "name": "range"
-        },
-        {
-          "name": "responseDateTimeRenderOption"
-        },
-        {
-          "name": "responseValueRenderOption"
-        },
-        {
-          "name": "spreadsheetId"
-        },
-        {
-          "name": "valueInputOption"
-        }
-      ]
-    },
-    {
-      "type": "com.google.api.services.sheets.v4.Sheets$Spreadsheets$Values$Get",
-      "fields": [
-        {
-          "name": "dateTimeRenderOption"
-        },
-        {
-          "name": "majorDimension"
-        },
-        {
-          "name": "range"
-        },
-        {
-          "name": "spreadsheetId"
-        },
-        {
-          "name": "valueRenderOption"
-        }
-      ]
-    },
-    {
-      "type": "com.google.api.services.sheets.v4.Sheets$Spreadsheets$Values$Update",
-      "fields": [
-        {
-          "name": "includeValuesInResponse"
-        },
-        {
-          "name": "range"
-        },
-        {
-          "name": "responseDateTimeRenderOption"
-        },
-        {
-          "name": "responseValueRenderOption"
-        },
-        {
-          "name": "spreadsheetId"
-        },
-        {
-          "name": "valueInputOption"
-        }
-      ]
-    },
-    {
-      "type": "com.google.api.services.sheets.v4.SheetsRequest",
-      "fields": [
-        {
-          "name": "$Xgafv"
-        },
-        {
-          "name": "accessToken"
-        },
-        {
-          "name": "alt"
-        },
-        {
-          "name": "callback"
-        },
-        {
-          "name": "fields"
-        },
-        {
-          "name": "key"
-        },
-        {
-          "name": "oauthToken"
-        },
-        {
-          "name": "prettyPrint"
-        },
-        {
-          "name": "quotaUser"
-        },
-        {
-          "name": "uploadProtocol"
-        },
-        {
-          "name": "uploadType"
-        }
-      ]
-    },
-    {
-      "type": "com.google.api.services.sheets.v4.model.AppendValuesResponse",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        },
-        {
-          "name": "setSpreadsheetId",
-          "parameterTypes": [
-            "java.lang.String"
-          ]
-        },
-        {
-          "name": "setTableRange",
-          "parameterTypes": [
-            "java.lang.String"
-          ]
-        },
-        {
-          "name": "setUpdates",
-          "parameterTypes": [
-            "com.google.api.services.sheets.v4.model.UpdateValuesResponse"
-          ]
-        }
-      ]
-    },
-    {
-      "type": "com.google.api.services.sheets.v4.model.BandedRange",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "com.google.api.services.sheets.v4.model.BatchUpdateSpreadsheetRequest",
-      "fields": [
-        {
-          "name": "includeSpreadsheetInResponse"
-        },
-        {
-          "name": "requests"
-        },
-        {
-          "name": "responseIncludeGridData"
-        },
-        {
-          "name": "responseRanges"
-        }
-      ]
-    },
-    {
-      "type": "com.google.api.services.sheets.v4.model.BatchUpdateSpreadsheetResponse",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        },
-        {
-          "name": "setReplies",
-          "parameterTypes": [
-            "java.util.List"
-          ]
-        },
-        {
-          "name": "setSpreadsheetId",
-          "parameterTypes": [
-            "java.lang.String"
-          ]
-        }
-      ]
-    },
-    {
-      "type": "com.google.api.services.sheets.v4.model.CellData",
-      "fields": [
-        {
-          "name": "chipRuns"
-        },
-        {
-          "name": "dataSourceFormula"
-        },
-        {
-          "name": "dataSourceTable"
-        },
-        {
-          "name": "dataValidation"
-        },
-        {
-          "name": "effectiveFormat"
-        },
-        {
-          "name": "effectiveValue"
-        },
-        {
-          "name": "formattedValue"
-        },
-        {
-          "name": "hyperlink"
-        },
-        {
-          "name": "note"
-        },
-        {
-          "name": "pivotTable"
-        },
-        {
-          "name": "textFormatRuns"
-        },
-        {
-          "name": "userEnteredFormat"
-        },
-        {
-          "name": "userEnteredValue"
-        }
-      ]
-    },
-    {
-      "type": "com.google.api.services.sheets.v4.model.CellFormat",
-      "fields": [
-        {
-          "name": "backgroundColor"
-        },
-        {
-          "name": "backgroundColorStyle"
-        },
-        {
-          "name": "borders"
-        },
-        {
-          "name": "horizontalAlignment"
-        },
-        {
-          "name": "hyperlinkDisplayType"
-        },
-        {
-          "name": "numberFormat"
-        },
-        {
-          "name": "padding"
-        },
-        {
-          "name": "textDirection"
-        },
-        {
-          "name": "textFormat"
-        },
-        {
-          "name": "textRotation"
-        },
-        {
-          "name": "verticalAlignment"
-        },
-        {
-          "name": "wrapStrategy"
-        }
-      ],
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        },
-        {
-          "name": "setBackgroundColor",
-          "parameterTypes": [
-            "com.google.api.services.sheets.v4.model.Color"
-          ]
-        },
-        {
-          "name": "setBackgroundColorStyle",
-          "parameterTypes": [
-            "com.google.api.services.sheets.v4.model.ColorStyle"
-          ]
-        },
-        {
-          "name": "setPadding",
-          "parameterTypes": [
-            "com.google.api.services.sheets.v4.model.Padding"
-          ]
-        },
-        {
-          "name": "setTextFormat",
-          "parameterTypes": [
-            "com.google.api.services.sheets.v4.model.TextFormat"
-          ]
-        },
-        {
-          "name": "setVerticalAlignment",
-          "parameterTypes": [
-            "java.lang.String"
-          ]
-        },
-        {
-          "name": "setWrapStrategy",
-          "parameterTypes": [
-            "java.lang.String"
-          ]
-        }
-      ]
-    },
-    {
-      "type": "com.google.api.services.sheets.v4.model.Color",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        },
-        {
-          "name": "setBlue",
-          "parameterTypes": [
-            "java.lang.Float"
-          ]
-        },
-        {
-          "name": "setGreen",
-          "parameterTypes": [
-            "java.lang.Float"
-          ]
-        },
-        {
-          "name": "setRed",
-          "parameterTypes": [
-            "java.lang.Float"
-          ]
-        }
-      ]
-    },
-    {
-      "type": "com.google.api.services.sheets.v4.model.ColorStyle",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        },
-        {
-          "name": "setRgbColor",
-          "parameterTypes": [
-            "com.google.api.services.sheets.v4.model.Color"
-          ]
-        }
-      ]
-    },
-    {
-      "type": "com.google.api.services.sheets.v4.model.ConditionalFormatRule",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "com.google.api.services.sheets.v4.model.DataSource",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "com.google.api.services.sheets.v4.model.DataSourceRefreshSchedule",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "com.google.api.services.sheets.v4.model.DeveloperMetadata",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "com.google.api.services.sheets.v4.model.DimensionGroup",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "com.google.api.services.sheets.v4.model.DimensionProperties",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "com.google.api.services.sheets.v4.model.EmbeddedChart",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "com.google.api.services.sheets.v4.model.FilterCriteria",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "com.google.api.services.sheets.v4.model.FilterSpec",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "com.google.api.services.sheets.v4.model.FilterView",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "com.google.api.services.sheets.v4.model.GridData",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "com.google.api.services.sheets.v4.model.GridProperties",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        },
-        {
-          "name": "setColumnCount",
-          "parameterTypes": [
-            "java.lang.Integer"
-          ]
-        },
-        {
-          "name": "setRowCount",
-          "parameterTypes": [
-            "java.lang.Integer"
-          ]
-        }
-      ]
-    },
-    {
-      "type": "com.google.api.services.sheets.v4.model.GridRange",
-      "fields": [
-        {
-          "name": "endColumnIndex"
-        },
-        {
-          "name": "endRowIndex"
-        },
-        {
-          "name": "sheetId"
-        },
-        {
-          "name": "startColumnIndex"
-        },
-        {
-          "name": "startRowIndex"
-        }
-      ],
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "com.google.api.services.sheets.v4.model.NamedRange",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "com.google.api.services.sheets.v4.model.NumberFormat",
-      "fields": [
-        {
-          "name": "pattern"
-        },
-        {
-          "name": "type"
-        }
-      ]
-    },
-    {
-      "type": "com.google.api.services.sheets.v4.model.Padding",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        },
-        {
-          "name": "setBottom",
-          "parameterTypes": [
-            "java.lang.Integer"
-          ]
-        },
-        {
-          "name": "setLeft",
-          "parameterTypes": [
-            "java.lang.Integer"
-          ]
-        },
-        {
-          "name": "setRight",
-          "parameterTypes": [
-            "java.lang.Integer"
-          ]
-        },
-        {
-          "name": "setTop",
-          "parameterTypes": [
-            "java.lang.Integer"
-          ]
-        }
-      ]
-    },
-    {
-      "type": "com.google.api.services.sheets.v4.model.ProtectedRange",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "com.google.api.services.sheets.v4.model.RepeatCellRequest",
-      "fields": [
-        {
-          "name": "cell"
-        },
-        {
-          "name": "fields"
-        },
-        {
-          "name": "range"
-        }
-      ]
-    },
-    {
-      "type": "com.google.api.services.sheets.v4.model.Request",
-      "fields": [
-        {
-          "name": "addBanding"
-        },
-        {
-          "name": "addChart"
-        },
-        {
-          "name": "addConditionalFormatRule"
-        },
-        {
-          "name": "addDataSource"
-        },
-        {
-          "name": "addDimensionGroup"
-        },
-        {
-          "name": "addFilterView"
-        },
-        {
-          "name": "addNamedRange"
-        },
-        {
-          "name": "addProtectedRange"
-        },
-        {
-          "name": "addSheet"
-        },
-        {
-          "name": "addSlicer"
-        },
-        {
-          "name": "addTable"
-        },
-        {
-          "name": "appendCells"
-        },
-        {
-          "name": "appendDimension"
-        },
-        {
-          "name": "autoFill"
-        },
-        {
-          "name": "autoResizeDimensions"
-        },
-        {
-          "name": "cancelDataSourceRefresh"
-        },
-        {
-          "name": "clearBasicFilter"
-        },
-        {
-          "name": "copyPaste"
-        },
-        {
-          "name": "createDeveloperMetadata"
-        },
-        {
-          "name": "cutPaste"
-        },
-        {
-          "name": "deleteBanding"
-        },
-        {
-          "name": "deleteConditionalFormatRule"
-        },
-        {
-          "name": "deleteDataSource"
-        },
-        {
-          "name": "deleteDeveloperMetadata"
-        },
-        {
-          "name": "deleteDimension"
-        },
-        {
-          "name": "deleteDimensionGroup"
-        },
-        {
-          "name": "deleteDuplicates"
-        },
-        {
-          "name": "deleteEmbeddedObject"
-        },
-        {
-          "name": "deleteFilterView"
-        },
-        {
-          "name": "deleteNamedRange"
-        },
-        {
-          "name": "deleteProtectedRange"
-        },
-        {
-          "name": "deleteRange"
-        },
-        {
-          "name": "deleteSheet"
-        },
-        {
-          "name": "deleteTable"
-        },
-        {
-          "name": "duplicateFilterView"
-        },
-        {
-          "name": "duplicateSheet"
-        },
-        {
-          "name": "findReplace"
-        },
-        {
-          "name": "insertDimension"
-        },
-        {
-          "name": "insertRange"
-        },
-        {
-          "name": "mergeCells"
-        },
-        {
-          "name": "moveDimension"
-        },
-        {
-          "name": "pasteData"
-        },
-        {
-          "name": "randomizeRange"
-        },
-        {
-          "name": "refreshDataSource"
-        },
-        {
-          "name": "repeatCell"
-        },
-        {
-          "name": "setBasicFilter"
-        },
-        {
-          "name": "setDataValidation"
-        },
-        {
-          "name": "sortRange"
-        },
-        {
-          "name": "textToColumns"
-        },
-        {
-          "name": "trimWhitespace"
-        },
-        {
-          "name": "unmergeCells"
-        },
-        {
-          "name": "updateBanding"
-        },
-        {
-          "name": "updateBorders"
-        },
-        {
-          "name": "updateCells"
-        },
-        {
-          "name": "updateChartSpec"
-        },
-        {
-          "name": "updateConditionalFormatRule"
-        },
-        {
-          "name": "updateDataSource"
-        },
-        {
-          "name": "updateDeveloperMetadata"
-        },
-        {
-          "name": "updateDimensionGroup"
-        },
-        {
-          "name": "updateDimensionProperties"
-        },
-        {
-          "name": "updateEmbeddedObjectBorder"
-        },
-        {
-          "name": "updateEmbeddedObjectPosition"
-        },
-        {
-          "name": "updateFilterView"
-        },
-        {
-          "name": "updateNamedRange"
-        },
-        {
-          "name": "updateProtectedRange"
-        },
-        {
-          "name": "updateSheetProperties"
-        },
-        {
-          "name": "updateSlicerSpec"
-        },
-        {
-          "name": "updateSpreadsheetProperties"
-        },
-        {
-          "name": "updateTable"
-        }
-      ]
-    },
-    {
-      "type": "com.google.api.services.sheets.v4.model.Response",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "com.google.api.services.sheets.v4.model.Sheet",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        },
-        {
-          "name": "setProperties",
-          "parameterTypes": [
-            "com.google.api.services.sheets.v4.model.SheetProperties"
-          ]
-        }
-      ]
-    },
-    {
-      "type": "com.google.api.services.sheets.v4.model.SheetProperties",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        },
-        {
-          "name": "setGridProperties",
-          "parameterTypes": [
-            "com.google.api.services.sheets.v4.model.GridProperties"
-          ]
-        },
-        {
-          "name": "setIndex",
-          "parameterTypes": [
-            "java.lang.Integer"
-          ]
-        },
-        {
-          "name": "setSheetId",
-          "parameterTypes": [
-            "java.lang.Integer"
-          ]
-        },
-        {
-          "name": "setSheetType",
-          "parameterTypes": [
-            "java.lang.String"
-          ]
-        },
-        {
-          "name": "setTitle",
-          "parameterTypes": [
-            "java.lang.String"
-          ]
-        }
-      ]
-    },
-    {
-      "type": "com.google.api.services.sheets.v4.model.Spreadsheet",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        },
-        {
-          "name": "setProperties",
-          "parameterTypes": [
-            "com.google.api.services.sheets.v4.model.SpreadsheetProperties"
-          ]
-        },
-        {
-          "name": "setSheets",
-          "parameterTypes": [
-            "java.util.List"
-          ]
-        },
-        {
-          "name": "setSpreadsheetId",
-          "parameterTypes": [
-            "java.lang.String"
-          ]
-        },
-        {
-          "name": "setSpreadsheetUrl",
-          "parameterTypes": [
-            "java.lang.String"
-          ]
-        }
-      ]
-    },
-    {
-      "type": "com.google.api.services.sheets.v4.model.SpreadsheetProperties",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        },
-        {
-          "name": "setAutoRecalc",
-          "parameterTypes": [
-            "java.lang.String"
-          ]
-        },
-        {
-          "name": "setDefaultFormat",
-          "parameterTypes": [
-            "com.google.api.services.sheets.v4.model.CellFormat"
-          ]
-        },
-        {
-          "name": "setLocale",
-          "parameterTypes": [
-            "java.lang.String"
-          ]
-        },
-        {
-          "name": "setSpreadsheetTheme",
-          "parameterTypes": [
-            "com.google.api.services.sheets.v4.model.SpreadsheetTheme"
-          ]
-        },
-        {
-          "name": "setTimeZone",
-          "parameterTypes": [
-            "java.lang.String"
-          ]
-        },
-        {
-          "name": "setTitle",
-          "parameterTypes": [
-            "java.lang.String"
-          ]
-        }
-      ]
-    },
-    {
-      "type": "com.google.api.services.sheets.v4.model.SpreadsheetTheme",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        },
-        {
-          "name": "setPrimaryFontFamily",
-          "parameterTypes": [
-            "java.lang.String"
-          ]
-        },
-        {
-          "name": "setThemeColors",
-          "parameterTypes": [
-            "java.util.List"
-          ]
-        }
-      ]
-    },
-    {
-      "type": "com.google.api.services.sheets.v4.model.TextFormat",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        },
-        {
-          "name": "setBold",
-          "parameterTypes": [
-            "java.lang.Boolean"
-          ]
-        },
-        {
-          "name": "setFontFamily",
-          "parameterTypes": [
-            "java.lang.String"
-          ]
-        },
-        {
-          "name": "setFontSize",
-          "parameterTypes": [
-            "java.lang.Integer"
-          ]
-        },
-        {
-          "name": "setForegroundColor",
-          "parameterTypes": [
-            "com.google.api.services.sheets.v4.model.Color"
-          ]
-        },
-        {
-          "name": "setForegroundColorStyle",
-          "parameterTypes": [
-            "com.google.api.services.sheets.v4.model.ColorStyle"
-          ]
-        },
-        {
-          "name": "setItalic",
-          "parameterTypes": [
-            "java.lang.Boolean"
-          ]
-        },
-        {
-          "name": "setStrikethrough",
-          "parameterTypes": [
-            "java.lang.Boolean"
-          ]
-        },
-        {
-          "name": "setUnderline",
-          "parameterTypes": [
-            "java.lang.Boolean"
-          ]
-        }
-      ]
-    },
-    {
-      "type": "com.google.api.services.sheets.v4.model.ThemeColorPair",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        },
-        {
-          "name": "setColor",
-          "parameterTypes": [
-            "com.google.api.services.sheets.v4.model.ColorStyle"
-          ]
-        },
-        {
-          "name": "setColorType",
-          "parameterTypes": [
-            "java.lang.String"
-          ]
-        }
-      ]
-    },
-    {
-      "type": "com.google.api.services.sheets.v4.model.UpdateValuesResponse",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        },
-        {
-          "name": "setSpreadsheetId",
-          "parameterTypes": [
-            "java.lang.String"
-          ]
-        },
-        {
-          "name": "setUpdatedCells",
-          "parameterTypes": [
-            "java.lang.Integer"
-          ]
-        },
-        {
-          "name": "setUpdatedColumns",
-          "parameterTypes": [
-            "java.lang.Integer"
-          ]
-        },
-        {
-          "name": "setUpdatedRange",
-          "parameterTypes": [
-            "java.lang.String"
-          ]
-        },
-        {
-          "name": "setUpdatedRows",
-          "parameterTypes": [
-            "java.lang.Integer"
-          ]
-        }
-      ]
-    },
-    {
-      "type": "com.google.api.services.sheets.v4.model.ValueRange",
-      "fields": [
-        {
-          "name": "majorDimension"
-        },
-        {
-          "name": "range"
-        },
-        {
-          "name": "values"
-        }
-      ],
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        },
-        {
-          "name": "setMajorDimension",
-          "parameterTypes": [
-            "java.lang.String"
-          ]
-        },
-        {
-          "name": "setRange",
-          "parameterTypes": [
-            "java.lang.String"
-          ]
-        },
-        {
-          "name": "setValues",
-          "parameterTypes": [
-            "java.util.List"
-          ]
-        }
-      ]
-    },
-    {
-      "type": "com.google.common.util.concurrent.AbstractFutureState",
-      "fields": [
-        {
-          "name": "listenersField"
-        },
-        {
-          "name": "valueField"
-        },
-        {
-          "name": "waitersField"
-        }
-      ]
-    },
-    {
-      "type": "com.google.common.util.concurrent.AbstractFutureState$Waiter",
-      "fields": [
-        {
-          "name": "next"
-        },
-        {
-          "name": "thread"
-        }
-      ]
-    },
-    {
       "type": "com.google.gson.Gson"
     },
     {
-      "type": "com.rometools.rome.feed.WireFeed"
-    },
-    {
-      "type": "com.sun.crypto.provider.AESCipher$General",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "com.sun.crypto.provider.ARCFOURCipher",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "com.sun.crypto.provider.ChaCha20Cipher$ChaCha20Poly1305",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "com.sun.crypto.provider.DESCipher",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "com.sun.crypto.provider.DESedeCipher",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "com.sun.crypto.provider.DHParameters",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "com.sun.crypto.provider.GaloisCounterMode$AESGCM",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "com.sun.crypto.provider.HKDFKeyDerivation$HKDFSHA384",
+      "type": "com.mysql.cj.conf.url.SingleConnectionUrl",
       "methods": [
         {
           "name": "<init>",
           "parameterTypes": [
-            "javax.crypto.KDFParameters"
+            "com.mysql.cj.conf.ConnectionUrlParser",
+            "java.util.Properties"
           ]
         }
       ]
     },
     {
-      "type": "com.sun.crypto.provider.HmacCore$HmacSHA384",
+      "type": "com.mysql.cj.jdbc.AbandonedConnectionCleanupThread"
+    },
+    {
+      "type": "com.mysql.cj.jdbc.Driver",
       "methods": [
         {
           "name": "<init>",
@@ -2001,7 +471,18 @@
       ]
     },
     {
-      "type": "com.sun.crypto.provider.HmacPKCS12PBECore$HmacPKCS12PBE_SHA1",
+      "type": "com.mysql.cj.log.StandardLogger",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "com.mysql.cj.protocol.StandardSocketFactory",
       "methods": [
         {
           "name": "<init>",
@@ -2010,40 +491,7 @@
       ]
     },
     {
-      "type": "com.sun.crypto.provider.PBEKeyFactory$PBEWithMD5AndDES",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "com.sun.crypto.provider.PBEParameters",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "com.sun.crypto.provider.PKCS12PBECipherCore$PBEWithSHA1AndRC2_40",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "com.sun.crypto.provider.TlsMasterSecretGenerator",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
+      "type": "com.rometools.rome.feed.WireFeed"
     },
     {
       "type": "com.sun.org.apache.xerces.internal.jaxp.DocumentBuilderFactoryImpl",
@@ -2055,13 +503,31 @@
       ]
     },
     {
+      "type": "com.zaxxer.hikari.HikariConfig"
+    },
+    {
+      "type": "com.zaxxer.hikari.HikariConfigMXBean"
+    },
+    {
+      "type": "com.zaxxer.hikari.HikariDataSource",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.zaxxer.hikari.pool.PoolBase"
+    },
+    {
+      "type": "com.zaxxer.hikari.pool.PoolEntry"
+    },
+    {
       "type": "groovy.lang.MetaClass"
     },
     {
       "type": "int[]"
-    },
-    {
-      "type": "io.grpc.override.ContextStorageOverride"
     },
     {
       "type": "io.micrometer.context.ContextSnapshot"
@@ -2070,28 +536,28 @@
       "type": "io.micrometer.context.ContextSnapshotFactory"
     },
     {
+      "type": "io.micrometer.core.instrument.MeterRegistry"
+    },
+    {
       "type": "io.micrometer.core.instrument.binder.tomcat.TomcatMetrics"
     },
     {
       "type": "io.micrometer.observation.Observation"
     },
     {
-      "type": "io.opencensus.impl.trace.TraceComponentImpl"
+      "type": "io.opentelemetry.api.GlobalOpenTelemetry"
     },
     {
-      "type": "io.opencensus.impllite.trace.TraceComponentImplLite"
-    },
-    {
-      "type": "io.opentelemetry.opencensusshim.OpenTelemetryContextManager"
-    },
-    {
-      "type": "io.opentelemetry.opencensusshim.OpenTelemetryTraceComponentImpl"
+      "type": "io.r2dbc.spi.ConnectionFactory"
     },
     {
       "type": "io.reactivex.rxjava3.core.Flowable"
     },
     {
       "type": "io.smallrye.mutiny.Multi"
+    },
+    {
+      "type": "io.vavr.control.Try"
     },
     {
       "type": "jakarta.annotation.PostConstruct"
@@ -2104,6 +570,9 @@
     },
     {
       "type": "jakarta.ejb.EJB"
+    },
+    {
+      "type": "jakarta.ejb.TransactionAttribute"
     },
     {
       "type": "jakarta.faces.context.FacesContext"
@@ -2163,6 +632,15 @@
       "type": "jakarta.servlet.jsp.jstl.core.Config"
     },
     {
+      "type": "jakarta.transaction.Transaction"
+    },
+    {
+      "type": "jakarta.transaction.TransactionManager"
+    },
+    {
+      "type": "jakarta.transaction.Transactional"
+    },
+    {
       "type": "jakarta.validation.Validator"
     },
     {
@@ -2182,6 +660,9 @@
     },
     {
       "type": "java.io.Serializable[]"
+    },
+    {
+      "type": "java.lang.AutoCloseable"
     },
     {
       "type": "java.lang.Boolean",
@@ -2213,7 +694,13 @@
       "type": "java.lang.Class[]"
     },
     {
+      "type": "java.lang.CloneNotSupportedException"
+    },
+    {
       "type": "java.lang.Comparable[]"
+    },
+    {
+      "type": "java.lang.Error"
     },
     {
       "type": "java.lang.Iterable"
@@ -2225,13 +712,22 @@
       "type": "java.lang.Module"
     },
     {
-      "type": "java.lang.Object"
+      "type": "java.lang.Object",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
     },
     {
       "type": "java.lang.Object[]"
     },
     {
       "type": "java.lang.Record"
+    },
+    {
+      "type": "java.lang.RuntimeException"
     },
     {
       "type": "java.lang.String"
@@ -2244,6 +740,9 @@
     },
     {
       "type": "java.lang.Thread$Builder"
+    },
+    {
+      "type": "java.lang.Throwable"
     },
     {
       "type": "java.lang.WrongThreadException"
@@ -2279,9 +778,6 @@
       "type": "java.lang.invoke.TypeDescriptor$OfField"
     },
     {
-      "type": "java.lang.invoke.VarHandle"
-    },
-    {
       "type": "java.lang.reflect.AnnotatedElement"
     },
     {
@@ -2304,8 +800,15 @@
       "type": "java.lang.reflect.Type"
     },
     {
+      "type": "java.lang.reflect.UndeclaredThrowableException"
+    },
+    {
       "type": "java.lang.reflect.WildcardType",
       "methods": [
+        {
+          "name": "getLowerBounds",
+          "parameterTypes": []
+        },
         {
           "name": "getUpperBounds",
           "parameterTypes": []
@@ -2313,28 +816,16 @@
       ]
     },
     {
-      "type": "java.security.AlgorithmParametersSpi"
-    },
-    {
-      "type": "java.security.KeyStoreSpi"
-    },
-    {
-      "type": "java.security.interfaces.ECPrivateKey"
-    },
-    {
-      "type": "java.security.interfaces.ECPublicKey"
-    },
-    {
-      "type": "java.security.interfaces.RSAPrivateKey"
-    },
-    {
-      "type": "java.security.interfaces.RSAPublicKey"
-    },
-    {
       "type": "java.sql.Date"
     },
     {
+      "type": "java.sql.Driver"
+    },
+    {
       "type": "java.sql.DriverManager"
+    },
+    {
+      "type": "java.sql.Statement[]"
     },
     {
       "type": "java.sql.Time"
@@ -2343,13 +834,135 @@
       "type": "java.sql.Timestamp"
     },
     {
+      "type": "java.sql.Types",
+      "fields": [
+        {
+          "name": "ARRAY"
+        },
+        {
+          "name": "BIGINT"
+        },
+        {
+          "name": "BINARY"
+        },
+        {
+          "name": "BIT"
+        },
+        {
+          "name": "BLOB"
+        },
+        {
+          "name": "BOOLEAN"
+        },
+        {
+          "name": "CHAR"
+        },
+        {
+          "name": "CLOB"
+        },
+        {
+          "name": "DATALINK"
+        },
+        {
+          "name": "DATE"
+        },
+        {
+          "name": "DECIMAL"
+        },
+        {
+          "name": "DISTINCT"
+        },
+        {
+          "name": "DOUBLE"
+        },
+        {
+          "name": "FLOAT"
+        },
+        {
+          "name": "INTEGER"
+        },
+        {
+          "name": "JAVA_OBJECT"
+        },
+        {
+          "name": "LONGNVARCHAR"
+        },
+        {
+          "name": "LONGVARBINARY"
+        },
+        {
+          "name": "LONGVARCHAR"
+        },
+        {
+          "name": "NCHAR"
+        },
+        {
+          "name": "NCLOB"
+        },
+        {
+          "name": "NULL"
+        },
+        {
+          "name": "NUMERIC"
+        },
+        {
+          "name": "NVARCHAR"
+        },
+        {
+          "name": "OTHER"
+        },
+        {
+          "name": "REAL"
+        },
+        {
+          "name": "REF"
+        },
+        {
+          "name": "REF_CURSOR"
+        },
+        {
+          "name": "ROWID"
+        },
+        {
+          "name": "SMALLINT"
+        },
+        {
+          "name": "SQLXML"
+        },
+        {
+          "name": "STRUCT"
+        },
+        {
+          "name": "TIME"
+        },
+        {
+          "name": "TIMESTAMP"
+        },
+        {
+          "name": "TIMESTAMP_WITH_TIMEZONE"
+        },
+        {
+          "name": "TIME_WITH_TIMEZONE"
+        },
+        {
+          "name": "TINYINT"
+        },
+        {
+          "name": "VARBINARY"
+        },
+        {
+          "name": "VARCHAR"
+        }
+      ]
+    },
+    {
+      "type": "java.sql.Wrapper"
+    },
+    {
       "type": "java.text.ListFormat"
     },
     {
       "type": "java.util.AbstractCollection"
-    },
-    {
-      "type": "java.util.AbstractMap"
     },
     {
       "type": "java.util.ArrayList"
@@ -2359,6 +972,9 @@
     },
     {
       "type": "java.util.Enumeration"
+    },
+    {
+      "type": "java.util.EventListener"
     },
     {
       "type": "java.util.HashSet"
@@ -2421,6 +1037,15 @@
       "type": "javax.servlet.Servlet"
     },
     {
+      "type": "javax.sql.CommonDataSource"
+    },
+    {
+      "type": "javax.sql.DataSource"
+    },
+    {
+      "type": "javax.sql.XADataSource"
+    },
+    {
       "type": "jdk.crac.management.CRaCMXBean"
     },
     {
@@ -2454,6 +1079,21 @@
       "type": "kotlinx.serialization.protobuf.ProtoBuf"
     },
     {
+      "type": "long[]"
+    },
+    {
+      "type": "oracle.jdbc.OracleConnection"
+    },
+    {
+      "type": "oracle.ucp.jdbc.PoolDataSource"
+    },
+    {
+      "type": "oracle.ucp.jdbc.PoolDataSourceImpl"
+    },
+    {
+      "type": "org.aopalliance.intercept.MethodInterceptor"
+    },
+    {
       "type": "org.apache.catalina.core.ApplicationContextFacade"
     },
     {
@@ -2480,6 +1120,9 @@
           "parameterTypes": []
         }
       ]
+    },
+    {
+      "type": "org.apache.commons.dbcp2.BasicDataSource"
     },
     {
       "type": "org.apache.commons.logging.LogFactory"
@@ -2548,6 +1191,9 @@
     },
     {
       "type": "org.apache.coyote.http11.Http11NioProtocol"
+    },
+    {
+      "type": "org.apache.derby.jdbc.EmbeddedDriver"
     },
     {
       "type": "org.apache.jasper.compiler.JspConfig"
@@ -3836,6 +2482,9 @@
       "type": "org.apache.logging.slf4j.SLF4JServiceProvider"
     },
     {
+      "type": "org.apache.tomcat.jdbc.pool.DataSource"
+    },
+    {
       "type": "org.apache.tomcat.util.net.AbstractEndpoint",
       "methods": [
         {
@@ -3862,6 +2511,9 @@
       "type": "org.crac.Core"
     },
     {
+      "type": "org.crac.Resource"
+    },
+    {
       "type": "org.eclipse.core.runtime.FileLocator"
     },
     {
@@ -3874,10 +2526,34 @@
       ]
     },
     {
+      "type": "org.h2.Driver"
+    },
+    {
+      "type": "org.hsqldb.jdbc.JDBCDriver"
+    },
+    {
       "type": "org.osgi.framework.FrameworkUtil"
     },
     {
       "type": "org.reactivestreams.Publisher"
+    },
+    {
+      "type": "org.springframework.aop.PointcutAdvisor"
+    },
+    {
+      "type": "org.springframework.aop.SpringProxy"
+    },
+    {
+      "type": "org.springframework.aop.TargetClassAware"
+    },
+    {
+      "type": "org.springframework.aop.framework.AbstractAdvisingBeanPostProcessor"
+    },
+    {
+      "type": "org.springframework.aop.framework.Advised"
+    },
+    {
+      "type": "org.springframework.aop.framework.AopConfigException"
     },
     {
       "type": "org.springframework.aop.framework.AopInfrastructureBean"
@@ -3915,6 +2591,9 @@
       "type": "org.springframework.aop.framework.autoproxy.AbstractAutoProxyCreator"
     },
     {
+      "type": "org.springframework.aop.framework.autoproxy.AbstractBeanFactoryAwareAdvisingPostProcessor"
+    },
+    {
       "type": "org.springframework.aop.framework.autoproxy.InfrastructureAdvisorAutoProxyCreator",
       "methods": [
         {
@@ -3922,6 +2601,15 @@
           "parameterTypes": []
         }
       ]
+    },
+    {
+      "type": "org.springframework.aop.scope.ScopedObject"
+    },
+    {
+      "type": "org.springframework.aop.support.AbstractBeanFactoryPointcutAdvisor"
+    },
+    {
+      "type": "org.springframework.aop.support.AbstractPointcutAdvisor"
     },
     {
       "type": "org.springframework.aot.generate.Generated"
@@ -3964,9 +2652,6 @@
     },
     {
       "type": "org.springframework.beans.factory.annotation.Qualifier"
-    },
-    {
-      "type": "org.springframework.beans.factory.annotation.Value"
     },
     {
       "type": "org.springframework.beans.factory.aot.BeanFactoryInitializationAotProcessor"
@@ -4150,6 +2835,9 @@
       "type": "org.springframework.boot.autoconfigure.condition.ConditionalOnBooleanProperty"
     },
     {
+      "type": "org.springframework.boot.autoconfigure.condition.ConditionalOnCheckpointRestore"
+    },
+    {
       "type": "org.springframework.boot.autoconfigure.condition.ConditionalOnClass"
     },
     {
@@ -4169,6 +2857,9 @@
     },
     {
       "type": "org.springframework.boot.autoconfigure.condition.ConditionalOnResource"
+    },
+    {
+      "type": "org.springframework.boot.autoconfigure.condition.ConditionalOnSingleCandidate"
     },
     {
       "type": "org.springframework.boot.autoconfigure.condition.ConditionalOnThreading"
@@ -4364,6 +3055,9 @@
           "parameterTypes": []
         }
       ]
+    },
+    {
+      "type": "org.springframework.boot.autoconfigure.service.connection.ConnectionDetails"
     },
     {
       "type": "org.springframework.boot.autoconfigure.ssl.FileWatcher"
@@ -4872,6 +3566,9 @@
       "type": "org.springframework.boot.health.actuate.endpoint.HealthEndpoint"
     },
     {
+      "type": "org.springframework.boot.health.autoconfigure.contributor.ConditionalOnEnabledHealthIndicator"
+    },
+    {
       "type": "org.springframework.boot.http.converter.autoconfigure.ClientHttpMessageConvertersCustomizer"
     },
     {
@@ -4881,31 +3578,7 @@
       "type": "org.springframework.boot.http.converter.autoconfigure.DefaultServerHttpMessageConvertersCustomizer"
     },
     {
-      "type": "org.springframework.boot.http.converter.autoconfigure.GsonHttpMessageConvertersConfiguration",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "org.springframework.boot.http.converter.autoconfigure.GsonHttpMessageConvertersConfiguration$JacksonAndJsonbUnavailableCondition",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "org.springframework.boot.http.converter.autoconfigure.GsonHttpMessageConvertersConfiguration$PreferGsonOrJacksonAndJsonbUnavailableCondition",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
+      "type": "org.springframework.boot.http.converter.autoconfigure.GsonHttpMessageConvertersConfiguration"
     },
     {
       "type": "org.springframework.boot.http.converter.autoconfigure.HttpMessageConvertersAutoConfiguration",
@@ -4974,9 +3647,6 @@
           "parameterTypes": []
         }
       ]
-    },
-    {
-      "type": "org.springframework.boot.http.converter.autoconfigure.Jackson2HttpMessageConvertersConfiguration$Jackson2JsonMessageConvertersCustomizer"
     },
     {
       "type": "org.springframework.boot.http.converter.autoconfigure.Jackson2HttpMessageConvertersConfiguration$PreferJackson2OrJacksonUnavailableCondition",
@@ -5197,6 +3867,296 @@
       "type": "org.springframework.boot.jackson.autoconfigure.JsonMapperBuilderCustomizer"
     },
     {
+      "type": "org.springframework.boot.jdbc.SpringJdbcDependsOnDatabaseInitializationDetector",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.springframework.boot.jdbc.autoconfigure.ApplicationDataSourceScriptDatabaseInitializer"
+    },
+    {
+      "type": "org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration$EmbeddedDatabaseCondition",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration$PooledDataSourceAvailableCondition",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration$PooledDataSourceCondition",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.springframework.boot.jdbc.autoconfigure.DataSourceAutoConfiguration$PooledDataSourceConfiguration",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        },
+        {
+          "name": "jdbcConnectionDetails",
+          "parameterTypes": [
+            "org.springframework.boot.jdbc.autoconfigure.DataSourceProperties"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.springframework.boot.jdbc.autoconfigure.DataSourceCheckpointRestoreConfiguration"
+    },
+    {
+      "type": "org.springframework.boot.jdbc.autoconfigure.DataSourceConfiguration$Dbcp2"
+    },
+    {
+      "type": "org.springframework.boot.jdbc.autoconfigure.DataSourceConfiguration$Generic"
+    },
+    {
+      "type": "org.springframework.boot.jdbc.autoconfigure.DataSourceConfiguration$Hikari",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        },
+        {
+          "name": "dataSource",
+          "parameterTypes": [
+            "org.springframework.boot.jdbc.autoconfigure.DataSourceProperties",
+            "org.springframework.boot.jdbc.autoconfigure.JdbcConnectionDetails",
+            "org.springframework.core.env.Environment"
+          ]
+        },
+        {
+          "name": "jdbcConnectionDetailsHikariBeanPostProcessor",
+          "parameterTypes": [
+            "org.springframework.beans.factory.ObjectProvider"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.springframework.boot.jdbc.autoconfigure.DataSourceConfiguration$OracleUcp"
+    },
+    {
+      "type": "org.springframework.boot.jdbc.autoconfigure.DataSourceConfiguration$Tomcat"
+    },
+    {
+      "type": "org.springframework.boot.jdbc.autoconfigure.DataSourceInitializationAutoConfiguration",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        },
+        {
+          "name": "dataSourceScriptDatabaseInitializer",
+          "parameterTypes": [
+            "javax.sql.DataSource",
+            "org.springframework.boot.sql.autoconfigure.init.SqlInitializationProperties"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.springframework.boot.jdbc.autoconfigure.DataSourceJmxConfiguration"
+    },
+    {
+      "type": "org.springframework.boot.jdbc.autoconfigure.DataSourcePoolMetadataProvidersConfiguration",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.springframework.boot.jdbc.autoconfigure.DataSourcePoolMetadataProvidersConfiguration$HikariDataSourcePoolMetadataRuntimeHints"
+    },
+    {
+      "type": "org.springframework.boot.jdbc.autoconfigure.DataSourcePoolMetadataProvidersConfiguration$HikariPoolDataSourceMetadataProviderConfiguration",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        },
+        {
+          "name": "hikariPoolDataSourceMetadataProvider",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.springframework.boot.jdbc.autoconfigure.DataSourceProperties",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        },
+        {
+          "name": "setPassword",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        },
+        {
+          "name": "setUrl",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        },
+        {
+          "name": "setUsername",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.springframework.boot.jdbc.autoconfigure.DataSourceTransactionManagerAutoConfiguration",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.springframework.boot.jdbc.autoconfigure.DataSourceTransactionManagerAutoConfiguration$JdbcTransactionManagerConfiguration",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        },
+        {
+          "name": "transactionManager",
+          "parameterTypes": [
+            "org.springframework.core.env.Environment",
+            "javax.sql.DataSource",
+            "org.springframework.beans.factory.ObjectProvider"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.springframework.boot.jdbc.autoconfigure.HikariJdbcConnectionDetailsBeanPostProcessor"
+    },
+    {
+      "type": "org.springframework.boot.jdbc.autoconfigure.JdbcClientAutoConfiguration",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        },
+        {
+          "name": "jdbcClient",
+          "parameterTypes": [
+            "org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.springframework.boot.jdbc.autoconfigure.JdbcConnectionDetails"
+    },
+    {
+      "type": "org.springframework.boot.jdbc.autoconfigure.JdbcProperties",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.springframework.boot.jdbc.autoconfigure.JdbcTemplateAutoConfiguration",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.springframework.boot.jdbc.autoconfigure.JdbcTemplateConfiguration",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        },
+        {
+          "name": "jdbcTemplate",
+          "parameterTypes": [
+            "javax.sql.DataSource",
+            "org.springframework.boot.jdbc.autoconfigure.JdbcProperties",
+            "org.springframework.beans.factory.ObjectProvider"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.springframework.boot.jdbc.autoconfigure.LazyConnectionDataSourceConfiguration"
+    },
+    {
+      "type": "org.springframework.boot.jdbc.autoconfigure.NamedParameterJdbcTemplateConfiguration",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        },
+        {
+          "name": "namedParameterJdbcTemplate",
+          "parameterTypes": [
+            "org.springframework.jdbc.core.JdbcTemplate"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.springframework.boot.jdbc.autoconfigure.PropertiesJdbcConnectionDetails"
+    },
+    {
+      "type": "org.springframework.boot.jdbc.init.DataSourceScriptDatabaseInitializer"
+    },
+    {
+      "type": "org.springframework.boot.jdbc.init.DataSourceScriptDatabaseInitializerDetector",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.springframework.boot.jdbc.metadata.DataSourcePoolMetadataProvider"
+    },
+    {
       "type": "org.springframework.boot.loader.launch.LaunchedClassLoader"
     },
     {
@@ -5301,6 +4261,21 @@
       "type": "org.springframework.boot.micrometer.observation.autoconfigure.ObservationProperties"
     },
     {
+      "type": "org.springframework.boot.persistence.autoconfigure.PersistenceExceptionTranslationAutoConfiguration",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        },
+        {
+          "name": "persistenceExceptionTranslationPostProcessor",
+          "parameterTypes": [
+            "org.springframework.core.env.Environment"
+          ]
+        }
+      ]
+    },
+    {
       "type": "org.springframework.boot.servlet.autoconfigure.HttpEncodingAutoConfiguration",
       "methods": [
         {
@@ -5363,6 +4338,75 @@
     },
     {
       "type": "org.springframework.boot.servlet.filter.OrderedRequestContextFilter"
+    },
+    {
+      "type": "org.springframework.boot.sql.autoconfigure.init.ApplicationScriptDatabaseInitializer"
+    },
+    {
+      "type": "org.springframework.boot.sql.autoconfigure.init.ConditionalOnSqlInitialization"
+    },
+    {
+      "type": "org.springframework.boot.sql.autoconfigure.init.OnSqlInitializationCondition",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.springframework.boot.sql.autoconfigure.init.SqlInitializationProperties",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        },
+        {
+          "name": "setContinueOnError",
+          "parameterTypes": [
+            "boolean"
+          ]
+        },
+        {
+          "name": "setMode",
+          "parameterTypes": [
+            "org.springframework.boot.sql.init.DatabaseInitializationMode"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.springframework.boot.sql.init.AbstractScriptDatabaseInitializer"
+    },
+    {
+      "type": "org.springframework.boot.sql.init.DatabaseInitializationModeEditor"
+    },
+    {
+      "type": "org.springframework.boot.sql.init.dependency.AnnotationDependsOnDatabaseInitializationDetector",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.springframework.boot.sql.init.dependency.DatabaseInitializationDependencyConfigurer",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.springframework.boot.sql.init.dependency.DatabaseInitializationDependencyConfigurer$DependsOnDatabaseInitializationPostProcessor",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
     },
     {
       "type": "org.springframework.boot.ssl.DefaultSslBundleRegistry"
@@ -5531,6 +4575,87 @@
       "type": "org.springframework.boot.tomcat.servlet.TomcatServletWebServerFactory"
     },
     {
+      "type": "org.springframework.boot.transaction.autoconfigure.ExecutionListenersTransactionManagerCustomizer"
+    },
+    {
+      "type": "org.springframework.boot.transaction.autoconfigure.TransactionAutoConfiguration",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.springframework.boot.transaction.autoconfigure.TransactionAutoConfiguration$EnableTransactionManagementConfiguration",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.springframework.boot.transaction.autoconfigure.TransactionAutoConfiguration$EnableTransactionManagementConfiguration$CglibAutoProxyConfiguration",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.springframework.boot.transaction.autoconfigure.TransactionAutoConfiguration$TransactionTemplateConfiguration",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        },
+        {
+          "name": "transactionTemplate",
+          "parameterTypes": [
+            "org.springframework.transaction.PlatformTransactionManager"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.springframework.boot.transaction.autoconfigure.TransactionManagerCustomizationAutoConfiguration",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        },
+        {
+          "name": "platformTransactionManagerCustomizers",
+          "parameterTypes": [
+            "org.springframework.beans.factory.ObjectProvider"
+          ]
+        },
+        {
+          "name": "transactionExecutionListeners",
+          "parameterTypes": [
+            "org.springframework.beans.factory.ObjectProvider"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.springframework.boot.transaction.autoconfigure.TransactionManagerCustomizer"
+    },
+    {
+      "type": "org.springframework.boot.transaction.autoconfigure.TransactionManagerCustomizers"
+    },
+    {
+      "type": "org.springframework.boot.transaction.autoconfigure.TransactionProperties",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
       "type": "org.springframework.boot.validation.beanvalidation.MethodValidationExcludeFilter",
       "methods": [
         {
@@ -5572,10 +4697,16 @@
       ]
     },
     {
+      "type": "org.springframework.boot.web.error.ErrorPageRegistry"
+    },
+    {
       "type": "org.springframework.boot.web.server.AbstractConfigurableWebServerFactory"
     },
     {
       "type": "org.springframework.boot.web.server.ConfigurableWebServerFactory"
+    },
+    {
+      "type": "org.springframework.boot.web.server.WebServerFactory"
     },
     {
       "type": "org.springframework.boot.web.server.WebServerFactoryCustomizer"
@@ -5657,6 +4788,9 @@
     },
     {
       "type": "org.springframework.boot.web.server.servlet.ServletWebServerFactory"
+    },
+    {
+      "type": "org.springframework.boot.web.server.servlet.WebListenerRegistry"
     },
     {
       "type": "org.springframework.boot.web.server.servlet.context.ServletWebServerApplicationContextFactory",
@@ -5889,7 +5023,15 @@
       "type": "org.springframework.boot.webmvc.autoconfigure.error.AbstractErrorController"
     },
     {
-      "type": "org.springframework.boot.webmvc.autoconfigure.error.BasicErrorController"
+      "type": "org.springframework.boot.webmvc.autoconfigure.error.BasicErrorController",
+      "methods": [
+        {
+          "name": "error",
+          "parameterTypes": [
+            "jakarta.servlet.http.HttpServletRequest"
+          ]
+        }
+      ]
     },
     {
       "type": "org.springframework.boot.webmvc.autoconfigure.error.DefaultErrorViewResolver"
@@ -5990,7 +5132,19 @@
       "type": "org.springframework.boot.webmvc.error.ErrorController"
     },
     {
+      "type": "org.springframework.cglib.proxy.Dispatcher"
+    },
+    {
+      "type": "org.springframework.cglib.proxy.MethodInterceptor"
+    },
+    {
+      "type": "org.springframework.cglib.proxy.NoOp"
+    },
+    {
       "type": "org.springframework.context.ApplicationContextAware"
+    },
+    {
+      "type": "org.springframework.context.ApplicationEventPublisherAware"
     },
     {
       "type": "org.springframework.context.ApplicationListener"
@@ -6005,7 +5159,13 @@
       "type": "org.springframework.context.EnvironmentAware"
     },
     {
+      "type": "org.springframework.context.Lifecycle"
+    },
+    {
       "type": "org.springframework.context.LifecycleProcessor"
+    },
+    {
+      "type": "org.springframework.context.Phased"
     },
     {
       "type": "org.springframework.context.ResourceLoaderAware"
@@ -6015,6 +5175,15 @@
     },
     {
       "type": "org.springframework.context.annotation.AnnotationScopeMetadataResolver",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.springframework.context.annotation.AutoProxyRegistrar",
       "methods": [
         {
           "name": "<init>",
@@ -6068,6 +5237,9 @@
       "type": "org.springframework.context.annotation.Import"
     },
     {
+      "type": "org.springframework.context.annotation.ImportAware"
+    },
+    {
       "type": "org.springframework.context.annotation.ImportRuntimeHints"
     },
     {
@@ -6075,6 +5247,9 @@
     },
     {
       "type": "org.springframework.context.annotation.Primary"
+    },
+    {
+      "type": "org.springframework.context.annotation.Role"
     },
     {
       "type": "org.springframework.context.annotation.Scope"
@@ -6087,9 +5262,6 @@
           "parameterTypes": []
         }
       ]
-    },
-    {
-      "type": "org.springframework.context.event.EventListener"
     },
     {
       "type": "org.springframework.context.event.EventListenerMethodProcessor",
@@ -6125,6 +5297,12 @@
       "type": "org.springframework.core.annotation.Order"
     },
     {
+      "type": "org.springframework.core.convert.ConversionService"
+    },
+    {
+      "type": "org.springframework.core.convert.converter.ConverterRegistry"
+    },
+    {
       "type": "org.springframework.core.convert.support.ConfigurableConversionService"
     },
     {
@@ -6137,6 +5315,9 @@
       "type": "org.springframework.core.task.AsyncTaskExecutor"
     },
     {
+      "type": "org.springframework.core.task.TaskExecutor"
+    },
+    {
       "type": "org.springframework.core.type.classreading.CachingMetadataReaderFactory"
     },
     {
@@ -6144,6 +5325,9 @@
     },
     {
       "type": "org.springframework.dao.DataAccessException"
+    },
+    {
+      "type": "org.springframework.dao.annotation.PersistenceExceptionTranslationPostProcessor"
     },
     {
       "type": "org.springframework.data.rest.webmvc.alps.AlpsJacksonJsonHttpMessageConverter"
@@ -6174,6 +5358,39 @@
     },
     {
       "type": "org.springframework.http.converter.json.JacksonJsonHttpMessageConverter"
+    },
+    {
+      "type": "org.springframework.jdbc.core.JdbcOperations"
+    },
+    {
+      "type": "org.springframework.jdbc.core.JdbcTemplate"
+    },
+    {
+      "type": "org.springframework.jdbc.core.namedparam.NamedParameterJdbcOperations"
+    },
+    {
+      "type": "org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate"
+    },
+    {
+      "type": "org.springframework.jdbc.core.simple.DefaultJdbcClient"
+    },
+    {
+      "type": "org.springframework.jdbc.core.simple.JdbcClient"
+    },
+    {
+      "type": "org.springframework.jdbc.datasource.DataSourceTransactionManager"
+    },
+    {
+      "type": "org.springframework.jdbc.datasource.embedded.EmbeddedDatabaseType"
+    },
+    {
+      "type": "org.springframework.jdbc.datasource.init.DatabasePopulator"
+    },
+    {
+      "type": "org.springframework.jdbc.support.JdbcAccessor"
+    },
+    {
+      "type": "org.springframework.jdbc.support.JdbcTransactionManager"
     },
     {
       "type": "org.springframework.jmx.export.MBeanExporter"
@@ -6209,7 +5426,117 @@
       "type": "org.springframework.stereotype.Indexed"
     },
     {
+      "type": "org.springframework.stereotype.Repository"
+    },
+    {
       "type": "org.springframework.stereotype.Service"
+    },
+    {
+      "type": "org.springframework.transaction.ConfigurableTransactionManager"
+    },
+    {
+      "type": "org.springframework.transaction.PlatformTransactionManager"
+    },
+    {
+      "type": "org.springframework.transaction.ReactiveTransactionManager"
+    },
+    {
+      "type": "org.springframework.transaction.TransactionDefinition"
+    },
+    {
+      "type": "org.springframework.transaction.TransactionManager"
+    },
+    {
+      "type": "org.springframework.transaction.annotation.AbstractTransactionManagementConfiguration",
+      "methods": [
+        {
+          "name": "transactionAttributeSource",
+          "parameterTypes": []
+        },
+        {
+          "name": "transactionalEventListenerFactory",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.springframework.transaction.annotation.AnnotationTransactionAttributeSource"
+    },
+    {
+      "type": "org.springframework.transaction.annotation.EnableTransactionManagement"
+    },
+    {
+      "type": "org.springframework.transaction.annotation.ProxyTransactionManagementConfiguration",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        },
+        {
+          "name": "transactionAdvisor",
+          "parameterTypes": [
+            "org.springframework.transaction.interceptor.TransactionAttributeSource",
+            "org.springframework.transaction.interceptor.TransactionInterceptor"
+          ]
+        },
+        {
+          "name": "transactionInterceptor",
+          "parameterTypes": [
+            "org.springframework.transaction.interceptor.TransactionAttributeSource"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.springframework.transaction.annotation.RestrictedTransactionalEventListenerFactory"
+    },
+    {
+      "type": "org.springframework.transaction.annotation.TransactionManagementConfigurationSelector",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.springframework.transaction.annotation.TransactionRuntimeHints"
+    },
+    {
+      "type": "org.springframework.transaction.annotation.Transactional"
+    },
+    {
+      "type": "org.springframework.transaction.aspectj.AbstractTransactionAspect"
+    },
+    {
+      "type": "org.springframework.transaction.interceptor.AbstractFallbackTransactionAttributeSource"
+    },
+    {
+      "type": "org.springframework.transaction.interceptor.BeanFactoryTransactionAttributeSourceAdvisor"
+    },
+    {
+      "type": "org.springframework.transaction.interceptor.TransactionAspectSupport"
+    },
+    {
+      "type": "org.springframework.transaction.interceptor.TransactionAttributeSource"
+    },
+    {
+      "type": "org.springframework.transaction.interceptor.TransactionInterceptor"
+    },
+    {
+      "type": "org.springframework.transaction.support.AbstractPlatformTransactionManager"
+    },
+    {
+      "type": "org.springframework.transaction.support.DefaultTransactionDefinition"
+    },
+    {
+      "type": "org.springframework.transaction.support.ResourceTransactionManager"
+    },
+    {
+      "type": "org.springframework.transaction.support.TransactionOperations"
+    },
+    {
+      "type": "org.springframework.transaction.support.TransactionTemplate"
     },
     {
       "type": "org.springframework.util.AntPathMatcher"
@@ -6312,6 +5639,9 @@
     },
     {
       "type": "org.springframework.web.filter.RequestContextFilter"
+    },
+    {
+      "type": "org.springframework.web.method.annotation.ExceptionHandlerMethodResolver"
     },
     {
       "type": "org.springframework.web.method.support.CompositeUriComponentsContributor"
@@ -6633,56 +5963,18 @@
       ]
     },
     {
-      "type": "sun.security.pkcs12.PKCS12KeyStore",
+      "type": "sun.reflect.ReflectionFactory",
       "methods": [
         {
-          "name": "<init>",
+          "name": "getReflectionFactory",
           "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "sun.security.pkcs12.PKCS12KeyStore$DualFormatPKCS12",
-      "methods": [
+        },
         {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "sun.security.provider.DSA$SHA224withDSA",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "sun.security.provider.DSA$SHA256withDSA",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "sun.security.provider.JavaKeyStore$DualFormatJKS",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "sun.security.provider.JavaKeyStore$JKS",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
+          "name": "newConstructorForSerialization",
+          "parameterTypes": [
+            "java.lang.Class",
+            "java.lang.reflect.Constructor"
+          ]
         }
       ]
     },
@@ -6707,15 +5999,6 @@
       ]
     },
     {
-      "type": "sun.security.provider.SHA2$SHA224",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
       "type": "sun.security.provider.SHA2$SHA256",
       "methods": [
         {
@@ -6723,264 +6006,6 @@
           "parameterTypes": []
         }
       ]
-    },
-    {
-      "type": "sun.security.provider.SHA5$SHA384",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "sun.security.provider.SHA5$SHA512",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "sun.security.provider.X509Factory",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "sun.security.provider.certpath.PKIXCertPathValidator",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "sun.security.rsa.PSSParameters",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "sun.security.rsa.RSAKeyFactory$Legacy",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "sun.security.rsa.RSAPSSSignature",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "sun.security.rsa.RSASignature$SHA224withRSA",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "sun.security.rsa.RSASignature$SHA256withRSA",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "sun.security.ssl.KeyManagerFactoryImpl$SunX509",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "sun.security.ssl.SSLContextImpl$DefaultSSLContext",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "sun.security.ssl.SSLContextImpl$TLSContext",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "sun.security.ssl.TrustManagerFactoryImpl$PKIXFactory",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "sun.security.x509.AuthorityInfoAccessExtension",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": [
-            "java.lang.Boolean",
-            "java.lang.Object"
-          ]
-        }
-      ]
-    },
-    {
-      "type": "sun.security.x509.AuthorityKeyIdentifierExtension",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": [
-            "java.lang.Boolean",
-            "java.lang.Object"
-          ]
-        }
-      ]
-    },
-    {
-      "type": "sun.security.x509.BasicConstraintsExtension",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": [
-            "java.lang.Boolean",
-            "java.lang.Object"
-          ]
-        }
-      ]
-    },
-    {
-      "type": "sun.security.x509.CRLDistributionPointsExtension",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": [
-            "java.lang.Boolean",
-            "java.lang.Object"
-          ]
-        }
-      ]
-    },
-    {
-      "type": "sun.security.x509.CertificatePoliciesExtension",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": [
-            "java.lang.Boolean",
-            "java.lang.Object"
-          ]
-        }
-      ]
-    },
-    {
-      "type": "sun.security.x509.ExtendedKeyUsageExtension",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": [
-            "java.lang.Boolean",
-            "java.lang.Object"
-          ]
-        }
-      ]
-    },
-    {
-      "type": "sun.security.x509.KeyUsageExtension",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": [
-            "java.lang.Boolean",
-            "java.lang.Object"
-          ]
-        }
-      ]
-    },
-    {
-      "type": "sun.security.x509.NetscapeCertTypeExtension",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": [
-            "java.lang.Boolean",
-            "java.lang.Object"
-          ]
-        }
-      ]
-    },
-    {
-      "type": "sun.security.x509.PrivateKeyUsageExtension",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": [
-            "java.lang.Boolean",
-            "java.lang.Object"
-          ]
-        }
-      ]
-    },
-    {
-      "type": "sun.security.x509.SubjectAlternativeNameExtension",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": [
-            "java.lang.Boolean",
-            "java.lang.Object"
-          ]
-        }
-      ]
-    },
-    {
-      "type": "sun.security.x509.SubjectKeyIdentifierExtension",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": [
-            "java.lang.Boolean",
-            "java.lang.Object"
-          ]
-        }
-      ]
-    },
-    {
-      "type": "sun.text.resources.FormatData"
-    },
-    {
-      "type": "sun.text.resources.FormatData_en"
-    },
-    {
-      "type": "sun.text.resources.JavaTimeSupplementary"
     },
     {
       "type": "sun.text.resources.cldr.FormatData"
@@ -7078,6 +6103,15 @@
     {
       "type": {
         "proxy": [
+          "java.lang.reflect.TypeVariable",
+          "org.springframework.core.SerializableTypeWrapper$SerializableTypeProxy",
+          "java.io.Serializable"
+        ]
+      }
+    },
+    {
+      "type": {
+        "proxy": [
           "java.lang.reflect.WildcardType",
           "org.springframework.core.SerializableTypeWrapper$SerializableTypeProxy",
           "java.io.Serializable"
@@ -7087,14 +6121,14 @@
     {
       "type": {
         "proxy": [
-          "org.springframework.boot.context.properties.ConfigurationProperties"
+          "java.sql.Connection"
         ]
       }
     },
     {
       "type": {
         "proxy": [
-          "org.springframework.context.event.EventListener"
+          "org.springframework.boot.context.properties.ConfigurationProperties"
         ]
       }
     },
@@ -7135,6 +6169,16 @@
     {
       "type": {
         "lambda": {
+          "declaringClass": "org.springframework.boot.jdbc.autoconfigure.DataSourcePoolMetadataProvidersConfiguration$HikariPoolDataSourceMetadataProviderConfiguration",
+          "interfaces": [
+            "org.springframework.boot.jdbc.metadata.DataSourcePoolMetadataProvider"
+          ]
+        }
+      }
+    },
+    {
+      "type": {
+        "lambda": {
           "declaringClass": "org.springframework.boot.validation.beanvalidation.MethodValidationExcludeFilter",
           "interfaces": [
             "org.springframework.boot.validation.beanvalidation.MethodValidationExcludeFilter"
@@ -7144,6 +6188,9 @@
     }
   ],
   "resources": [
+    {
+      "glob": ""
+    },
     {
       "glob": "META-INF/build-info.properties"
     },
@@ -7155,9 +6202,6 @@
     },
     {
       "glob": "META-INF/resources/index.html"
-    },
-    {
-      "glob": "META-INF/services/com.google.auth.http.HttpTransportFactory"
     },
     {
       "glob": "META-INF/services/java.net.spi.InetAddressResolverProvider"
@@ -7253,25 +6297,31 @@
       "glob": "com/expensetracker/config/RequestLoggingFilter.class"
     },
     {
-      "glob": "com/expensetracker/config/SheetOrderInitializer.class"
+      "glob": "com/expensetracker/controller/ExpenseController.class"
     },
     {
-      "glob": "com/expensetracker/controller/ExpenseController.class"
+      "glob": "com/expensetracker/data/BudgetRepository.class"
+    },
+    {
+      "glob": "com/expensetracker/data/ExpenseRepository.class"
+    },
+    {
+      "glob": "com/expensetracker/data/TopUpRepository.class"
     },
     {
       "glob": "com/expensetracker/service/ExpenseService.class"
     },
     {
-      "glob": "com/google/api/client/googleapis/google-api-client.properties"
+      "glob": "com/mysql/cj/LocalizedErrorMessages.properties"
     },
     {
-      "glob": "com/google/api/client/googleapis/google.p12"
+      "glob": "com/mysql/cj/LocalizedErrorMessages_en.properties"
     },
     {
-      "glob": "com/google/api/client/http/google-http-client.properties"
+      "glob": "com/mysql/cj/LocalizedErrorMessages_en_US.properties"
     },
     {
-      "glob": "com/google/auth/oauth2/google-auth-library.properties"
+      "glob": "com/mysql/cj/TlsSettings.properties"
     },
     {
       "glob": "commons-logging.properties"
@@ -7299,6 +6349,12 @@
     },
     {
       "glob": "config/application.yml"
+    },
+    {
+      "glob": "data-all.sql"
+    },
+    {
+      "glob": "data.sql"
     },
     {
       "glob": "git.properties"
@@ -7646,6 +6702,9 @@
       "glob": "org/springframework/boot/autoconfigure/condition/ConditionalOnProperty.class"
     },
     {
+      "glob": "org/springframework/boot/autoconfigure/condition/ConditionalOnSingleCandidate.class"
+    },
+    {
       "glob": "org/springframework/boot/autoconfigure/condition/ConditionalOnWebApplication.class"
     },
     {
@@ -7731,33 +6790,6 @@
     },
     {
       "glob": "org/springframework/boot/gson/autoconfigure/GsonAutoConfiguration.class"
-    },
-    {
-      "glob": "org/springframework/boot/http/converter/autoconfigure/GsonHttpMessageConvertersConfiguration$GsonHttpConvertersCustomizer.class"
-    },
-    {
-      "glob": "org/springframework/boot/http/converter/autoconfigure/GsonHttpMessageConvertersConfiguration$GsonHttpMessageConverterConfiguration.class"
-    },
-    {
-      "glob": "org/springframework/boot/http/converter/autoconfigure/GsonHttpMessageConvertersConfiguration$JacksonAndJsonbUnavailableCondition$Jackson2Available.class"
-    },
-    {
-      "glob": "org/springframework/boot/http/converter/autoconfigure/GsonHttpMessageConvertersConfiguration$JacksonAndJsonbUnavailableCondition$JacksonAvailable.class"
-    },
-    {
-      "glob": "org/springframework/boot/http/converter/autoconfigure/GsonHttpMessageConvertersConfiguration$JacksonAndJsonbUnavailableCondition$JsonbPreferred.class"
-    },
-    {
-      "glob": "org/springframework/boot/http/converter/autoconfigure/GsonHttpMessageConvertersConfiguration$JacksonAndJsonbUnavailableCondition.class"
-    },
-    {
-      "glob": "org/springframework/boot/http/converter/autoconfigure/GsonHttpMessageConvertersConfiguration$PreferGsonOrJacksonAndJsonbUnavailableCondition$GsonPreferred.class"
-    },
-    {
-      "glob": "org/springframework/boot/http/converter/autoconfigure/GsonHttpMessageConvertersConfiguration$PreferGsonOrJacksonAndJsonbUnavailableCondition$JacksonJsonbUnavailable.class"
-    },
-    {
-      "glob": "org/springframework/boot/http/converter/autoconfigure/GsonHttpMessageConvertersConfiguration$PreferGsonOrJacksonAndJsonbUnavailableCondition.class"
     },
     {
       "glob": "org/springframework/boot/http/converter/autoconfigure/GsonHttpMessageConvertersConfiguration.class"
@@ -7859,6 +6891,96 @@
       "glob": "org/springframework/boot/jackson2/autoconfigure/Jackson2AutoConfiguration.class"
     },
     {
+      "glob": "org/springframework/boot/jdbc/autoconfigure/DataSourceAutoConfiguration$EmbeddedDatabaseCondition.class"
+    },
+    {
+      "glob": "org/springframework/boot/jdbc/autoconfigure/DataSourceAutoConfiguration$EmbeddedDatabaseConfiguration.class"
+    },
+    {
+      "glob": "org/springframework/boot/jdbc/autoconfigure/DataSourceAutoConfiguration$PooledDataSourceAvailableCondition.class"
+    },
+    {
+      "glob": "org/springframework/boot/jdbc/autoconfigure/DataSourceAutoConfiguration$PooledDataSourceCondition$ExplicitType.class"
+    },
+    {
+      "glob": "org/springframework/boot/jdbc/autoconfigure/DataSourceAutoConfiguration$PooledDataSourceCondition$PooledDataSourceAvailable.class"
+    },
+    {
+      "glob": "org/springframework/boot/jdbc/autoconfigure/DataSourceAutoConfiguration$PooledDataSourceCondition.class"
+    },
+    {
+      "glob": "org/springframework/boot/jdbc/autoconfigure/DataSourceAutoConfiguration$PooledDataSourceConfiguration.class"
+    },
+    {
+      "glob": "org/springframework/boot/jdbc/autoconfigure/DataSourceAutoConfiguration.class"
+    },
+    {
+      "glob": "org/springframework/boot/jdbc/autoconfigure/DataSourceCheckpointRestoreConfiguration.class"
+    },
+    {
+      "glob": "org/springframework/boot/jdbc/autoconfigure/DataSourceConfiguration$Dbcp2.class"
+    },
+    {
+      "glob": "org/springframework/boot/jdbc/autoconfigure/DataSourceConfiguration$Generic.class"
+    },
+    {
+      "glob": "org/springframework/boot/jdbc/autoconfigure/DataSourceConfiguration$Hikari.class"
+    },
+    {
+      "glob": "org/springframework/boot/jdbc/autoconfigure/DataSourceConfiguration$OracleUcp.class"
+    },
+    {
+      "glob": "org/springframework/boot/jdbc/autoconfigure/DataSourceConfiguration$Tomcat.class"
+    },
+    {
+      "glob": "org/springframework/boot/jdbc/autoconfigure/DataSourceInitializationAutoConfiguration.class"
+    },
+    {
+      "glob": "org/springframework/boot/jdbc/autoconfigure/DataSourceJmxConfiguration.class"
+    },
+    {
+      "glob": "org/springframework/boot/jdbc/autoconfigure/DataSourcePoolMetadataProvidersConfiguration$CommonsDbcp2PoolDataSourceMetadataProviderConfiguration.class"
+    },
+    {
+      "glob": "org/springframework/boot/jdbc/autoconfigure/DataSourcePoolMetadataProvidersConfiguration$HikariDataSourcePoolMetadataRuntimeHints.class"
+    },
+    {
+      "glob": "org/springframework/boot/jdbc/autoconfigure/DataSourcePoolMetadataProvidersConfiguration$HikariPoolDataSourceMetadataProviderConfiguration.class"
+    },
+    {
+      "glob": "org/springframework/boot/jdbc/autoconfigure/DataSourcePoolMetadataProvidersConfiguration$OracleUcpPoolDataSourceMetadataProviderConfiguration.class"
+    },
+    {
+      "glob": "org/springframework/boot/jdbc/autoconfigure/DataSourcePoolMetadataProvidersConfiguration$TomcatDataSourcePoolMetadataProviderConfiguration.class"
+    },
+    {
+      "glob": "org/springframework/boot/jdbc/autoconfigure/DataSourcePoolMetadataProvidersConfiguration.class"
+    },
+    {
+      "glob": "org/springframework/boot/jdbc/autoconfigure/DataSourceTransactionManagerAutoConfiguration$JdbcTransactionManagerConfiguration.class"
+    },
+    {
+      "glob": "org/springframework/boot/jdbc/autoconfigure/DataSourceTransactionManagerAutoConfiguration.class"
+    },
+    {
+      "glob": "org/springframework/boot/jdbc/autoconfigure/JdbcClientAutoConfiguration.class"
+    },
+    {
+      "glob": "org/springframework/boot/jdbc/autoconfigure/JdbcTemplateAutoConfiguration.class"
+    },
+    {
+      "glob": "org/springframework/boot/jdbc/autoconfigure/JdbcTemplateConfiguration.class"
+    },
+    {
+      "glob": "org/springframework/boot/jdbc/autoconfigure/JndiDataSourceAutoConfiguration.class"
+    },
+    {
+      "glob": "org/springframework/boot/jdbc/autoconfigure/LazyConnectionDataSourceConfiguration.class"
+    },
+    {
+      "glob": "org/springframework/boot/jdbc/autoconfigure/NamedParameterJdbcTemplateConfiguration.class"
+    },
+    {
       "glob": "org/springframework/boot/jsonb/autoconfigure$JsonbAutoConfiguration.class"
     },
     {
@@ -7874,10 +6996,19 @@
       "glob": "org/springframework/boot/logging/log4j2/log4j2.xml"
     },
     {
+      "glob": "org/springframework/boot/persistence/autoconfigure/PersistenceExceptionTranslationAutoConfiguration.class"
+    },
+    {
       "glob": "org/springframework/boot/servlet/autoconfigure/HttpEncodingAutoConfiguration.class"
     },
     {
       "glob": "org/springframework/boot/servlet/autoconfigure/MultipartAutoConfiguration.class"
+    },
+    {
+      "glob": "org/springframework/boot/sql/autoconfigure/init/ConditionalOnSqlInitialization.class"
+    },
+    {
+      "glob": "org/springframework/boot/sql/init/dependency/DatabaseInitializationDependencyConfigurer.class"
     },
     {
       "glob": "org/springframework/boot/tomcat/autoconfigure/TomcatWebServerConfiguration$TomcatWebSocketConfiguration.class"
@@ -7887,6 +7018,27 @@
     },
     {
       "glob": "org/springframework/boot/tomcat/autoconfigure/servlet/TomcatServletWebServerAutoConfiguration.class"
+    },
+    {
+      "glob": "org/springframework/boot/transaction/autoconfigure/TransactionAutoConfiguration$AspectJTransactionManagementConfiguration.class"
+    },
+    {
+      "glob": "org/springframework/boot/transaction/autoconfigure/TransactionAutoConfiguration$EnableTransactionManagementConfiguration$CglibAutoProxyConfiguration.class"
+    },
+    {
+      "glob": "org/springframework/boot/transaction/autoconfigure/TransactionAutoConfiguration$EnableTransactionManagementConfiguration$JdkDynamicAutoProxyConfiguration.class"
+    },
+    {
+      "glob": "org/springframework/boot/transaction/autoconfigure/TransactionAutoConfiguration$EnableTransactionManagementConfiguration.class"
+    },
+    {
+      "glob": "org/springframework/boot/transaction/autoconfigure/TransactionAutoConfiguration$TransactionTemplateConfiguration.class"
+    },
+    {
+      "glob": "org/springframework/boot/transaction/autoconfigure/TransactionAutoConfiguration.class"
+    },
+    {
+      "glob": "org/springframework/boot/transaction/autoconfigure/TransactionManagerCustomizationAutoConfiguration.class"
     },
     {
       "glob": "org/springframework/boot/validation/autoconfigure$ValidationAutoConfiguration.class"
@@ -7976,6 +7128,12 @@
       "glob": "org/springframework/context/ResourceLoaderAware.class"
     },
     {
+      "glob": "org/springframework/context/annotation/AdviceModeImportSelector.class"
+    },
+    {
+      "glob": "org/springframework/context/annotation/AutoProxyRegistrar.class"
+    },
+    {
       "glob": "org/springframework/context/annotation/Conditional.class"
     },
     {
@@ -7985,16 +7143,34 @@
       "glob": "org/springframework/context/annotation/Import.class"
     },
     {
+      "glob": "org/springframework/context/annotation/ImportAware.class"
+    },
+    {
       "glob": "org/springframework/context/annotation/ImportBeanDefinitionRegistrar.class"
     },
     {
       "glob": "org/springframework/context/annotation/ImportRuntimeHints.class"
     },
     {
+      "glob": "org/springframework/context/annotation/Role.class"
+    },
+    {
       "glob": "org/springframework/core/annotation/Order.class"
     },
     {
       "glob": "org/springframework/core/env/EnvironmentCapable.class"
+    },
+    {
+      "glob": "org/springframework/transaction/annotation/AbstractTransactionManagementConfiguration.class"
+    },
+    {
+      "glob": "org/springframework/transaction/annotation/EnableTransactionManagement.class"
+    },
+    {
+      "glob": "org/springframework/transaction/annotation/ProxyTransactionManagementConfiguration.class"
+    },
+    {
+      "glob": "org/springframework/transaction/annotation/TransactionManagementConfigurationSelector.class"
     },
     {
       "glob": "org/springframework/web/bind/annotation/ResponseBody.class"
@@ -8033,22 +7209,19 @@
       "glob": "resources/index.html"
     },
     {
+      "glob": "schema-all.sql"
+    },
+    {
+      "glob": "schema.sql"
+    },
+    {
       "glob": "spring.properties"
     },
     {
       "glob": "static/index.html"
     },
     {
-      "module": "java.base",
-      "glob": "jdk/internal/icu/impl/data/icudt76b/nfkc.nrm"
-    },
-    {
-      "module": "java.base",
-      "glob": "jdk/internal/icu/impl/data/icudt76b/uprops.icu"
-    },
-    {
-      "module": "java.base",
-      "glob": "sun/net/idn/uidna.spp"
+      "bundle": "com.mysql.cj.LocalizedErrorMessages"
     },
     {
       "bundle": "jakarta.servlet.LocalStrings"
