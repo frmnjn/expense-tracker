@@ -553,3 +553,38 @@ Menampilkan daftar pengeluaran per periode, mengedit, dan menghapus (soft delete
 
 * [x] `/summary` mengembalikan `count` per budget (test sheet)
 * [x] Cek di docker local
+
+---
+
+# Phase 17 - Migrasi ke MySQL
+
+Memindahkan penyimpanan dari Google Sheets ke database MySQL (berbagi instance dengan WordPress, database `expense_tracker` terpisah). API tidak berubah.
+
+## Backend
+
+* [x] Tambah `spring-boot-starter-jdbc` + `mysql-connector-j`; hapus dependency Google Sheets
+* [x] Hapus `GoogleSheetsClient` & config Google; full cutover
+* [x] Repository JdbcTemplate: `BudgetRepository`, `ExpenseRepository`, `TopUpRepository`
+* [x] `ExpenseService` dipindah ke repository (API & controller sama)
+* [x] Skema `schema.sql` (budgets, expenses, top_ups) dibuat via `spring.sql.init`
+* [x] `PeriodSheetName.periodStart` + `FORMATTER` untuk menghitung periode dari date_time
+* [x] Unit test diadaptasi (mock repository)
+* [ ] Regenerasi native config (MySQL JDBC driver refleksi)
+
+## Frontend
+
+* [x] Tidak ada perubahan (API sama)
+
+## Infra
+
+* [x] docker-compose: backend `extra_hosts` host.docker.internal + env DB dari `.env`
+* [x] `scripts/seed_budgets.py` (impor budget + saldo dari tab Budget)
+* [ ] Setup database & user `expense_tracker` di MySQL VPS
+* [ ] Seed tabel `budgets` (via script)
+
+## Verifikasi
+
+* [x] Backend build & test lolos
+* [x] Endpoint (options/expenses/summary/trend/topups/update/delete) jalan terhadap MySQL lokal
+* [x] `schema.sql` membuat tabel otomatis saat start
+* [ ] Native image + deploy ke VPS

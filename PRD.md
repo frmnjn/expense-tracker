@@ -6,7 +6,7 @@
 
 Expense Tracker adalah aplikasi web sederhana untuk mencatat pengeluaran harian.
 
-Aplikasi tidak menggunakan database. Semua data akan langsung disimpan ke Google Sheets menggunakan Google Sheets API.
+Aplikasi menggunakan database **MySQL** (berbagi instance dengan WordPress di VPS, memakai database `expense_tracker` terpisah).
 
 Target utama aplikasi adalah sederhana, mudah dijalankan secara lokal menggunakan Docker, dan mudah dikembangkan di masa depan.
 
@@ -17,7 +17,7 @@ Target utama aplikasi adalah sederhana, mudah dijalankan secara lokal menggunaka
 Membangun aplikasi yang memungkinkan pengguna:
 
 * Menambahkan data pengeluaran melalui web.
-* Menyimpan data ke Google Sheets.
+* Menyimpan data ke database MySQL.
 * Menjalankan seluruh aplikasi menggunakan Docker.
 
 ---
@@ -44,9 +44,15 @@ Membangun aplikasi yang memungkinkan pengguna:
 
 ## Storage
 
-Google Sheets
+MySQL 8+
 
-Tidak menggunakan database lokal.
+## Backend
+
+* Java
+* Spring Boot
+* Spring JDBC (JdbcTemplate)
+
+Menggunakan database MySQL (berbagi instance dengan WordPress, database `expense_tracker` terpisah).
 
 ## Container
 
@@ -159,59 +165,27 @@ Jika gagal:
 
 ---
 
-# Google Sheets Format
+# Database (MySQL)
 
-Spreadsheet utama berisi data pengeluaran yang dipisah per periode.
+Aplikasi memakai database `expense_tracker` pada instance MySQL yang berbagi dengan WordPress. Skema dibuat otomatis oleh backend saat start (`spring.sql.init` + `schema.sql`).
 
-Setiap periode memiliki sheet sendiri dengan format nama:
+Tabel:
 
-```text
-YYYY-MON-MON
-```
+| Tabel | Kolom |
+| ----- | ----- |
+| `budgets` | `id` PK, `name` UNIQUE, `balance` |
+| `expenses` | `id` PK, `period`, `period_start`, `date_time`, `budget_id` FK→`budgets`, `name`, `amount`, `description`, `deleted` |
+| `top_ups` | `id` PK, `date_time`, `budget_id` FK→`budgets`, `amount`, `description` |
 
-Contoh:
+Periode (format `YYYY-MON-MON`, contoh `2026-JAN-FEB`) dihitung dari `date_time` dengan aturan cut-off tanggal 25. `period` disimpan untuk filter cepat.
 
-| Periode                  | Sheet Name    |
-| ------------------------ | ------------- |
-| 25 Jan 2026 - 24 Feb 2026 | 2026-JAN-FEB  |
-| 25 Feb 2026 - 24 Mar 2026 | 2026-FEB-MAR  |
+Penghapusan expense dilakukan dengan **soft delete** (kolom `deleted = TRUE`); baris tetap ada di DB dan disaring saat ditampilkan.
 
-Periode berjalan dari tanggal 25 bulan X sampai 24 bulan X+1.
+`budgets.balance` adalah saldo running dan boleh bernilai negatif.
 
-Sheet baru otomatis dibuat oleh backend pada tanggal 25 beserta header.
+Penambahan saldo (misalnya tiap gajian tanggal 25) dilakukan melalui aplikasi (`POST /topups`); setiap top-up menambah saldo budget dan dicatat pada tabel `top_ups`.
 
-Kolom pada setiap sheet periode:
-
-| Waktu                | Name | Budget | Nominal | Description | ID   | Deleted |
-| -------------------- | ---- | ------ | ------- | ----------- | ---- | ------- |
-
-* `ID`: pengenal unik setiap baris expense, dipakai untuk edit/hapus.
-* `Deleted`: `FALSE` (aktif, default) atau `TRUE` (dihapus).
-
-Backend akan selalu melakukan append row.
-
-Baris tidak pernah dihapus dari sheet. Penghapusan dilakukan dengan soft delete (menandai kolom `Deleted`), lalu baris yang ditandai disaring saat ditampilkan.
-
-Urutan sheet pada spreadsheet otomatis diatur oleh backend:
-
-* Sheet periode terbaru paling kiri.
-* Sheet periode yang lebih lama berada di kanannya.
-* Sheet non-periode berada setelah sheet periode.
-* Tab `Budget` selalu berada paling kanan.
-
-Reorder dilakukan saat backend start dan setiap kali sheet periode baru dibuat.
-
-Dropdown Budget bersumber dari sheet khusus pada spreadsheet yang sama:
-
-| Tab    | Isi                                   |
-| ------ | ------------------------------------- |
-| Budget | Kolom A berisi daftar nama budget, kolom B berisi saldo, header di baris 1 |
-
-Saldo pada kolom B merupakan saldo running dan boleh bernilai negatif.
-
-Penambahan saldo (misalnya tiap gajian tanggal 25) dilakukan manual oleh user langsung di Google Sheets dengan mengedit nilai kolom B.
-
-Setiap expense yang tersimpan akan otomatis mengurangi saldo budget terkait sebesar nominalnya.
+Setiap expense yang tersimpan otomatis mengurangi saldo budget terkait sebesar nominalnya (atomic dalam transaksi).
 
 ---
 
@@ -605,11 +579,9 @@ http://localhost:8080
 Backend:
 
 ```text
-GOOGLE_APPLICATION_CREDENTIALS=/app/credentials.json
-GOOGLE_SHEET_ID=xxxxxxxxxxxxxxxx
-GOOGLE_TEST_SHEET_ID=xxxxxxxxxxxxxxxx (opsional, untuk integration test)
-GOOGLE_BUDGET_SHEET=Budget
-GOOGLE_TOP_UP_SHEET=TopUp
+DB_URL=jdbc:mysql://host.docker.internal:33060/expense_tracker?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+DB_USER=expense_tracker_user
+DB_PASSWORD=password-kuat
 PORT=8080
 ```
 
@@ -643,14 +615,14 @@ README.md
 * User dapat mengisi form pengeluaran.
 * User dapat memilih budget dari dropdown.
 * User dapat menekan tombol Save.
-* Data berhasil tersimpan ke sheet periode yang benar pada Google Sheets.
+* Data berhasil tersimpan ke database MySQL.
 * Jika validasi gagal, tampilkan pesan error.
 * User dapat melihat daftar pengeluaran per periode.
 * User dapat mengedit pengeluaran.
 * User dapat menghapus pengeluaran (soft delete).
 * Saldo budget tetap konsisten setelah edit/hapus.
 * Aplikasi dapat dijalankan hanya dengan Docker Compose.
-* Tidak menggunakan database.
+* Menggunakan database (MySQL).
 
 ---
 

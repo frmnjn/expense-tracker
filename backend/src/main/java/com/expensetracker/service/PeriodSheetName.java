@@ -10,6 +10,8 @@ import java.util.Optional;
 
 public final class PeriodSheetName {
 
+    public static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+
     private static final DateTimeFormatter MONTH_FORMAT = DateTimeFormatter.ofPattern("MMM", Locale.ENGLISH);
     private static final DateTimeFormatter MONTH_PARSE_FORMAT = new DateTimeFormatterBuilder()
             .parseCaseInsensitive()
@@ -19,16 +21,14 @@ public final class PeriodSheetName {
     private PeriodSheetName() {
     }
 
+    public static LocalDate periodStart(LocalDate date) {
+        LocalDate start = date.getDayOfMonth() >= 25 ? date : date.minusMonths(1);
+        return LocalDate.of(start.getYear(), start.getMonth(), 25);
+    }
+
     public static String forDate(LocalDate date) {
-        LocalDate start;
-        LocalDate end;
-        if (date.getDayOfMonth() >= 25) {
-            start = date;
-            end = date.plusMonths(1);
-        } else {
-            start = date.minusMonths(1);
-            end = date;
-        }
+        LocalDate start = periodStart(date);
+        LocalDate end = start.plusMonths(1);
         return start.getYear() + "-" + MONTH_FORMAT.format(start).toUpperCase(Locale.ENGLISH) + "-"
                 + MONTH_FORMAT.format(end).toUpperCase(Locale.ENGLISH);
     }

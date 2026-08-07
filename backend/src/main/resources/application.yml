@@ -6,14 +6,16 @@ spring:
     name: expense-tracker-backend
   config:
     import: optional:file:./.env
+  datasource:
+    url: ${DB_URL:}
+    username: ${DB_USER:}
+    password: ${DB_PASSWORD:}
+  sql:
+    init:
+      mode: always
+      continue-on-error: false
 
 logging:
   structured:
     format:
       console: ecs
-
-google:
-  sheet-id: ${GOOGLE_SHEET_ID:}
-  application-credentials: ${GOOGLE_APPLICATION_CREDENTIALS:}
-  budget-sheet: ${GOOGLE_BUDGET_SHEET:Budget}
-  top-up-sheet: ${GOOGLE_TOP_UP_SHEET:TopUp}

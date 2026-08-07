@@ -2,7 +2,7 @@
 
 Aplikasi web sederhana untuk mencatat pengeluaran harian.
 
-Data tidak disimpan di database, melainkan langsung di Google Sheets menggunakan Google Sheets API.
+Data disimpan di database **MySQL** (berbagi instance dengan WordPress di VPS, memakai database `expense_tracker` terpisah).
 
 ---
 
@@ -10,8 +10,8 @@ Data tidak disimpan di database, melainkan langsung di Google Sheets menggunakan
 
 * Menambah pengeluaran
 * Input waktu otomatis atau manual
-* Dropdown budget dari Google Sheets
-* Saldo per budget (otomatis berkurang saat pengeluaran, ditambah manual di sheet tiap gajian)
+* Dropdown budget dari database
+* Saldo per budget (otomatis berkurang saat pengeluaran, ditambah via top-up tiap gajian)
 * Preview "Saldo nanti" saat mengisi nominal
 * Daftar pengeluaran per periode (halaman Riwayat)
 * Filter & sort di Riwayat (search nama, filter budget, urutkan)
@@ -21,15 +21,11 @@ Data tidak disimpan di database, melainkan langsung di Google Sheets menggunakan
 * Dashboard ringkasan per periode (total, saldo per budget, pengeluaran terbesar)
 * Dashboard 3 bulan terakhir (total + transaksi per periode, bar visual)
 * Top-up saldo via aplikasi (tambah saldo budget + riwayat)
-* Sheet pengeluaran terpisah per periode
-* Kolom nominal & saldo diformat currency IDR
-* Urutan sheet otomatis (periode terbaru di kiri)
 * Validasi input
-* Menyimpan data ke Google Sheets
+* Menyimpan data ke MySQL
 * REST API menggunakan Java Spring Boot
 * React Frontend
 * Docker Compose
-* Tanpa database
 * Mobile-friendly & PWA (bisa ditambahkan ke Home Screen dari HP)
 * Dark mode (toggle, tersimpan di perangkat)
 
@@ -51,12 +47,12 @@ Data tidak disimpan di database, melainkan langsung di Google Sheets menggunakan
 * Java 25 (LTS)
 * Spring Boot 4
 * Maven
+* Spring JDBC (JdbcTemplate)
 * **GraalVM 25 Native Image** (produksi memakai native executable, bukan JVM)
-* Google Sheets API
 
 ## Storage
 
-* Google Sheets API
+* MySQL 8+
 
 ## Infrastructure
 
@@ -119,52 +115,40 @@ Tidak diperlukan instalasi Node.js, Java, maupun Maven apabila menjalankan proje
 
 ---
 
-# Google Sheets Setup
+# Database Setup (MySQL)
 
-1. Buat Google Spreadsheet.
+Aplikasi memakai MySQL yang sudah ada di VPS (berbagi instance dengan WordPress). Perlu database dan user terpisah untuk expense tracker:
 
-2. Buat satu sheet untuk data dropdown dengan header di baris 1:
+1. Buat database:
 
-   * Sheet `Budget`, kolom A berisi daftar nama budget.
-
-3. Buat Google Cloud Service Account.
-
-4. Aktifkan Google Sheets API.
-
-5. Download credential JSON.
-
-6. Share spreadsheet ke email Service Account dengan hak akses **Editor**.
-
-7. Simpan file credential sebagai:
-
-```text
-backend/credentials.json
+```sql
+CREATE DATABASE expense_tracker;
 ```
 
-Sheet pengeluaran per periode (format nama `YYYY-MON-MON`, contoh `2026-JAN-FEB`) dibuat otomatis oleh backend beserta header.
+2. Buat user khusus (terpisah dari WordPress) dan beri hak akses:
 
-Urutan sheet otomatis diatur oleh backend: periode terbaru paling kiri, lalu periode lama ke kanan, dan tab `Budget` selalu paling kanan. Reorder dilakukan saat backend start dan saat sheet periode baru dibuat.
+```sql
+CREATE USER 'expense_tracker_user'@'%' IDENTIFIED BY 'password-kuat';
+GRANT ALL PRIVILEGES ON expense_tracker.* TO 'expense_tracker_user'@'%';
+FLUSH PRIVILEGES;
+```
 
-## Testing Spreadsheet (opsional)
+3. Skema tabel dibuat otomatis oleh backend saat start (`spring.sql.init`, `schema.sql`).
 
-Untuk mencegah test menulis ke spreadsheet produksi, buat spreadsheet terpisah untuk testing:
-
-1. Buat Google Spreadsheet terpisah.
-2. Buat tab `Budget` (kolom A, header baris 1) — agar test `getOptions` berjalan.
-3. Share spreadsheet ke email Service Account yang sama dengan hak akses **Editor**.
-4. Isi ID spreadsheet testing pada `GOOGLE_TEST_SHEET_ID` di `backend/.env`.
-
-Jika `GOOGLE_TEST_SHEET_ID` kosong, integration test akan di-skip.
-
-## Mode Testing (smoke test dengan Docker)
-
-Untuk mencegah smoke test menulis ke spreadsheet produksi, jalankan backend dengan override compose yang memaksa memakai test spreadsheet:
+4. Isi tabel `budgets` (nama + saldo) — bisa diimpor dari tab `Budget` Google Sheets yang lama:
 
 ```bash
-docker compose --env-file backend/.env -f docker-compose.yml -f docker-compose.test.yml up --build
+python3 scripts/seed_budgets.py > seed.sql
+mysql -u expense_tracker_user -p expense_tracker < seed.sql
 ```
 
-Backend akan memakai `GOOGLE_TEST_SHEET_ID` sebagai `GOOGLE_SHEET_ID`. Jika `GOOGLE_TEST_SHEET_ID` kosong, compose akan menolak berjalan.
+5. Backend menghubungi MySQL melalui host port (mis. `33060`) yang sudah di-expose oleh compose WordPress:
+
+```env
+DB_URL=jdbc:mysql://host.docker.internal:33060/expense_tracker?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+DB_USER=expense_tracker_user
+DB_PASSWORD=password-kuat
+```
 
 Mode normal tetap menggunakan:
 
@@ -188,11 +172,9 @@ Contoh:
 
 ```env
 PORT=8080
-GOOGLE_SHEET_ID=YOUR_GOOGLE_SHEET_ID
-GOOGLE_TEST_SHEET_ID=YOUR_TEST_GOOGLE_SHEET_ID
-GOOGLE_APPLICATION_CREDENTIALS=/app/credentials.json
-GOOGLE_BUDGET_SHEET=Budget
-GOOGLE_TOP_UP_SHEET=TopUp
+DB_URL=jdbc:mysql://host.docker.internal:33060/expense_tracker?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+DB_USER=expense_tracker_user
+DB_PASSWORD=change-me
 ```
 
 ---

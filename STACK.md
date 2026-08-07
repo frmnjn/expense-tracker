@@ -15,8 +15,13 @@
 - Java 25 (LTS)
 - Spring Boot 4
 - Maven
-- Google Sheets API
+- Spring JDBC (JdbcTemplate)
+- MySQL (Connector/J)
 - GraalVM 25 Native Image (produksi; native executable bukan JVM)
+
+## Database
+
+- MySQL 8+ (berbagi instance dengan WordPress di VPS, database terpisah `expense_tracker`)
 
 ## Build Native Image (produksi)
 
