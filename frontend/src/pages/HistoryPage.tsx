@@ -10,6 +10,7 @@ import {
   NumberInput,
   Paper,
   Select,
+  SimpleGrid,
   Stack,
   Table,
   Text,
@@ -38,6 +39,40 @@ function HistoryPage() {
 
   const periods = useMemo(() => (periodsData?.periods ?? []).map((p) => ({ value: p, label: p })), [periodsData])
   const expenses = expensesData?.expenses ?? []
+  const budgetOptions = useMemo(
+    () => (options?.budgets ?? []).map((b) => ({ value: b.name, label: b.name })),
+    [options],
+  )
+
+  const [search, setSearch] = useState('')
+  const [budgetFilter, setBudgetFilter] = useState<string | null>(null)
+  const [sortBy, setSortBy] = useState<string>('waktu-desc')
+
+  const visibleExpenses = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    let list = expensesData?.expenses ?? []
+    if (q) {
+      list = list.filter((e) => e.name.toLowerCase().includes(q))
+    }
+    if (budgetFilter) {
+      list = list.filter((e) => e.budget === budgetFilter)
+    }
+    const sorted = [...list]
+    switch (sortBy) {
+      case 'waktu-asc':
+        sorted.sort((a, b) => a.dateTime.localeCompare(b.dateTime))
+        break
+      case 'nominal-desc':
+        sorted.sort((a, b) => b.amount - a.amount)
+        break
+      case 'nominal-asc':
+        sorted.sort((a, b) => a.amount - b.amount)
+        break
+      default:
+        sorted.sort((a, b) => b.dateTime.localeCompare(a.dateTime))
+    }
+    return sorted
+  }, [expensesData, search, budgetFilter, sortBy])
 
   const [editing, setEditing] = useState<Expense | null>(null)
   const [deleting, setDeleting] = useState<Expense | null>(null)
@@ -93,6 +128,35 @@ function HistoryPage() {
         mb="md"
       />
 
+      {period && (
+        <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="xs" mb="md">
+          <TextInput
+            placeholder="Cari nama..."
+            value={search}
+            onChange={(e) => setSearch(e.currentTarget.value)}
+          />
+          <Select
+            placeholder="Semua budget"
+            data={budgetOptions}
+            value={budgetFilter}
+            onChange={setBudgetFilter}
+            clearable
+            searchable
+          />
+          <Select
+            placeholder="Urutkan"
+            data={[
+              { value: 'waktu-desc', label: 'Waktu terbaru' },
+              { value: 'waktu-asc', label: 'Waktu terlama' },
+              { value: 'nominal-desc', label: 'Nominal terbesar' },
+              { value: 'nominal-asc', label: 'Nominal terkecil' },
+            ]}
+            value={sortBy}
+            onChange={(value) => setSortBy(value ?? 'waktu-desc')}
+          />
+        </SimpleGrid>
+      )}
+
       <Paper withBorder p="lg" radius="md" shadow="sm" pos="relative">
         <LoadingOverlay visible={expensesLoading && !!period} zIndex={1000} overlayProps={{ radius: 'sm', blur: 1 }} />
 
@@ -100,9 +164,13 @@ function HistoryPage() {
           <Text c="dimmed" ta="center" py="lg">
             {period ? 'Tidak ada pengeluaran pada periode ini.' : 'Pilih periode untuk melihat pengeluaran.'}
           </Text>
+        ) : visibleExpenses.length === 0 ? (
+          <Text c="dimmed" ta="center" py="lg">
+            Tidak ada hasil yang cocok dengan filter.
+          </Text>
         ) : isMobile ? (
           <Stack gap="sm">
-            {expenses.map((expense) => (
+            {visibleExpenses.map((expense) => (
               <Paper key={expense.id} withBorder p="sm" radius="md">
                 <Group justify="space-between" mb={4} wrap="nowrap" align="flex-start">
                   <Text fw={600} style={{ wordBreak: 'break-word' }}>
@@ -153,7 +221,7 @@ function HistoryPage() {
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
-              {expenses.map((expense) => (
+              {visibleExpenses.map((expense) => (
                 <Table.Tr key={expense.id}>
                   <Table.Td>{dayjs(expense.dateTime).format(DATE_TIME_FORMAT)}</Table.Td>
                   <Table.Td>{expense.name}</Table.Td>
