@@ -2,6 +2,7 @@ package com.expensetracker.controller;
 
 import com.expensetracker.model.ApiResponse;
 import com.expensetracker.model.ExpenseRequest;
+import com.expensetracker.model.TopUpRequest;
 import com.expensetracker.service.ExpenseService;
 import com.expensetracker.service.ValidationException;
 import org.slf4j.Logger;
@@ -80,6 +81,33 @@ public class ExpenseController {
                     .body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
             LOGGER.error("internal error getting summary", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Internal server error"));
+        }
+    }
+
+    @GetMapping("/topups")
+    public ResponseEntity<ApiResponse> getTopUps() {
+        try {
+            return ResponseEntity.ok(ApiResponse.ok(expenseService.getTopUps()));
+        } catch (Exception e) {
+            LOGGER.error("internal error getting top ups", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Internal server error"));
+        }
+    }
+
+    @PostMapping("/topups")
+    public ResponseEntity<ApiResponse> createTopUp(@RequestBody TopUpRequest request) {
+        try {
+            expenseService.createTopUp(request);
+            return ResponseEntity.ok(ApiResponse.ok());
+        } catch (ValidationException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            LOGGER.error("internal error creating top up", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("Internal server error"));
         }

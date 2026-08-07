@@ -4,6 +4,7 @@ import com.expensetracker.google.GoogleSheetsClient;
 import com.expensetracker.model.ExpenseRef;
 import com.expensetracker.model.ExpenseRequest;
 import com.expensetracker.model.ExpenseResponse;
+import com.expensetracker.model.TopUpRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -185,5 +186,27 @@ class ExpenseServiceTest {
     void getSummary_missingPeriod_shouldReject() {
         ValidationException ex = assertThrows(ValidationException.class, () -> expenseService.getSummary(""));
         assertEquals("Period is required", ex.getMessage());
+    }
+
+    @Test
+    void createTopUp_validRequest_shouldAppendAndIncreaseBalance() {
+        assertDoesNotThrow(() -> expenseService.createTopUp(
+                new TopUpRequest("2026-08-07 10:00", "Daily", 50000L, "Gaji")));
+        verify(googleSheetsClient).appendTopUp("2026-08-07 10:00", "Daily", 50000L, "Gaji");
+        verify(googleSheetsClient).adjustBudgetBalance("Daily", 50000L);
+    }
+
+    @Test
+    void createTopUp_missingBudget_shouldReject() {
+        ValidationException ex = assertThrows(ValidationException.class,
+                () -> expenseService.createTopUp(new TopUpRequest(null, "", 50000L, null)));
+        assertEquals("Budget is required", ex.getMessage());
+    }
+
+    @Test
+    void createTopUp_zeroAmount_shouldReject() {
+        ValidationException ex = assertThrows(ValidationException.class,
+                () -> expenseService.createTopUp(new TopUpRequest(null, "Daily", 0L, null)));
+        assertEquals("Amount must be greater than 0", ex.getMessage());
     }
 }

@@ -23,6 +23,7 @@ import com.expensetracker.service.PeriodSheetName;
 import com.expensetracker.model.BudgetOption;
 import com.expensetracker.model.ExpenseRef;
 import com.expensetracker.model.ExpenseResponse;
+import com.expensetracker.model.TopUpResponse;
 import com.google.auth.http.HttpCredentialsAdapter;
 import com.google.auth.oauth2.GoogleCredentials;
 import org.slf4j.Logger;
@@ -43,14 +44,18 @@ public class GoogleSheetsClient {
     private static final Logger LOGGER = LoggerFactory.getLogger(GoogleSheetsClient.class);
     private static final List<Object> HEADERS =
             List.of("Waktu", "Name", "Budget", "Nominal", "Description", "ID", "Deleted");
+    private static final List<Object> TOP_UP_HEADERS =
+            List.of("Waktu", "Budget", "Nominal", "Description", "ID", "Deleted");
 
     private final Sheets sheets;
     private final String spreadsheetId;
     private final String budgetSheet;
+    private final String topUpSheet;
 
-    public GoogleSheetsClient(String credentialsPath, String spreadsheetId, String budgetSheet) {
+    public GoogleSheetsClient(String credentialsPath, String spreadsheetId, String budgetSheet, String topUpSheet) {
         this.spreadsheetId = spreadsheetId;
         this.budgetSheet = budgetSheet;
+        this.topUpSheet = topUpSheet;
         this.sheets = createSheetsService(credentialsPath);
     }
 
@@ -244,6 +249,94 @@ public class GoogleSheetsClient {
         }
     }
 
+    public String appendTopUp(String dateTime, String budget, long amount, String description) {
+        ensureTopUpSheetExists();
+        String id = UUID.randomUUID().toString();
+        ValueRange body = new ValueRange()
+                .setValues(List.of(List.of(dateTime, budget, amount,
+                        description == null ? "" : description, id, "FALSE")));
+        try {
+            sheets.spreadsheets().values()
+                    .append(spreadsheetId, topUpSheet + "!A:F", body)
+                    .setValueInputOption("USER_ENTERED")
+                    .setInsertDataOption("INSERT_ROWS")
+                    .execute();
+            return id;
+        } catch (IOException e) {
+            LOGGER.error("error appending top up to google sheets api", e);
+            throw new IllegalStateException("Failed to append top up to google sheets", e);
+        }
+    }
+
+    public List<TopUpResponse> getTopUps() {
+        if (!sheetExists(topUpSheet)) {
+            return new ArrayList<>();
+        }
+        try {
+            ValueRange result = sheets.spreadsheets().values()
+                    .get(spreadsheetId, topUpSheet + "!A:F")
+                    .execute();
+            List<TopUpResponse> topUps = new ArrayList<>();
+            List<List<Object>> values = result.getValues();
+            if (values == null) {
+                return topUps;
+            }
+            for (int i = 1; i < values.size(); i++) {
+                List<Object> row = values.get(i);
+                if (row == null || row.isEmpty()) {
+                    continue;
+                }
+                String deleted = cell(row, 5);
+                if (deleted != null && deleted.equalsIgnoreCase("TRUE")) {
+                    continue;
+                }
+                topUps.add(new TopUpResponse(
+                        cell(row, 4),
+                        cell(row, 0) == null ? "" : cell(row, 0),
+                        cell(row, 1) == null ? "" : cell(row, 1),
+                        parseAmount(row.size() > 2 ? row.get(2) : null),
+                        cell(row, 3)));
+            }
+            return topUps;
+        } catch (IOException e) {
+            LOGGER.error("error reading top ups from google sheets api", e);
+            throw new IllegalStateException("Failed to read top ups from google sheets", e);
+        }
+    }
+
+    private void ensureTopUpSheetExists() {
+        if (sheetExists(topUpSheet)) {
+            return;
+        }
+        AddSheetRequest addSheet = new AddSheetRequest()
+                .setProperties(new SheetProperties().setTitle(topUpSheet));
+        Request request = new Request().setAddSheet(addSheet);
+        BatchUpdateSpreadsheetRequest batch = new BatchUpdateSpreadsheetRequest().setRequests(List.of(request));
+        try {
+            sheets.spreadsheets().batchUpdate(spreadsheetId, batch).execute();
+            writeTopUpHeaders();
+            formatCurrencyColumn(topUpSheet, 2);
+            reorderSheets();
+        } catch (IOException e) {
+            throw new IllegalStateException("Failed to create top up sheet", e);
+        }
+    }
+
+    private void writeTopUpHeaders() {
+        ValueRange body = new ValueRange().setValues(List.of(TOP_UP_HEADERS));
+        try {
+            sheets.spreadsheets().values()
+                    .update(spreadsheetId, topUpSheet + "!A1:F1", body)
+                    .setValueInputOption("RAW")
+                    .execute();
+        } catch (IOException e) {
+            throw new IllegalStateException("Failed to write top up headers", e);
+        }
+    }
+
+    public String getTopUpSheet() {
+        return topUpSheet;
+    }
     public List<String> getPeriodSheetTitles() {
         List<String> titles = getSheetTitlesInOrder();
         List<String> periods = new ArrayList<>();

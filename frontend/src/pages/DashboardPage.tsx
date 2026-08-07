@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
 import {
+  ActionIcon,
   Anchor,
   Container,
   Group,
@@ -14,7 +15,9 @@ import {
 import { useMediaQuery } from '@mantine/hooks'
 import { usePeriods, useSummary } from '../hooks/useExpenses'
 import { useOptions } from '../hooks/useOptions'
+import { useTopUps } from '../hooks/useTopUps'
 import ColorSchemeToggle from '../components/ColorSchemeToggle'
+import TopUpModal from '../components/TopUpModal'
 import { formatCurrency } from '../utils/currency'
 import type { BudgetSummary } from '../types/expense'
 
@@ -36,7 +39,9 @@ function StatCard({ label, value, color }: { label: string; value: string; color
 function DashboardPage() {
   const { data: periodsData, isPending: periodsLoading } = usePeriods()
   const { data: options } = useOptions()
+  const { data: topUpsData } = useTopUps()
   const [period, setPeriod] = useState<string | null>(null)
+  const [selectedTopUpBudget, setSelectedTopUpBudget] = useState<string | null>(null)
   const { data: summary, isPending: summaryLoading } = useSummary(period)
   const isMobile = useMediaQuery('(max-width: 48em)')
 
@@ -45,6 +50,7 @@ function DashboardPage() {
   const balanceOf = (name: string): number | undefined => options?.budgets.find((b) => b.name === name)?.balance
   const negativeCount = (options?.budgets ?? []).filter((b) => b.balance < 0).length
   const spendingOf = new Map<string, number>((summary?.byBudget ?? []).map((b: BudgetSummary) => [b.budget, b.amount]))
+  const topUps = useMemo(() => (topUpsData?.topUps ?? []).slice().reverse(), [topUpsData])
 
   const allBudgets = useMemo(() => {
     const names = new Set<string>([
@@ -55,6 +61,7 @@ function DashboardPage() {
   }, [options, summary])
 
   const topBudgets = summary?.byBudget.slice(0, 3) ?? []
+  const selectedTopUpBalance = selectedTopUpBudget ? balanceOf(selectedTopUpBudget) : undefined
 
   return (
     <Container size="md" py="lg">
@@ -104,13 +111,23 @@ function DashboardPage() {
                       <Text fw={600} style={{ wordBreak: 'break-word' }}>
                         {name}
                       </Text>
-                      <Text
-                        fw={700}
-                        ff="monospace"
-                        c={balance !== undefined ? balanceColor(balance) : undefined}
-                      >
-                        {balance !== undefined ? formatCurrency(balance) : '-'}
-                      </Text>
+                      <Group gap="xs" wrap="nowrap">
+                        <Text
+                          fw={700}
+                          ff="monospace"
+                          c={balance !== undefined ? balanceColor(balance) : undefined}
+                        >
+                          {balance !== undefined ? formatCurrency(balance) : '-'}
+                        </Text>
+                        <ActionIcon
+                          size="sm"
+                          variant="subtle"
+                          color="green"
+                          onClick={() => setSelectedTopUpBudget(name)}
+                        >
+                          <span>+</span>
+                        </ActionIcon>
+                      </Group>
                     </Group>
                     {spending !== undefined && (
                       <Text size="sm" c="dimmed">
@@ -132,13 +149,23 @@ function DashboardPage() {
                       <Text fw={600} style={{ wordBreak: 'break-word' }}>
                         {name}
                       </Text>
-                      <Text
-                        fw={700}
-                        ff="monospace"
-                        c={balance !== undefined ? balanceColor(balance) : undefined}
-                      >
-                        {balance !== undefined ? formatCurrency(balance) : '-'}
-                      </Text>
+                      <Group gap="xs" wrap="nowrap">
+                        <Text
+                          fw={700}
+                          ff="monospace"
+                          c={balance !== undefined ? balanceColor(balance) : undefined}
+                        >
+                          {balance !== undefined ? formatCurrency(balance) : '-'}
+                        </Text>
+                        <ActionIcon
+                          size="sm"
+                          variant="subtle"
+                          color="green"
+                          onClick={() => setSelectedTopUpBudget(name)}
+                        >
+                          <span>+</span>
+                        </ActionIcon>
+                      </Group>
                     </Group>
                     {spending !== undefined && (
                       <Text size="sm" c="dimmed">
@@ -189,6 +216,36 @@ function DashboardPage() {
             </Paper>
           </>
         )}
+
+        {topUps.length > 0 && (
+          <Paper withBorder p={{ base: 'md', sm: 'lg' }} radius="md" shadow="sm">
+            <Title order={4} mb="sm">
+              Riwayat Top-up
+            </Title>
+            <Stack gap="xs">
+              {topUps.map((t) => (
+                <Group key={t.id} justify="space-between">
+                  <div>
+                    <Text size="sm">{t.budget}</Text>
+                    <Text size="xs" c="dimmed">
+                      {t.dateTime}
+                    </Text>
+                  </div>
+                  <Text ff="monospace" fw={600} c="green">
+                    +{formatCurrency(t.amount)}
+                  </Text>
+                </Group>
+              ))}
+            </Stack>
+          </Paper>
+        )}
+
+        <TopUpModal
+          opened={!!selectedTopUpBudget}
+          budget={selectedTopUpBudget ?? ''}
+          balance={selectedTopUpBalance}
+          onClose={() => setSelectedTopUpBudget(null)}
+        />
       </Stack>
     </Container>
   )

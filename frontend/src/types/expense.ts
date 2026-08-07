@@ -44,6 +44,25 @@ export interface SummaryResponse {
   byBudget: BudgetSummary[]
 }
 
+export interface TopUp {
+  id: string
+  dateTime: string
+  budget: string
+  amount: number
+  description?: string
+}
+
+export interface TopUpsResponse {
+  topUps: TopUp[]
+}
+
+export interface TopUpRequest {
+  dateTime?: string
+  budget: string
+  amount: number
+  description?: string
+}
+
 export interface ApiResponse<T> {
   success: boolean
   message?: string

@@ -9,6 +9,9 @@ import com.expensetracker.model.ExpensesResponse;
 import com.expensetracker.model.OptionsResponse;
 import com.expensetracker.model.PeriodsResponse;
 import com.expensetracker.model.SummaryResponse;
+import com.expensetracker.model.TopUpRequest;
+import com.expensetracker.model.TopUpResponse;
+import com.expensetracker.model.TopUpsResponse;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -76,6 +79,37 @@ public class ExpenseService {
                 .sorted(Comparator.comparingLong(BudgetSummary::amount).reversed())
                 .toList();
         return new SummaryResponse(period, total, expenses.size(), list);
+    }
+
+    public TopUpsResponse getTopUps() {
+        return new TopUpsResponse(googleSheetsClient.getTopUps());
+    }
+
+    public void createTopUp(TopUpRequest request) {
+        if (request.budget() == null || request.budget().isBlank()) {
+            throw new ValidationException("Budget is required");
+        }
+        if (request.amount() == null) {
+            throw new ValidationException("Amount is required");
+        }
+        if (request.amount() <= 0) {
+            throw new ValidationException("Amount must be greater than 0");
+        }
+        if (request.description() != null && request.description().length() > 255) {
+            throw new ValidationException("Description must be at most 255 characters");
+        }
+        String dateTime = request.dateTime();
+        if (dateTime == null || dateTime.isBlank()) {
+            dateTime = LocalDateTime.now().format(DATE_TIME_FORMAT);
+        } else {
+            try {
+                LocalDateTime.parse(dateTime, DATE_TIME_FORMAT);
+            } catch (DateTimeParseException e) {
+                throw new ValidationException("DateTime must be in yyyy-MM-dd HH:mm format");
+            }
+        }
+        googleSheetsClient.appendTopUp(dateTime, request.budget(), request.amount(), request.description());
+        googleSheetsClient.adjustBudgetBalance(request.budget(), request.amount());
     }
 
     public void updateExpense(String id, ExpenseRequest request) {

@@ -6,6 +6,8 @@ import type {
   OptionsResponse,
   PeriodsResponse,
   SummaryResponse,
+  TopUpRequest,
+  TopUpsResponse,
 } from '../types/expense'
 
 export async function createExpense(request: ExpenseRequest): Promise<ApiResponse<void>> {
@@ -35,6 +37,16 @@ export async function getSummary(period: string): Promise<SummaryResponse> {
     params: { period },
   })
   return response.data.data ?? { period, total: 0, count: 0, byBudget: [] }
+}
+
+export async function getTopUps(): Promise<TopUpsResponse> {
+  const response = await apiClient.get<ApiResponse<TopUpsResponse>>('/topups')
+  return response.data.data ?? { topUps: [] }
+}
+
+export async function createTopUp(request: TopUpRequest): Promise<ApiResponse<void>> {
+  const response = await apiClient.post<ApiResponse<void>>('/topups', request)
+  return response.data
 }
 
 export async function updateExpense(id: string, request: ExpenseRequest): Promise<ApiResponse<void>> {
