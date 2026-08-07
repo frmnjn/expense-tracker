@@ -182,12 +182,15 @@ Sheet baru otomatis dibuat oleh backend pada tanggal 25 beserta header.
 
 Kolom pada setiap sheet periode:
 
-| Waktu                | Name | Budget | Nominal | Description |
-| -------------------- | ---- | ------ | ------- | ----------- |
+| Waktu                | Name | Budget | Nominal | Description | ID   | Deleted |
+| -------------------- | ---- | ------ | ------- | ----------- | ---- | ------- |
+
+* `ID`: pengenal unik setiap baris expense, dipakai untuk edit/hapus.
+* `Deleted`: `FALSE` (aktif, default) atau `TRUE` (dihapus).
 
 Backend akan selalu melakukan append row.
 
-Tidak boleh menghapus data yang sudah ada.
+Baris tidak pernah dihapus dari sheet. Penghapusan dilakukan dengan soft delete (menandai kolom `Deleted`), lalu baris yang ditandai disaring saat ditampilkan.
 
 Urutan sheet pada spreadsheet otomatis diatur oleh backend:
 
@@ -258,6 +261,89 @@ Response
 
 ---
 
+## GET /periods
+
+Mengembalikan daftar periode (nama sheet periode) untuk dropdown bulan pada halaman Riwayat.
+
+Response
+
+```json
+{
+    "success": true,
+    "data": {
+        "periods": ["2026-JUL-AUG", "2026-AUG-SEP"]
+    }
+}
+```
+
+---
+
+## GET /expenses
+
+Mengembalikan daftar expense aktif pada suatu periode.
+
+Query param:
+
+* `period` (wajib): nama sheet periode, contoh `2026-JUL-AUG`.
+
+Response
+
+```json
+{
+    "success": true,
+    "data": {
+        "expenses": [
+            {
+                "id": "abc123",
+                "dateTime": "2026-08-06 14:30",
+                "name": "Makan Siang",
+                "budget": "Daily",
+                "amount": 35000,
+                "description": "Catatan"
+            }
+        ]
+    }
+}
+```
+
+Baris dengan `Deleted=TRUE` tidak dikembalikan.
+
+---
+
+## PUT /expenses/{id}
+
+Mengedit satu expense pada periode yang sesuai.
+
+Request body sama seperti `POST /expenses`.
+
+Response
+
+```json
+{
+    "success": true
+}
+```
+
+Validasi sama seperti `POST /expenses`. Saldo budget disesuaikan ulang berdasarkan perubahan.
+
+---
+
+## DELETE /expenses/{id}
+
+Menghapus (soft delete) satu expense.
+
+Response
+
+```json
+{
+    "success": true
+}
+```
+
+Baris ditandai `Deleted=TRUE` dan saldo budget dikembalikan sebesar nominal.
+
+---
+
 # Error Response
 
 ```json
@@ -271,11 +357,14 @@ Response
 
 # UI
 
-Halaman hanya terdiri dari satu halaman.
+Terdapat dua halaman:
+
+* Halaman utama (form pencatatan pengeluaran).
+* Halaman `Riwayat` (daftar, edit, dan hapus pengeluaran).
 
 Saat aplikasi dibuka, user langsung melihat form pencatatan pengeluaran.
 
-Komponen:
+Komponen halaman utama:
 
 * Input Waktu (opsi: waktu sistem saat ini atau manual)
 * Name Text Field
@@ -291,8 +380,6 @@ Dropdown Budget ditampilkan dua kolom:
 * nama budget di kiri
 * saldo di kanan (rata kanan, font mono, merah jika negatif)
 
-Di bawah field Budget ditampilkan sisa saldo budget yang terpilih.
-
 Setelah Nominal diisi, muncul kartu preview:
 
 * Sisa saldo saat ini
@@ -302,6 +389,29 @@ Setelah Nominal diisi, muncul kartu preview:
 Preview dinonaktifkan selama budget belum dipilih atau nominal kosong / <= 0.
 
 Budget boleh bernilai negatif.
+
+### Halaman Riwayat
+
+Diakses melalui link dari halaman utama.
+
+Komponen:
+
+* Dropdown bulan (periode, format `YYYY-MON-MON`)
+* Tabel daftar expense aktif pada periode terpilih
+* Tombol Edit (membuka modal berisi form yang sudah terisi)
+* Tombol Hapus (dengan konfirmasi)
+
+Preview saldo pada edit & hapus:
+
+* Hapus: menampilkan saldo budget saat ini dan saldo nanti (bertambah sebesar nominal).
+* Edit: menampilkan perubahan saldo budget (budget sama atau berganti), diperbarui otomatis saat nominal/budget diubah.
+
+Baris tanpa ID (dibuat sebelum fitur ini) tidak dapat diedit atau dihapus.
+
+Setelah edit atau hapus:
+
+* daftar di-refresh pada periode yang sama
+* saldo budget ikut ter-update
 
 Waktu menggunakan format:
 
@@ -403,6 +513,10 @@ README.md
 * User dapat menekan tombol Save.
 * Data berhasil tersimpan ke sheet periode yang benar pada Google Sheets.
 * Jika validasi gagal, tampilkan pesan error.
+* User dapat melihat daftar pengeluaran per periode.
+* User dapat mengedit pengeluaran.
+* User dapat menghapus pengeluaran (soft delete).
+* Saldo budget tetap konsisten setelah edit/hapus.
 * Aplikasi dapat dijalankan hanya dengan Docker Compose.
 * Tidak menggunakan database.
 
@@ -414,9 +528,6 @@ Versi pertama belum mendukung:
 
 * Login
 * Authentication
-* Edit data
-* Delete data
-* List pengeluaran
 * Filter
 * Search
 * Category

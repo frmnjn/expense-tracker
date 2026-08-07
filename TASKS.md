@@ -346,7 +346,6 @@ Menambahkan saldo per budget. Saldo disimpan sebagai kolom B pada tab `Budget`, 
 * [ ] Type `OptionsResponse` -> `{ name, balance }[]`
 * [ ] Utils format rupiah + warna tanda
 * [ ] Dropdown dua kolom via renderOption
-* [ ] Teks sisa saldo di bawah field Budget
 * [ ] Kartu preview "Saldo nanti" (disable jika budget/nominal kosong)
 
 ## Verifikasi
@@ -356,3 +355,47 @@ Menambahkan saldo per budget. Saldo disimpan sebagai kolom B pada tab `Budget`, 
 * [ ] Data tetap tersimpan ke sheet periode yang benar
 * [ ] Saldo berkurang sesuai expense (test sheet)
 * [ ] Saldo negatif dapat tampil
+
+---
+
+# Phase 10 - Daftar, Edit & Hapus Pengeluaran
+
+Menampilkan daftar pengeluaran per periode, mengedit, dan menghapus (soft delete) beserta penyesuaian saldo budget.
+
+## Docs
+
+* [x] Update PRD.md (skema ID+Deleted, API period/expenses/put/delete, UI halaman Riwayat, out-of-scope)
+* [x] Update TASKS.md (checklist ini)
+
+## Backend
+
+* [x] Model: `ExpenseResponse`, `PeriodsResponse`, `ExpensesResponse`
+* [x] Kolom `ID` & `Deleted` di header sheet periode; appendExpense menulis ID unik
+* [x] `GoogleSheetsClient.getExpenses` (baca A:G, filter baris Deleted)
+* [x] `GoogleSheetsClient.getPeriodSheetTitles`
+* [x] `GoogleSheetsClient.findExpense` (cari id lintas sheet -> ExpenseRef)
+* [x] `GoogleSheetsClient.updateExpenseRow`
+* [x] `GoogleSheetsClient.softDeleteExpense`
+* [x] Refactor helper baca/tulis saldo (`adjustBudgetBalance`, `readBudgetBalance`)
+* [x] `ExpenseService.getPeriods` / `getExpenses` / `updateExpense` / `deleteExpense` + kalkulasi delta saldo
+* [x] Controller: `GET /periods`, `GET /expenses`, `PUT /expenses/{id}`, `DELETE /expenses/{id}`
+* [x] Unit test delta saldo, find row, soft delete
+* [x] Regenerasi native config
+
+## Frontend
+
+* [x] Types `Expense`, `PeriodsResponse`, `ExpensesResponse`
+* [x] Service: getPeriods, getExpenses, updateExpense, deleteExpense
+* [x] Hooks: usePeriods, useExpenses, useUpdateExpense, useDeleteExpense
+* [x] Halaman `/riwayat` (dropdown bulan + tabel + modal edit + konfirmasi hapus)
+* [x] Preview saldo saat edit & hapus (saldo nanti bertambah/dikurangi)
+* [x] Link ke `/riwayat` dari halaman utama
+* [x] Refetch daftar + invalidate options setelah edit/hapus
+
+## Verifikasi
+
+* [x] Backend build & test lolos
+* [x] Frontend lint & build lolos
+* [x] Test sheet: buat -> edit nominal/ganti budget -> hapus -> cek saldo konsisten
+* [x] Soft delete: baris ditandai, tidak tampil di daftar, tidak dihapus fisik
+* [x] Saldo dropdown ter-update setelah edit/hapus

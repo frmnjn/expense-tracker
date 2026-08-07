@@ -8,9 +8,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
@@ -40,6 +44,32 @@ public class ExpenseController {
         }
     }
 
+    @GetMapping("/periods")
+    public ResponseEntity<ApiResponse> getPeriods() {
+        try {
+            return ResponseEntity.ok(ApiResponse.ok(expenseService.getPeriods()));
+        } catch (Exception e) {
+            LOGGER.error("internal error getting periods", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Internal server error"));
+        }
+    }
+
+    @GetMapping("/expenses")
+    public ResponseEntity<ApiResponse> getExpenses(@RequestParam("period") String period) {
+        try {
+            return ResponseEntity.ok(ApiResponse.ok(expenseService.getExpenses(period)));
+        } catch (ValidationException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            LOGGER.error("internal error getting expenses", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Internal server error"));
+        }
+    }
+
     @PostMapping("/expenses")
     public ResponseEntity<ApiResponse> createExpense(@RequestBody ExpenseRequest request) {
         try {
@@ -51,6 +81,39 @@ public class ExpenseController {
                     .body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
             LOGGER.error("internal error creating expense", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Internal server error"));
+        }
+    }
+
+    @PutMapping("/expenses/{id}")
+    public ResponseEntity<ApiResponse> updateExpense(@PathVariable String id,
+                                                     @RequestBody ExpenseRequest request) {
+        try {
+            expenseService.updateExpense(id, request);
+            return ResponseEntity.ok(ApiResponse.ok());
+        } catch (ValidationException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            LOGGER.error("internal error updating expense", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Internal server error"));
+        }
+    }
+
+    @DeleteMapping("/expenses/{id}")
+    public ResponseEntity<ApiResponse> deleteExpense(@PathVariable String id) {
+        try {
+            expenseService.deleteExpense(id);
+            return ResponseEntity.ok(ApiResponse.ok());
+        } catch (ValidationException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            LOGGER.error("internal error deleting expense", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("Internal server error"));
         }

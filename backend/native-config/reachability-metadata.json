@@ -133,13 +133,17 @@
           ]
         },
         {
-          "name": "createExpense",
+          "name": "getExpenses",
           "parameterTypes": [
-            "com.expensetracker.model.ExpenseRequest"
+            "java.lang.String"
           ]
         },
         {
           "name": "getOptions",
+          "parameterTypes": []
+        },
+        {
+          "name": "getPeriods",
           "parameterTypes": []
         },
         {
@@ -182,17 +186,43 @@
       ]
     },
     {
-      "type": "com.expensetracker.model.ExpenseRequest",
+      "type": "com.expensetracker.model.ExpenseRequest"
+    },
+    {
+      "type": "com.expensetracker.model.ExpenseResponse",
       "methods": [
         {
-          "name": "<init>",
-          "parameterTypes": [
-            "java.lang.String",
-            "java.lang.String",
-            "java.lang.String",
-            "java.lang.Long",
-            "java.lang.String"
-          ]
+          "name": "amount",
+          "parameterTypes": []
+        },
+        {
+          "name": "budget",
+          "parameterTypes": []
+        },
+        {
+          "name": "dateTime",
+          "parameterTypes": []
+        },
+        {
+          "name": "description",
+          "parameterTypes": []
+        },
+        {
+          "name": "id",
+          "parameterTypes": []
+        },
+        {
+          "name": "name",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.expensetracker.model.ExpensesResponse",
+      "methods": [
+        {
+          "name": "expenses",
+          "parameterTypes": []
         }
       ]
     },
@@ -201,6 +231,15 @@
       "methods": [
         {
           "name": "budgets",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.expensetracker.model.PeriodsResponse",
+      "methods": [
+        {
+          "name": "periods",
           "parameterTypes": []
         }
       ]
@@ -615,32 +654,6 @@
       ]
     },
     {
-      "type": "com.google.api.services.sheets.v4.Sheets$Spreadsheets$Values$Append",
-      "fields": [
-        {
-          "name": "includeValuesInResponse"
-        },
-        {
-          "name": "insertDataOption"
-        },
-        {
-          "name": "range"
-        },
-        {
-          "name": "responseDateTimeRenderOption"
-        },
-        {
-          "name": "responseValueRenderOption"
-        },
-        {
-          "name": "spreadsheetId"
-        },
-        {
-          "name": "valueInputOption"
-        }
-      ]
-    },
-    {
       "type": "com.google.api.services.sheets.v4.Sheets$Spreadsheets$Values$Get",
       "fields": [
         {
@@ -657,29 +670,6 @@
         },
         {
           "name": "valueRenderOption"
-        }
-      ]
-    },
-    {
-      "type": "com.google.api.services.sheets.v4.Sheets$Spreadsheets$Values$Update",
-      "fields": [
-        {
-          "name": "includeValuesInResponse"
-        },
-        {
-          "name": "range"
-        },
-        {
-          "name": "responseDateTimeRenderOption"
-        },
-        {
-          "name": "responseValueRenderOption"
-        },
-        {
-          "name": "spreadsheetId"
-        },
-        {
-          "name": "valueInputOption"
         }
       ]
     },
@@ -718,56 +708,6 @@
         },
         {
           "name": "uploadType"
-        }
-      ]
-    },
-    {
-      "type": "com.google.api.services.sheets.v4.model.AddSheetRequest",
-      "fields": [
-        {
-          "name": "properties"
-        }
-      ]
-    },
-    {
-      "type": "com.google.api.services.sheets.v4.model.AddSheetResponse",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        },
-        {
-          "name": "setProperties",
-          "parameterTypes": [
-            "com.google.api.services.sheets.v4.model.SheetProperties"
-          ]
-        }
-      ]
-    },
-    {
-      "type": "com.google.api.services.sheets.v4.model.AppendValuesResponse",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        },
-        {
-          "name": "setSpreadsheetId",
-          "parameterTypes": [
-            "java.lang.String"
-          ]
-        },
-        {
-          "name": "setTableRange",
-          "parameterTypes": [
-            "java.lang.String"
-          ]
-        },
-        {
-          "name": "setUpdates",
-          "parameterTypes": [
-            "com.google.api.services.sheets.v4.model.UpdateValuesResponse"
-          ]
         }
       ]
     },
@@ -1427,12 +1367,6 @@
         {
           "name": "<init>",
           "parameterTypes": []
-        },
-        {
-          "name": "setAddSheet",
-          "parameterTypes": [
-            "com.google.api.services.sheets.v4.model.AddSheetResponse"
-          ]
         }
       ]
     },
@@ -1453,38 +1387,6 @@
     },
     {
       "type": "com.google.api.services.sheets.v4.model.SheetProperties",
-      "fields": [
-        {
-          "name": "dataSourceSheetProperties"
-        },
-        {
-          "name": "gridProperties"
-        },
-        {
-          "name": "hidden"
-        },
-        {
-          "name": "index"
-        },
-        {
-          "name": "rightToLeft"
-        },
-        {
-          "name": "sheetId"
-        },
-        {
-          "name": "sheetType"
-        },
-        {
-          "name": "tabColor"
-        },
-        {
-          "name": "tabColorStyle"
-        },
-        {
-          "name": "title"
-        }
-      ],
       "methods": [
         {
           "name": "<init>",
@@ -1700,68 +1602,7 @@
       ]
     },
     {
-      "type": "com.google.api.services.sheets.v4.model.UpdateSheetPropertiesRequest",
-      "fields": [
-        {
-          "name": "fields"
-        },
-        {
-          "name": "properties"
-        }
-      ]
-    },
-    {
-      "type": "com.google.api.services.sheets.v4.model.UpdateValuesResponse",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        },
-        {
-          "name": "setSpreadsheetId",
-          "parameterTypes": [
-            "java.lang.String"
-          ]
-        },
-        {
-          "name": "setUpdatedCells",
-          "parameterTypes": [
-            "java.lang.Integer"
-          ]
-        },
-        {
-          "name": "setUpdatedColumns",
-          "parameterTypes": [
-            "java.lang.Integer"
-          ]
-        },
-        {
-          "name": "setUpdatedRange",
-          "parameterTypes": [
-            "java.lang.String"
-          ]
-        },
-        {
-          "name": "setUpdatedRows",
-          "parameterTypes": [
-            "java.lang.Integer"
-          ]
-        }
-      ]
-    },
-    {
       "type": "com.google.api.services.sheets.v4.model.ValueRange",
-      "fields": [
-        {
-          "name": "majorDimension"
-        },
-        {
-          "name": "range"
-        },
-        {
-          "name": "values"
-        }
-      ],
       "methods": [
         {
           "name": "<init>",
@@ -5769,7 +5610,15 @@
       "type": "org.springframework.boot.webmvc.autoconfigure.error.AbstractErrorController"
     },
     {
-      "type": "org.springframework.boot.webmvc.autoconfigure.error.BasicErrorController"
+      "type": "org.springframework.boot.webmvc.autoconfigure.error.BasicErrorController",
+      "methods": [
+        {
+          "name": "error",
+          "parameterTypes": [
+            "jakarta.servlet.http.HttpServletRequest"
+          ]
+        }
+      ]
     },
     {
       "type": "org.springframework.boot.webmvc.autoconfigure.error.DefaultErrorViewResolver"
@@ -6122,6 +5971,9 @@
       "type": "org.springframework.web.accept.MediaTypeFileExtensionResolver"
     },
     {
+      "type": "org.springframework.web.bind.annotation.DeleteMapping"
+    },
+    {
       "type": "org.springframework.web.bind.annotation.ExceptionHandler"
     },
     {
@@ -6134,6 +5986,9 @@
       "type": "org.springframework.web.bind.annotation.PostMapping"
     },
     {
+      "type": "org.springframework.web.bind.annotation.PutMapping"
+    },
+    {
       "type": "org.springframework.web.bind.annotation.RequestBody"
     },
     {
@@ -6141,6 +5996,9 @@
     },
     {
       "type": "org.springframework.web.bind.annotation.RequestMethod[]"
+    },
+    {
+      "type": "org.springframework.web.bind.annotation.RequestParam"
     },
     {
       "type": "org.springframework.web.bind.annotation.ResponseBody"
@@ -6183,6 +6041,9 @@
     },
     {
       "type": "org.springframework.web.filter.RequestContextFilter"
+    },
+    {
+      "type": "org.springframework.web.method.annotation.ExceptionHandlerMethodResolver"
     },
     {
       "type": "org.springframework.web.method.support.CompositeUriComponentsContributor"
@@ -6973,6 +6834,13 @@
       "type": {
         "proxy": [
           "org.springframework.web.bind.annotation.RequestMapping"
+        ]
+      }
+    },
+    {
+      "type": {
+        "proxy": [
+          "org.springframework.web.bind.annotation.RequestParam"
         ]
       }
     },

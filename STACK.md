@@ -7,6 +7,7 @@
 - TypeScript
 - Mantine UI
 - TanStack Query
+- React Router
 - Axios
 
 ## Backend
