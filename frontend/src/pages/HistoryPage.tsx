@@ -16,6 +16,7 @@ import {
   TextInput,
   Title,
 } from '@mantine/core'
+import { useMediaQuery } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
 import dayjs from 'dayjs'
 import { useDeleteExpense, useExpenses, usePeriods, useUpdateExpense } from '../hooks/useExpenses'
@@ -32,6 +33,7 @@ function HistoryPage() {
   const { data: options } = useOptions()
   const [period, setPeriod] = useState<string | null>(null)
   const { data: expensesData, isPending: expensesLoading } = useExpenses(period)
+  const isMobile = useMediaQuery('(max-width: 48em)')
 
   const periods = useMemo(() => (periodsData?.periods ?? []).map((p) => ({ value: p, label: p })), [periodsData])
   const expenses = expensesData?.expenses ?? []
@@ -63,11 +65,13 @@ function HistoryPage() {
     deletingBalance !== undefined && deleting ? deletingBalance + deleting.amount : undefined
 
   return (
-    <Container size="sm" px="md" py="lg">
-      <Group justify="space-between" mb="md">
-        <Title order={3}>Riwayat Pengeluaran</Title>
-        <Anchor href="/">Catat Pengeluaran</Anchor>
-      </Group>
+    <Container size="md" py="lg">
+      <Title order={2} mb="xs">
+        Riwayat Pengeluaran
+      </Title>
+      <Anchor href="/catat" mb="lg" display="inline-block">
+        Catat Pengeluaran
+      </Anchor>
 
       <Select
         label="Periode"
@@ -82,10 +86,52 @@ function HistoryPage() {
 
       <Paper withBorder p="lg" radius="md" shadow="sm" pos="relative">
         <LoadingOverlay visible={expensesLoading && !!period} zIndex={1000} overlayProps={{ radius: 'sm', blur: 1 }} />
+
         {expenses.length === 0 ? (
           <Text c="dimmed" ta="center" py="lg">
             {period ? 'Tidak ada pengeluaran pada periode ini.' : 'Pilih periode untuk melihat pengeluaran.'}
           </Text>
+        ) : isMobile ? (
+          <Stack gap="sm">
+            {expenses.map((expense) => (
+              <Paper key={expense.id} withBorder p="sm" radius="md">
+                <Group justify="space-between" mb={4} wrap="nowrap" align="flex-start">
+                  <Text fw={600} style={{ wordBreak: 'break-word' }}>
+                    {expense.name}
+                  </Text>
+                  <Text fw={700} ff="monospace" style={{ whiteSpace: 'nowrap' }}>
+                    {formatCurrency(expense.amount)}
+                  </Text>
+                </Group>
+                <Group justify="space-between" mb="xs">
+                  <Text size="sm" c="dimmed">
+                    {dayjs(expense.dateTime).format(DATE_TIME_FORMAT)}
+                  </Text>
+                  <Text size="sm" c="dimmed">
+                    {expense.budget}
+                  </Text>
+                </Group>
+                <Group justify="flex-end" gap="xs">
+                  <ActionIcon
+                    variant="subtle"
+                    color="blue"
+                    disabled={!expense.id}
+                    onClick={() => setEditing(expense)}
+                  >
+                    <span>✎</span>
+                  </ActionIcon>
+                  <ActionIcon
+                    variant="subtle"
+                    color="red"
+                    disabled={!expense.id}
+                    onClick={() => setDeleting(expense)}
+                  >
+                    <span>🗑</span>
+                  </ActionIcon>
+                </Group>
+              </Paper>
+            ))}
+          </Stack>
         ) : (
           <Table highlightOnHover>
             <Table.Thead>
@@ -232,8 +278,8 @@ function EditExpenseModal({ expense, onClose }: { expense: Expense; onClose: () 
   }
 
   return (
-    <Modal opened onClose={onClose} title="Edit Pengeluaran" centered>
-      <Stack>
+    <Modal opened onClose={onClose} title="Ubah pengeluaran" centered>
+      <Stack gap="sm">
         <TextInput
           label="Waktu"
           value={dateTime}
@@ -254,7 +300,6 @@ function EditExpenseModal({ expense, onClose }: { expense: Expense; onClose: () 
           data={budgetOptions}
           value={budget}
           onChange={setBudget}
-          searchable
           required
           size="md"
         />
@@ -262,11 +307,7 @@ function EditExpenseModal({ expense, onClose }: { expense: Expense; onClose: () 
           label="Nominal"
           value={amount}
           onChange={setAmount}
-          min={1}
-          allowNegative={false}
-          prefix="Rp"
-          thousandSeparator="."
-          decimalSeparator=","
+          min={0}
           required
           size="md"
         />
