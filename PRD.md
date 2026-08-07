@@ -390,6 +390,10 @@ Preview dinonaktifkan selama budget belum dipilih atau nominal kosong / <= 0.
 
 Budget boleh bernilai negatif.
 
+### Dark Mode
+
+Aplikasi mendukung mode terang dan gelap. Terdapat toggle di halaman form dan halaman Riwayat. Preferensi tersimpan di perangkat (localStorage) dan default adalah mode gelap.
+
 ### Halaman Riwayat
 
 Diakses melalui link dari halaman utama.

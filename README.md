@@ -27,6 +27,7 @@ Data tidak disimpan di database, melainkan langsung di Google Sheets menggunakan
 * Docker Compose
 * Tanpa database
 * Mobile-friendly & PWA (bisa ditambahkan ke Home Screen dari HP)
+* Dark mode (toggle, tersimpan di perangkat)
 
 ---
 
