@@ -1,0 +1,27 @@
+# build jar with maven + temurin
+FROM maven:3.9-eclipse-temurin-25 AS build
+WORKDIR /app
+COPY pom.xml .
+RUN mvn -q dependency:go-offline
+COPY src ./src
+RUN mvn -q package -DskipTests
+
+# native compile with GraalVM native-image (installs maven via microdnf)
+FROM container-registry.oracle.com/graalvm/native-image:25 AS native
+WORKDIR /app
+COPY pom.xml .
+COPY src ./src
+COPY native-config ./native-config
+RUN microdnf -y install maven && microdnf clean all \
+    && JAVA_HOME=/usr/lib64/graalvm/graalvm-java25 mvn -q -Pnative -DskipTests package
+
+# minimal glibc runtime with zlib
+FROM debian:bookworm-slim AS zlib
+RUN apt-get update && apt-get install -y --no-install-recommends libz1 && rm -rf /var/lib/apt/lists/*
+
+FROM gcr.io/distroless/cc-debian12
+COPY --from=zlib /usr/lib/x86_64-linux-gnu/libz.so.1* /usr/lib/x86_64-linux-gnu/
+COPY --from=native /app/target/expense-tracker-backend /app/expense-tracker
+WORKDIR /app
+EXPOSE 8080
+ENTRYPOINT ["/app/expense-tracker"]

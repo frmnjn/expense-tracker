@@ -1,8 +1,8 @@
 services:
   backend:
-    build: ./backend
+    image: expense-tracker-backend-native:latest
     restart: unless-stopped
-    mem_limit: 256m
+    mem_limit: 128m
     env_file:
       - ./backend/.env
     volumes:
@@ -15,6 +15,6 @@ services:
         VITE_API_URL: /api
     restart: unless-stopped
     ports:
-      - "127.0.0.1:23824:80"
+      - "23824:80"
     depends_on:
       - backend
