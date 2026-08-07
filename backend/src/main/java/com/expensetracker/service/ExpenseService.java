@@ -35,6 +35,7 @@ public class ExpenseService {
                 request.budget(),
                 request.amount(),
                 request.description());
+        googleSheetsClient.decrementBudget(request.budget(), request.amount());
     }
 
     private void validate(ExpenseRequest request) {

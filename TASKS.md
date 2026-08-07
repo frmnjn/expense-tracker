@@ -319,3 +319,40 @@ Mengubah backend menjadi native executable (~50MB total) menggantikan JVM runtim
 
 * [x] Image JVM (`expense-tracker-backend:0.0.1-SNAPSHOT`) tetap tersimpan di VPS sebagai fallback
 * [x] Dokumentasikan cara rollback: `docker compose -f docker-compose.prod.yml down && docker compose up -d` setelah mengembalikan konfigurasi image
+
+---
+
+# Phase 9 - Fitur Saldo Budget
+
+Menambahkan saldo per budget. Saldo disimpan sebagai kolom B pada tab `Budget`, dikurangi otomatis saat expense tersimpan, dan diisi manual di Google Sheets (misal tiap gajian tanggal 25). Budget boleh bernilai negatif.
+
+## Docs
+
+* [ ] Update PRD.md (format sheet Budget, respons /options, UI dropdown dua kolom + preview saldo)
+* [ ] Update TASKS.md (checklist ini)
+* [ ] Buat docs/BALANCE.md
+
+## Backend
+
+* [ ] Model: `BudgetOption(name, balance)` + `OptionsResponse(List<BudgetOption>)`
+* [ ] `GoogleSheetsClient.getOptions` membaca tab Budget `A:B` (parse saldo, blank -> 0)
+* [ ] `GoogleSheetsClient.decrementBudget(budget, amount)` (baca, kurangi, tulis ulang)
+* [ ] `ExpenseService.createExpense` memanggil decrementBudget setelah append
+* [ ] Unit test parsing saldo & decrement
+* [ ] Regenerasi native config (`./backend/generate-native-config.sh`)
+
+## Frontend
+
+* [ ] Type `OptionsResponse` -> `{ name, balance }[]`
+* [ ] Utils format rupiah + warna tanda
+* [ ] Dropdown dua kolom via renderOption
+* [ ] Teks sisa saldo di bawah field Budget
+* [ ] Kartu preview "Saldo nanti" (disable jika budget/nominal kosong)
+
+## Verifikasi
+
+* [ ] Backend build & test lolos
+* [ ] Frontend lint & build lolos
+* [ ] Data tetap tersimpan ke sheet periode yang benar
+* [ ] Saldo berkurang sesuai expense (test sheet)
+* [ ] Saldo negatif dapat tampil

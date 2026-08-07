@@ -22,8 +22,9 @@ public class SheetOrderInitializer {
     public void onApplicationReady() {
         try {
             googleSheetsClient.reorderSheets();
+            googleSheetsClient.formatBudgetBalanceColumn();
         } catch (Exception e) {
-            LOGGER.error("failed to reorder sheets on startup", e);
+            LOGGER.error("failed to initialize sheets on startup", e);
         }
     }
 }

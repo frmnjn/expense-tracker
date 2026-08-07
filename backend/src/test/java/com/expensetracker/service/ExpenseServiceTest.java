@@ -43,6 +43,12 @@ class ExpenseServiceTest {
     }
 
     @Test
+    void createExpense_validRequest_shouldDecrementBudget() {
+        assertDoesNotThrow(() -> expenseService.createExpense(validRequest()));
+        verify(googleSheetsClient).decrementBudget("Daily", 35000L);
+    }
+
+    @Test
     void createExpense_dateTimeOnCutoff_shouldUseNextPeriodSheet() {
         ExpenseRequest request = new ExpenseRequest("2026-08-25 08:00", "Makan Siang", "Daily", 35000L, null);
         expenseService.createExpense(request);
@@ -56,6 +62,7 @@ class ExpenseServiceTest {
         ValidationException ex = assertThrows(ValidationException.class, () -> expenseService.createExpense(request));
         assertEquals("DateTime is required", ex.getMessage());
         verify(googleSheetsClient, never()).appendExpense(any(), any(), any(), any(), anyLong(), any());
+        verify(googleSheetsClient, never()).decrementBudget(any(), anyLong());
     }
 
     @Test

@@ -6,8 +6,13 @@ export interface ExpenseRequest {
   description?: string
 }
 
+export interface BudgetOption {
+  name: string
+  balance: number
+}
+
 export interface OptionsResponse {
-  budgets: string[]
+  budgets: BudgetOption[]
 }
 
 export interface ApiResponse<T> {
