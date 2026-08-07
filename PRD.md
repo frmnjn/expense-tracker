@@ -495,6 +495,9 @@ Diakses melalui link dari halaman utama.
 Komponen:
 
 * Dropdown bulan (periode, format `YYYY-MON-MON`)
+* Search nama pengeluaran
+* Filter budget
+* Sort (waktu naik/turun, nominal besar/kecil)
 * Tabel daftar expense aktif pada periode terpilih
 * Tombol Edit (membuka modal berisi form yang sudah terisi)
 * Tombol Hapus (dengan konfirmasi)

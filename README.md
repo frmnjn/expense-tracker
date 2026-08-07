@@ -14,6 +14,7 @@ Data tidak disimpan di database, melainkan langsung di Google Sheets menggunakan
 * Saldo per budget (otomatis berkurang saat pengeluaran, ditambah manual di sheet tiap gajian)
 * Preview "Saldo nanti" saat mengisi nominal
 * Daftar pengeluaran per periode (halaman Riwayat)
+* Filter & sort di Riwayat (search nama, filter budget, urutkan)
 * Edit pengeluaran
 * Hapus pengeluaran (soft delete, saldo dikembalikan)
 * Preview perubahan saldo saat edit/hapus

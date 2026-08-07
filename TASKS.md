@@ -482,3 +482,23 @@ Menampilkan daftar pengeluaran per periode, mengedit, dan menghapus (soft delete
 
 * [x] POST /topups menambah saldo & tercatat di tab TopUp (test sheet)
 * [ ] Build & lint lolos
+
+---
+
+# Phase 14 - Filter & Sort di Riwayat
+
+## Docs
+
+* [x] Update PRD.md (filter & sort di UI Riwayat)
+* [x] Update TASKS.md (checklist ini)
+* [x] Update README.md
+
+## Frontend
+
+* [x] Search nama (client-side)
+* [x] Filter budget (dropdown dari /options)
+* [x] Sort (waktu naik/turun, nominal besar/kecil)
+* [x] Diterapkan di tabel desktop & list kartu mobile
+* [x] State "tidak ada hasil" jika filter kosong
+* [ ] Build & lint lolos
+* [ ] Cek di docker local
