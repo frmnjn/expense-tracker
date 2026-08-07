@@ -133,6 +133,12 @@
           ]
         },
         {
+          "name": "createExpense",
+          "parameterTypes": [
+            "com.expensetracker.model.ExpenseRequest"
+          ]
+        },
+        {
           "name": "getExpenses",
           "parameterTypes": [
             "java.lang.String"
@@ -186,7 +192,19 @@
       ]
     },
     {
-      "type": "com.expensetracker.model.ExpenseRequest"
+      "type": "com.expensetracker.model.ExpenseRequest",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.String",
+            "java.lang.String",
+            "java.lang.String",
+            "java.lang.Long",
+            "java.lang.String"
+          ]
+        }
+      ]
     },
     {
       "type": "com.expensetracker.model.ExpenseResponse",
@@ -397,12 +415,6 @@
         },
         {
           "name": "setAuthenticate",
-          "parameterTypes": [
-            "java.lang.String"
-          ]
-        },
-        {
-          "name": "setAuthorization",
           "parameterTypes": [
             "java.lang.String"
           ]
@@ -654,6 +666,32 @@
       ]
     },
     {
+      "type": "com.google.api.services.sheets.v4.Sheets$Spreadsheets$Values$Append",
+      "fields": [
+        {
+          "name": "includeValuesInResponse"
+        },
+        {
+          "name": "insertDataOption"
+        },
+        {
+          "name": "range"
+        },
+        {
+          "name": "responseDateTimeRenderOption"
+        },
+        {
+          "name": "responseValueRenderOption"
+        },
+        {
+          "name": "spreadsheetId"
+        },
+        {
+          "name": "valueInputOption"
+        }
+      ]
+    },
+    {
       "type": "com.google.api.services.sheets.v4.Sheets$Spreadsheets$Values$Get",
       "fields": [
         {
@@ -670,6 +708,29 @@
         },
         {
           "name": "valueRenderOption"
+        }
+      ]
+    },
+    {
+      "type": "com.google.api.services.sheets.v4.Sheets$Spreadsheets$Values$Update",
+      "fields": [
+        {
+          "name": "includeValuesInResponse"
+        },
+        {
+          "name": "range"
+        },
+        {
+          "name": "responseDateTimeRenderOption"
+        },
+        {
+          "name": "responseValueRenderOption"
+        },
+        {
+          "name": "spreadsheetId"
+        },
+        {
+          "name": "valueInputOption"
         }
       ]
     },
@@ -708,6 +769,33 @@
         },
         {
           "name": "uploadType"
+        }
+      ]
+    },
+    {
+      "type": "com.google.api.services.sheets.v4.model.AppendValuesResponse",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        },
+        {
+          "name": "setSpreadsheetId",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        },
+        {
+          "name": "setTableRange",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        },
+        {
+          "name": "setUpdates",
+          "parameterTypes": [
+            "com.google.api.services.sheets.v4.model.UpdateValuesResponse"
+          ]
         }
       ]
     },
@@ -1602,7 +1690,57 @@
       ]
     },
     {
+      "type": "com.google.api.services.sheets.v4.model.UpdateValuesResponse",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        },
+        {
+          "name": "setSpreadsheetId",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        },
+        {
+          "name": "setUpdatedCells",
+          "parameterTypes": [
+            "java.lang.Integer"
+          ]
+        },
+        {
+          "name": "setUpdatedColumns",
+          "parameterTypes": [
+            "java.lang.Integer"
+          ]
+        },
+        {
+          "name": "setUpdatedRange",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        },
+        {
+          "name": "setUpdatedRows",
+          "parameterTypes": [
+            "java.lang.Integer"
+          ]
+        }
+      ]
+    },
+    {
       "type": "com.google.api.services.sheets.v4.model.ValueRange",
+      "fields": [
+        {
+          "name": "majorDimension"
+        },
+        {
+          "name": "range"
+        },
+        {
+          "name": "values"
+        }
+      ],
       "methods": [
         {
           "name": "<init>",
@@ -5610,15 +5748,7 @@
       "type": "org.springframework.boot.webmvc.autoconfigure.error.AbstractErrorController"
     },
     {
-      "type": "org.springframework.boot.webmvc.autoconfigure.error.BasicErrorController",
-      "methods": [
-        {
-          "name": "error",
-          "parameterTypes": [
-            "jakarta.servlet.http.HttpServletRequest"
-          ]
-        }
-      ]
+      "type": "org.springframework.boot.webmvc.autoconfigure.error.BasicErrorController"
     },
     {
       "type": "org.springframework.boot.webmvc.autoconfigure.error.DefaultErrorViewResolver"
@@ -6041,9 +6171,6 @@
     },
     {
       "type": "org.springframework.web.filter.RequestContextFilter"
-    },
-    {
-      "type": "org.springframework.web.method.annotation.ExceptionHandlerMethodResolver"
     },
     {
       "type": "org.springframework.web.method.support.CompositeUriComponentsContributor"
