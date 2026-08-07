@@ -209,4 +209,27 @@ class ExpenseServiceTest {
                 () -> expenseService.createTopUp(new TopUpRequest(null, "Daily", 0L, null)));
         assertEquals("Amount must be greater than 0", ex.getMessage());
     }
+
+    @Test
+    void getTrend_shouldReturnNewestPeriodsAscending() {
+        when(googleSheetsClient.getPeriodSheetTitles()).thenReturn(List.of("2026-AUG-SEP", "2026-JUL-AUG"));
+        when(googleSheetsClient.getExpenses("2026-JUL-AUG")).thenReturn(List.of(
+                new ExpenseResponse("1", "2026-08-01 09:00", "a", "Daily", 1000L, null),
+                new ExpenseResponse("2", "2026-08-02 09:00", "b", "Daily", 2000L, null)));
+        when(googleSheetsClient.getExpenses("2026-AUG-SEP")).thenReturn(List.of(
+                new ExpenseResponse("3", "2026-09-01 09:00", "c", "Daily", 5000L, null)));
+        var trend = expenseService.getTrend(3);
+        assertEquals(2, trend.periods().size());
+        assertEquals("2026-JUL-AUG", trend.periods().get(0).period());
+        assertEquals(3000L, trend.periods().get(0).total());
+        assertEquals(2, trend.periods().get(0).count());
+        assertEquals("2026-AUG-SEP", trend.periods().get(1).period());
+        assertEquals(5000L, trend.periods().get(1).total());
+    }
+
+    @Test
+    void getTrend_invalidMonths_shouldReject() {
+        ValidationException ex = assertThrows(ValidationException.class, () -> expenseService.getTrend(0));
+        assertEquals("Months must be greater than 0", ex.getMessage());
+    }
 }

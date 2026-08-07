@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import {
   ActionIcon,
   Anchor,
+  Box,
   Container,
   Group,
   LoadingOverlay,
@@ -13,7 +14,7 @@ import {
   Title,
 } from '@mantine/core'
 import { useMediaQuery } from '@mantine/hooks'
-import { usePeriods, useSummary } from '../hooks/useExpenses'
+import { usePeriods, useSummary, useTrend } from '../hooks/useExpenses'
 import { useOptions } from '../hooks/useOptions'
 import { useTopUps } from '../hooks/useTopUps'
 import ColorSchemeToggle from '../components/ColorSchemeToggle'
@@ -43,6 +44,7 @@ function DashboardPage() {
   const [period, setPeriod] = useState<string | null>(null)
   const [selectedTopUpBudget, setSelectedTopUpBudget] = useState<string | null>(null)
   const { data: summary, isPending: summaryLoading } = useSummary(period)
+  const { data: trend } = useTrend(3)
   const isMobile = useMediaQuery('(max-width: 48em)')
 
   const periods = useMemo(() => (periodsData?.periods ?? []).map((p) => ({ value: p, label: p })), [periodsData])
@@ -236,6 +238,39 @@ function DashboardPage() {
                   </Text>
                 </Group>
               ))}
+            </Stack>
+          </Paper>
+        )}
+
+        {trend && trend.periods.length > 0 && (
+          <Paper withBorder p={{ base: 'md', sm: 'lg' }} radius="md" shadow="sm">
+            <Title order={4} mb="sm">
+              3 Bulan Terakhir
+            </Title>
+            <Stack gap="md">
+              {trend.periods.map((p) => {
+                const max = Math.max(...trend.periods.map((x) => x.total), 1)
+                const width = Math.max((p.total / max) * 100, p.total > 0 ? 2 : 0)
+                return (
+                  <div key={p.period}>
+                    <Group justify="space-between" mb={4}>
+                      <Text size="sm">{p.period}</Text>
+                      <Text size="sm" ff="monospace">
+                        {formatCurrency(p.total)} · {p.count} transaksi
+                      </Text>
+                    </Group>
+                    <Box
+                      bg="blue.6"
+                      style={{
+                        width: `${width}%`,
+                        height: 14,
+                        borderRadius: 4,
+                        transition: 'width 0.3s ease',
+                      }}
+                    />
+                  </div>
+                )
+              })}
             </Stack>
           </Paper>
         )}

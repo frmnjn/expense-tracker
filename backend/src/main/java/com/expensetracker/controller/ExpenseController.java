@@ -86,6 +86,21 @@ public class ExpenseController {
         }
     }
 
+    @GetMapping("/trend")
+    public ResponseEntity<ApiResponse> getTrend(@RequestParam(value = "months", defaultValue = "3") int months) {
+        try {
+            return ResponseEntity.ok(ApiResponse.ok(expenseService.getTrend(months)));
+        } catch (ValidationException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            LOGGER.error("internal error getting trend", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Internal server error"));
+        }
+    }
+
     @GetMapping("/topups")
     public ResponseEntity<ApiResponse> getTopUps() {
         try {

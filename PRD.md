@@ -339,6 +339,32 @@ Response
 
 ---
 
+## GET /trend
+
+Mengembalikan ringkasan pengeluaran untuk beberapa periode terakhir.
+
+Query param:
+
+* `months` (opsional, default `3`): jumlah periode terakhir.
+
+Response
+
+```json
+{
+    "success": true,
+    "data": {
+        "periods": [
+            { "period": "2026-JUL-AUG", "total": 30000, "count": 2 },
+            { "period": "2026-AUG-SEP", "total": 50000, "count": 1 }
+        ]
+    }
+}
+```
+
+`periods` diurutkan dari periode terlama ke terbaru.
+
+---
+
 ## GET /topups
 
 Mengembalikan daftar top-up saldo.
@@ -457,6 +483,7 @@ Komponen:
 * Tombol "Tambah Saldo" (modal: pilih budget + nominal + deskripsi) untuk menambah saldo budget
 * Daftar pengeluaran terbesar (3 budget teratas)
 * Daftar riwayat top-up saldo
+* Ringkasan 3 bulan terakhir (total + transaksi per periode, dengan bar visual)
 
 Komponen halaman form:
 

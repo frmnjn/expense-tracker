@@ -1,5 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { deleteExpense, getExpenses, getPeriods, getSummary, updateExpense } from '../services/expense'
+import {
+  deleteExpense,
+  getExpenses,
+  getPeriods,
+  getSummary,
+  getTrend,
+  updateExpense,
+} from '../services/expense'
 import type { ExpenseRequest } from '../types/expense'
 
 export function usePeriods() {
@@ -22,6 +29,13 @@ export function useSummary(period: string | null) {
     queryKey: ['summary', period],
     queryFn: () => getSummary(period ?? ''),
     enabled: !!period,
+  })
+}
+
+export function useTrend(months = 3) {
+  return useQuery({
+    queryKey: ['trend', months],
+    queryFn: () => getTrend(months),
   })
 }
 

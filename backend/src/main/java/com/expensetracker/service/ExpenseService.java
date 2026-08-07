@@ -12,11 +12,15 @@ import com.expensetracker.model.SummaryResponse;
 import com.expensetracker.model.TopUpRequest;
 import com.expensetracker.model.TopUpResponse;
 import com.expensetracker.model.TopUpsResponse;
+import com.expensetracker.model.TrendPoint;
+import com.expensetracker.model.TrendResponse;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -83,6 +87,29 @@ public class ExpenseService {
 
     public TopUpsResponse getTopUps() {
         return new TopUpsResponse(googleSheetsClient.getTopUps());
+    }
+
+    public TrendResponse getTrend(int months) {
+        if (months < 1) {
+            throw new ValidationException("Months must be greater than 0");
+        }
+        List<String> newest = googleSheetsClient.getPeriodSheetTitles();
+        if (newest.size() > months) {
+            newest = newest.subList(0, months);
+        }
+        List<String> ascending = new ArrayList<>(newest);
+        Collections.reverse(ascending);
+
+        List<TrendPoint> points = new ArrayList<>();
+        for (String period : ascending) {
+            List<ExpenseResponse> expenses = googleSheetsClient.getExpenses(period);
+            long total = 0;
+            for (ExpenseResponse expense : expenses) {
+                total += expense.amount() == null ? 0 : expense.amount();
+            }
+            points.add(new TrendPoint(period, total, expenses.size()));
+        }
+        return new TrendResponse(points);
     }
 
     public void createTopUp(TopUpRequest request) {
