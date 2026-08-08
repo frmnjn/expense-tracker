@@ -280,6 +280,22 @@ public class ExpenseController {
         return MediaType.IMAGE_JPEG;
     }
 
+    @DeleteMapping("/expenses/{id}/photo")
+    public ResponseEntity<ApiResponse> deletePhoto(@PathVariable String id) {
+        try {
+            expenseService.detachPhoto(id);
+            return ResponseEntity.ok(ApiResponse.ok());
+        } catch (ValidationException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            LOGGER.error("internal error deleting photo", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Internal server error"));
+        }
+    }
+
     @PutMapping("/expenses/{id}")
     public ResponseEntity<ApiResponse> updateExpense(@PathVariable String id,
                                                      @RequestBody ExpenseRequest request) {

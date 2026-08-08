@@ -63,6 +63,11 @@ export async function uploadPhoto(id: string, file: File): Promise<ApiResponse<v
   return response.data
 }
 
+export async function deletePhoto(id: string): Promise<ApiResponse<void>> {
+  const response = await apiClient.delete<ApiResponse<void>>(`/expenses/${id}/photo`)
+  return response.data
+}
+
 export async function getOptions(): Promise<OptionsResponse> {
   const response = await apiClient.get<ApiResponse<OptionsResponse>>('/options')
   return response.data.data ?? { budgets: [] }

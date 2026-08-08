@@ -6,11 +6,12 @@ Aplikasi web untuk mencatat pengeluaran harian, memantau saldo per budget, dan m
 
 ## Fitur
 
-* Catat pengeluaran (waktu, nama, budget, nominal, deskripsi) + **foto invoice opsional** (kamera/galeri)
+* Catat pengeluaran (waktu, nama, budget, nominal, deskripsi) + **foto invoice opsional** (kamera/galeri/pakai foto yang sudah ada di periode ini)
 * Saldo per budget (berkurang saat pengeluaran, bertambah via top-up)
 * Dashboard: saldo per budget, pengeluaran terbesar, 3 bulan terakhir
-* Riwayat per periode: search, filter, sort, edit, hapus, lihat foto
+* Riwayat per periode: search, filter, sort, edit (termasuk ganti/hapus foto), hapus, lihat foto
 * Kelola budget (tambah/edit/hapus, soft delete)
+* Idempotensi POST (header `Idempotency-Key`) untuk mencegah duplikat
 * Dark mode (default gelap)
 
 ---
@@ -103,10 +104,13 @@ Dokumentasi lengkap ada di `PRD.md`. Ringkasan endpoint (`/api`):
 
 * `GET /health`, `/options`, `/periods`
 * `GET/POST /expenses`, `PUT/DELETE /expenses/{id}`
-* `POST/GET /expenses/{id}/photo`
+* `POST/GET/DELETE /expenses/{id}/photo`
+* `GET /invoices?date=...`, `GET /invoices/{id}/photo`
 * `GET /summary?period=`, `/trend?months=`
 * `GET/POST /topups`
 * `POST /budgets`, `PUT/DELETE /budgets/{name}`
+
+Semua endpoint `POST` menerima header `Idempotency-Key` opsional (uuid) untuk mencegah duplikat.
 
 ---
 

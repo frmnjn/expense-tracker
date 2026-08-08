@@ -22,8 +22,10 @@ import { useMediaQuery } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
 import dayjs from 'dayjs'
 import { useDeleteExpense, useExpenses, usePeriods, useUpdateExpense } from '../hooks/useExpenses'
+import { useDeletePhoto, useUploadPhoto } from '../hooks/useCreateExpense'
 import { useOptions } from '../hooks/useOptions'
 import ColorSchemeToggle from '../components/ColorSchemeToggle'
+import PhotoInput, { type PhotoSelection } from '../components/PhotoInput'
 import { getPhotoUrl } from '../services/expense'
 import { formatCurrency } from '../utils/currency'
 import type { Expense } from '../types/expense'
@@ -327,12 +329,16 @@ function HistoryPage() {
 function EditExpenseModal({ expense, onClose }: { expense: Expense; onClose: () => void }) {
   const { data: options } = useOptions()
   const updateExpense = useUpdateExpense()
+  const uploadPhoto = useUploadPhoto()
+  const deletePhoto = useDeletePhoto()
 
   const [dateTime, setDateTime] = useState(expense.dateTime)
   const [name, setName] = useState(expense.name)
   const [budget, setBudget] = useState<string | null>(expense.budget)
   const [amount, setAmount] = useState<string | number>(expense.amount)
   const [description, setDescription] = useState(expense.description ?? '')
+  const [photo, setPhoto] = useState<PhotoSelection | null>(null)
+  const [removePhoto, setRemovePhoto] = useState(false)
 
   const budgetOptions = useMemo(
     () => (options?.budgets ?? []).map((b) => ({ value: b.name, label: b.name })),
@@ -362,12 +368,22 @@ function EditExpenseModal({ expense, onClose }: { expense: Expense; onClose: () 
           budget: budget ?? '',
           amount: Number(amount),
           description: description.trim() === '' ? undefined : description.trim(),
+          invoiceId: photo?.kind === 'existing' ? photo.invoiceId : undefined,
         },
       },
       {
         onSuccess: () => {
-          notifications.show({ title: 'Berhasil', message: 'Pengeluaran diperbarui', color: 'green' })
-          onClose()
+          const finish = () => {
+            notifications.show({ title: 'Berhasil', message: 'Pengeluaran diperbarui', color: 'green' })
+            onClose()
+          }
+          if (removePhoto) {
+            deletePhoto.mutate(expense.id, { onSuccess: finish, onError: finish })
+          } else if (photo?.kind === 'new') {
+            uploadPhoto.mutate({ id: expense.id, file: photo.file }, { onSuccess: finish, onError: finish })
+          } else {
+            finish()
+          }
         },
         onError: (error) => {
           const message =
@@ -466,6 +482,38 @@ function EditExpenseModal({ expense, onClose }: { expense: Expense; onClose: () 
           maxLength={255}
           size="md"
         />
+
+        {expense.hasPhoto && !removePhoto && !photo && (
+          <Group align="flex-start">
+            <Image
+              src={getPhotoUrl(expense.id)}
+              alt="Invoice saat ini"
+              mah={150}
+              fit="contain"
+              radius="md"
+              style={{ flex: 1 }}
+            />
+            <Button variant="subtle" color="red" onClick={() => setRemovePhoto(true)}>
+              Hapus Foto
+            </Button>
+          </Group>
+        )}
+
+        {expense.hasPhoto && removePhoto ? (
+          <Text size="sm" c="red">
+            Foto akan dihapus setelah disimpan.
+          </Text>
+        ) : null}
+
+        <PhotoInput
+          value={photo}
+          onChange={(v) => {
+            setPhoto(v)
+            if (v) setRemovePhoto(false)
+          }}
+          dateTime={dayjs(dateTime).format(DATE_TIME_FORMAT)}
+        />
+
         <Group justify="flex-end" mt="md">
           <Button variant="default" onClick={onClose}>
             Batal

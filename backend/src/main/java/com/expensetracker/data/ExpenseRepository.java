@@ -70,6 +70,10 @@ public class ExpenseRepository {
         jdbcTemplate.update("UPDATE expenses SET invoice_id = ? WHERE id = ?", invoiceId, id);
     }
 
+    public void detachPhoto(String id) {
+        jdbcTemplate.update("UPDATE expenses SET invoice_id = NULL WHERE id = ?", id);
+    }
+
     public long totalForPeriod(String period) {
         List<Long> totals = jdbcTemplate.query(
                 "SELECT COALESCE(SUM(amount), 0) FROM expenses WHERE period = ? AND deleted = FALSE",

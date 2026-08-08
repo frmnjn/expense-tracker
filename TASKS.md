@@ -689,3 +689,35 @@ Mengganti `spring.sql.init` (schema.sql) dengan Flyway versioned migrations agar
 * [x] Upload + tampil foto (local, langsung & via proxy)
 * [x] Non-image ditolak
 * [x] Native config regen + build (saat deploy)
+
+---
+
+# Phase 22 - Shared Invoice, Reuse Foto, Idempotensi, & Edit Foto
+
+## Backend
+
+* [x] Flyway `V5__invoices.sql`: tabel `invoices`, kolom `expenses.invoice_id`; migrasi foto lama dari `expenses.photo_path` ke invoice; hapus `photo_path`
+* [x] `InvoiceData` / `InvoiceRepository` / `InvoiceService` / `InvoiceController`
+* [x] `GET /invoices?date=...` (daftar id invoice per periode) & `GET /invoices/{id}/photo`
+* [x] `ExpenseRequest` + `invoiceId` opsional (create & update, divalidasi periode sama)
+* [x] `attachPhoto` kini membuat invoice & menghubungkan `invoice_id`
+* [x] `DELETE /expenses/{id}/photo` (melepas `invoice_id`; hapus baris invoice + file jika tidak dipakai expense lain, pertahankan jika masih dipakai)
+* [x] `ExpenseResponse.hasPhoto` = `invoice_id` terisi
+* [x] Flyway `V6__idempotency.sql`: tabel `idempotency_keys`
+* [x] Flyway `V7__indexes.sql`: index `expenses.invoice_id`, komposit `expenses(period, deleted)`, `idempotency_keys.created_at`
+* [x] `IdempotencyRepository` / `IdempotencyService` (Jackson 3); semua POST membaca header `Idempotency-Key`, simpan respons 24 jam + cleanup otomatis
+* [x] `@RegisterReflectionForBinding` + `InvoiceResponse[]` untuk serialisasi native `/invoices`
+* [x] Unit test: detachPhoto, updateExpense+invoice, InvoiceService, IdempotencyService
+
+## Frontend
+
+* [x] `PhotoInput`: opsi ke-3 "Pakai Foto Periode Ini" (grid thumbnail invoice via `useInvoices`)
+* [x] `ExpenseForm`: kirim `invoiceId` saat reuse, guard `submittingRef` anti double-submit
+* [x] `services`/`hooks`: `getInvoices`, `getInvoicePhotoUrl`, `deletePhoto`, `useDeletePhoto`, invalidasi `useUploadPhoto`
+* [x] `EditExpenseModal`: ganti foto (upload baru / reuse periode ini) & hapus foto
+
+## Infra / Verifikasi
+
+* [x] Idempotensi teruji (request key sama 2x → id sama, tidak duplikat)
+* [x] Delete photo → `hasPhoto` false; update dengan `invoiceId` → reuse foto
+* [x] Native config regen + build + deploy (terverifikasi di VPS, termasuk fix refleksi array)

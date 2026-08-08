@@ -247,6 +247,20 @@ public class ExpenseService {
                 request.name(),
                 request.amount(),
                 request.description());
+
+        if (request.invoiceId() != null && !request.invoiceId().isBlank()) {
+            attachInvoiceToExpense(id, request.invoiceId(), PeriodSheetName.forDate(dateTime.toLocalDate()));
+        }
+    }
+
+    @Transactional
+    public void detachPhoto(String id) {
+        ExpenseData expense = requireExpense(id);
+        String invoiceId = expense.invoiceId();
+        expenseRepository.detachPhoto(id);
+        if (invoiceId != null && !invoiceId.isBlank()) {
+            invoiceService.deleteIfUnused(invoiceId);
+        }
     }
 
     @Transactional

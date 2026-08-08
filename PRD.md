@@ -70,7 +70,9 @@ Tabel:
 | Tabel | Kolom |
 | ----- | ----- |
 | `budgets` | `id` PK, `name` UNIQUE, `balance`, `is_active` |
-| `expenses` | `id` PK, `period`, `period_start`, `date_time`, `budget_id` FK→`budgets`, `name`, `amount`, `description`, `deleted`, `photo_path` |
+| `expenses` | `id` PK, `period`, `period_start`, `date_time`, `budget_id` FK→`budgets`, `name`, `amount`, `description`, `deleted`, `invoice_id` FK→`invoices` (nullable) |
+| `invoices` | `id` PK, `period`, `period_start`, `photo_path`, `deleted` |
+| `idempotency_keys` | `id_key` PK, `response_json`, `created_at` |
 | `top_ups` | `id` PK, `date_time`, `budget_id` FK→`budgets`, `amount`, `description` |
 
 Migration saat ini:
@@ -78,7 +80,14 @@ Migration saat ini:
 * `V1__init.sql` — skema awal.
 * `V2__budget_is_active.sql` — kolom `is_active` pada budgets (idempotent).
 * `V3__seed_default_budgets.sql` — seed budget default (`INSERT IGNORE`).
-* `V4__expense_photo.sql` — kolom `photo_path` pada expenses.
+* `V4__expense_photo.sql` — kolom `photo_path` pada expenses (sudah digantikan `V5`).
+* `V5__invoices.sql` — tabel `invoices`, kolom `expenses.invoice_id`; memindahkan foto lama dari `expenses.photo_path` ke `invoices.photo_path` lalu menghapus `photo_path`.
+* `V6__idempotency.sql` — tabel `idempotency_keys` untuk idempotensi request POST.
+* `V7__indexes.sql` — index `expenses.invoice_id`, komposit `expenses(period, deleted)` (menggantikan `idx_expenses_period`), dan `idempotency_keys.created_at`.
+
+Index yang ada: `budgets` PK(id) + UNIQUE(name); `expenses` PK(id), `budget_id` FK, `deleted`, `invoice_id`, komposit `(period, deleted)`; `invoices` PK(id) + `period`; `top_ups` PK(id) + `budget_id`; `idempotency_keys` PK(id_key) + `created_at`.
+
+Satu **invoice** adalah pemilik satu file foto dan dapat dirujuk oleh **banyak** expense (`invoice_id`). Karena itu satu foto invoice bisa dipakai untuk beberapa catatan pengeluaran (mis. satu struk untuk beberapa budget). `hasPhoto` pada respons expense berarti `invoice_id` terisi. Menghapus foto pada sebuah expense melepas referensi (`invoice_id = NULL`); invoice & file foto **baru dihapus jika tidak ada expense lain yang masih memakainya** — jika masih dipakai expense lain, invoice & file dipertahankan.
 
 Periode (format `YYYY-MON-MON`, contoh `2026-JAN-FEB`) dihitung dari `date_time` dengan aturan cut-off tanggal 25. `period` disimpan untuk filter cepat.
 
@@ -106,8 +115,9 @@ Field:
 * Waktu bisa otomatis (waktu sistem) atau manual.
 * Budget diambil dari dropdown (budget aktif).
 * Saat nominal diisi, muncul preview "Saldo nanti" (sisa saldo dikurangi nominal; hijau jika >= 0, merah jika negatif).
-* Foto: tombol membuka pilihan **"Ambil Foto (Kamera)"** atau **"Dari Galeri"**, dengan preview.
-* Submit: create expense → jika ada foto, upload foto → reset form + notifikasi sukses.
+* Foto: tombol membuka pilihan **"Ambil Foto (Kamera)"**, **"Dari Galeri"**, atau **"Pakai Foto Periode Ini"** (memilih foto invoice yang sudah di-upload di periode yang sama, agar satu struk bisa dipakai beberapa catatan), dengan preview.
+* Submit: create expense → jika ada foto, upload foto (atau pakai `invoiceId` saat memilih foto yang sudah ada) → reset form + notifikasi sukses.
+* Idempotensi: setiap POST mengirim header `Idempotency-Key` (UUID). Backend menyimpan hasilnya selama 24 jam; request dengan key yang sama mengembalikan respons tersimpan tanpa membuat duplikat. Guard `submittingRef` di frontend juga mencegah double-submit.
 
 ## Dashboard
 
@@ -129,6 +139,7 @@ Field:
 * Tabel (desktop) / kartu (mobile) daftar expense aktif.
 * Tombol lihat foto (📷) jika expense memiliki foto.
 * Tombol edit (modal) dan hapus (konfirmasi, soft delete).
+* Edit bisa **ganti foto** (upload baru / pakai foto periode ini) atau **hapus foto**.
 * Preview perubahan saldo saat edit/hapus.
 
 ## Budget
@@ -214,9 +225,12 @@ Membuat expense.
   "name": "Makan Siang",
   "budget": "Daily",
   "amount": 35000,
-  "description": "Catatan"
+  "description": "Catatan",
+  "invoiceId": "inv-abc123"
 }
 ```
+
+`invoiceId` opsional — mengaitkan expense ke invoice yang sudah ada (untuk memakai ulang foto). Invoice harus berada di periode yang sama dengan `dateTime`, jika tidak → `Invoice is not in the same period as the expense`.
 
 Response:
 
@@ -231,7 +245,7 @@ Response:
 
 ## PUT /expenses/{id}
 
-Mengedit expense (body sama seperti `POST /expenses`). Saldo disesuaikan ulang.
+Mengedit expense (body sama seperti `POST /expenses`, `invoiceId` opsional). Saldo disesuaikan ulang. Mengirim `invoiceId` mengganti referensi foto expense ke invoice tersebut (harus periode yang sama).
 
 ## DELETE /expenses/{id}
 
@@ -239,14 +253,37 @@ Menghapus (soft delete) expense dan mengembalikan saldo budget.
 
 ## POST /expenses/{id}/photo
 
-Mengunggah foto invoice (multipart `file`). Opsional.
+Mengunggah/mengganti foto invoice (multipart `file`). Membuat invoice baru (atau mengganti referensi jika expense sudah punya foto). Opsional.
 
 * Hanya gambar: jpeg, png, webp, gif.
 * Maksimal 10MB.
 
+## DELETE /expenses/{id}/photo
+
+Menghapus foto expense (melepas `invoice_id`). Jika invoice tersebut tidak lagi dipakai expense mana pun, baris invoice **dan file foto** di disk ikut dihapus; jika masih dipakai expense lain, invoice & file dipertahankan.
+
 ## GET /expenses/{id}/photo
 
 Mengembalikan file foto invoice. `404` jika tidak ada.
+
+## GET /invoices?date=yyyy-MM-dd HH:mm
+
+Daftar id invoice yang punya foto pada periode dari `date` (untuk fitur "Pakai Foto Periode Ini").
+
+```json
+{
+  "success": true,
+  "data": { "invoices": [ { "id": "inv-abc123" } ] }
+}
+```
+
+## GET /invoices/{id}/photo
+
+Mengembalikan file foto sebuah invoice. `404` jika tidak ada.
+
+## Idempotensi
+
+Semua endpoint `POST` (`/expenses`, `/expenses/{id}/photo`, `/topups`, `/budgets`) menerima header `Idempotency-Key` opsional. Jika key diberikan, backend menyimpan respons selama **24 jam** dan mengembalikan respons tersimpan untuk key yang sama (mencegah duplikat saat retry). Baris lama dibersihkan otomatis saat penyimpanan baru.
 
 ## GET /summary?period=YYYY-MON-MON
 
@@ -366,5 +403,4 @@ Untuk **produksi**, `docker-compose.prod.yml` memakai MySQL VPS dan image native
 * Authentication & multi-user
 * Grafik tren yang lebih detail
 * Export CSV/Excel
-* Ganti/hapus foto saat edit expense
 * Notifikasi/pengingat & peringatan budget menipis
