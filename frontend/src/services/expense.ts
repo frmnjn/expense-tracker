@@ -1,10 +1,12 @@
 import apiClient from './api'
+import { newIdempotencyKey } from '../utils/idempotency'
 import type {
   ApiResponse,
   BudgetCreateRequest,
   BudgetUpdateRequest,
   ExpenseRequest,
   ExpensesResponse,
+  InvoicesResponse,
   OptionsResponse,
   PeriodsResponse,
   SummaryResponse,
@@ -14,7 +16,9 @@ import type {
 } from '../types/expense'
 
 export async function createBudget(request: BudgetCreateRequest): Promise<ApiResponse<void>> {
-  const response = await apiClient.post<ApiResponse<void>>('/budgets', request)
+  const response = await apiClient.post<ApiResponse<void>>('/budgets', request, {
+    headers: { 'Idempotency-Key': newIdempotencyKey() },
+  })
   return response.data
 }
 
@@ -29,7 +33,9 @@ export async function deleteBudget(name: string): Promise<ApiResponse<void>> {
 }
 
 export async function createExpense(request: ExpenseRequest): Promise<{ id: string }> {
-  const response = await apiClient.post<ApiResponse<{ id: string }>>('/expenses', request)
+  const response = await apiClient.post<ApiResponse<{ id: string }>>('/expenses', request, {
+    headers: { 'Idempotency-Key': newIdempotencyKey() },
+  })
   return response.data.data ?? { id: '' }
 }
 
@@ -37,10 +43,23 @@ export function getPhotoUrl(id: string): string {
   return `${apiClient.defaults.baseURL}/expenses/${encodeURIComponent(id)}/photo`
 }
 
+export function getInvoicePhotoUrl(id: string): string {
+  return `${apiClient.defaults.baseURL}/invoices/${encodeURIComponent(id)}/photo`
+}
+
+export async function getInvoices(dateTime: string): Promise<InvoicesResponse> {
+  const response = await apiClient.get<ApiResponse<InvoicesResponse>>('/invoices', {
+    params: { date: dateTime },
+  })
+  return response.data.data ?? { invoices: [] }
+}
+
 export async function uploadPhoto(id: string, file: File): Promise<ApiResponse<void>> {
   const formData = new FormData()
   formData.append('file', file)
-  const response = await apiClient.post<ApiResponse<void>>(`/expenses/${id}/photo`, formData)
+  const response = await apiClient.post<ApiResponse<void>>(`/expenses/${id}/photo`, formData, {
+    headers: { 'Idempotency-Key': newIdempotencyKey() },
+  })
   return response.data
 }
 
@@ -74,7 +93,9 @@ export async function getTopUps(): Promise<TopUpsResponse> {
 }
 
 export async function createTopUp(request: TopUpRequest): Promise<ApiResponse<void>> {
-  const response = await apiClient.post<ApiResponse<void>>('/topups', request)
+  const response = await apiClient.post<ApiResponse<void>>('/topups', request, {
+    headers: { 'Idempotency-Key': newIdempotencyKey() },
+  })
   return response.data
 }
 

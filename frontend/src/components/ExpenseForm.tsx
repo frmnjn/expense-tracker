@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import {
   Box,
   Button,
@@ -16,7 +16,7 @@ import { DateTimePicker } from '@mantine/dates'
 import { notifications } from '@mantine/notifications'
 import { useQueryClient } from '@tanstack/react-query'
 import dayjs from 'dayjs'
-import PhotoInput from './PhotoInput'
+import PhotoInput, { type PhotoSelection } from './PhotoInput'
 import { useCreateExpense, useUploadPhoto } from '../hooks/useCreateExpense'
 import { useOptions } from '../hooks/useOptions'
 import { formatCurrency } from '../utils/currency'
@@ -31,12 +31,13 @@ function ExpenseForm() {
   const [budget, setBudget] = useState<string | null>(null)
   const [amount, setAmount] = useState<string | number>('')
   const [description, setDescription] = useState('')
-  const [photo, setPhoto] = useState<File | null>(null)
+  const [photo, setPhoto] = useState<PhotoSelection | null>(null)
 
   const { data: options, isPending: optionsLoading } = useOptions()
   const createExpense = useCreateExpense()
   const uploadPhoto = useUploadPhoto()
   const queryClient = useQueryClient()
+  const submittingRef = useRef(false)
 
   const nowDisabled = mode === 'now'
   const displayValue = nowDisabled ? dayjs().format(DATE_TIME_SECONDS_FORMAT) : dateTime
@@ -54,6 +55,8 @@ function ExpenseForm() {
   }
 
   const handleSubmit = () => {
+    if (submittingRef.current) return
+    submittingRef.current = true
     createExpense.mutate(
       {
         dateTime: dayjs(displayValue).format(DATE_TIME_FORMAT),
@@ -61,10 +64,12 @@ function ExpenseForm() {
         budget: budget ?? '',
         amount: Number(amount),
         description: description.trim() === '' ? undefined : description.trim(),
+        invoiceId: photo?.kind === 'existing' ? photo.invoiceId : undefined,
       },
       {
         onSuccess: (result) => {
           const finish = () => {
+            submittingRef.current = false
             notifications.show({
               title: 'Berhasil',
               message: 'Pengeluaran berhasil disimpan',
@@ -73,9 +78,9 @@ function ExpenseForm() {
             queryClient.invalidateQueries({ queryKey: ['options'] })
             resetForm()
           }
-          if (photo && result.id) {
+          if (photo && photo.kind === 'new' && result.id) {
             uploadPhoto.mutate(
-              { id: result.id, file: photo },
+              { id: result.id, file: photo.file },
               { onSuccess: finish, onError: finish },
             )
           } else {
@@ -83,6 +88,7 @@ function ExpenseForm() {
           }
         },
         onError: (error) => {
+          submittingRef.current = false
           const message =
             (error as { response?: { data?: { message?: string } } }).response?.data?.message ??
             'Terjadi kesalahan, coba lagi'
@@ -223,7 +229,11 @@ function ExpenseForm() {
           size="md"
         />
 
-        <PhotoInput value={photo} onChange={setPhoto} />
+        <PhotoInput
+          value={photo}
+          onChange={setPhoto}
+          dateTime={dayjs(displayValue).format(DATE_TIME_FORMAT)}
+        />
 
         <Box
           mt="md"

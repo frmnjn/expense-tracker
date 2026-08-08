@@ -8,6 +8,8 @@ import com.expensetracker.model.BudgetSummary;
 import com.expensetracker.model.ExpenseRequest;
 import com.expensetracker.model.ExpenseResponse;
 import com.expensetracker.model.ExpensesResponse;
+import com.expensetracker.model.InvoiceResponse;
+import com.expensetracker.model.InvoicesResponse;
 import com.expensetracker.model.OptionsResponse;
 import com.expensetracker.model.PeriodsResponse;
 import com.expensetracker.model.SummaryResponse;
@@ -30,6 +32,8 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
         ExpenseRequest.class,
         ExpenseResponse.class,
         ExpensesResponse.class,
+        InvoiceResponse.class,
+        InvoicesResponse.class,
         OptionsResponse.class,
         PeriodsResponse.class,
         SummaryResponse.class,

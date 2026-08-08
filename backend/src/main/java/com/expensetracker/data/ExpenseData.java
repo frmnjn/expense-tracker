@@ -9,5 +9,6 @@ public record ExpenseData(
         long amount,
         String description,
         boolean deleted,
-        boolean hasPhoto) {
+        boolean hasPhoto,
+        String invoiceId) {
 }
