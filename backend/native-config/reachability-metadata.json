@@ -86,6 +86,11 @@
     },
     {
       "type": "com.expensetracker.config.FlywayConfig",
+      "fields": [
+        {
+          "name": "locations"
+        }
+      ],
       "methods": [
         {
           "name": "flyway",
@@ -194,6 +199,12 @@
           "parameterTypes": []
         },
         {
+          "name": "getPhoto",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        },
+        {
           "name": "getSummary",
           "parameterTypes": [
             "java.lang.String"
@@ -218,6 +229,13 @@
           "parameterTypes": [
             "java.lang.String",
             "com.expensetracker.model.ExpenseRequest"
+          ]
+        },
+        {
+          "name": "uploadPhoto",
+          "parameterTypes": [
+            "java.lang.String",
+            "org.springframework.web.multipart.MultipartFile"
           ]
         }
       ]
@@ -297,6 +315,12 @@
         {
           "name": "getPeriods",
           "parameterTypes": []
+        },
+        {
+          "name": "getPhotoPath",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
         },
         {
           "name": "insert",
@@ -465,6 +489,10 @@
           "parameterTypes": []
         },
         {
+          "name": "hasPhoto",
+          "parameterTypes": []
+        },
+        {
           "name": "id",
           "parameterTypes": []
         },
@@ -568,6 +596,11 @@
     },
     {
       "type": "com.expensetracker.service.ExpenseService",
+      "fields": [
+        {
+          "name": "uploadDir"
+        }
+      ],
       "methods": [
         {
           "name": "<init>",
@@ -575,6 +608,13 @@
             "com.expensetracker.data.BudgetRepository",
             "com.expensetracker.data.ExpenseRepository",
             "com.expensetracker.data.TopUpRepository"
+          ]
+        },
+        {
+          "name": "attachPhoto",
+          "parameterTypes": [
+            "java.lang.String",
+            "org.springframework.web.multipart.MultipartFile"
           ]
         },
         {
@@ -608,6 +648,12 @@
         {
           "name": "getPeriods",
           "parameterTypes": []
+        },
+        {
+          "name": "getPhotoPath",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
         },
         {
           "name": "getSummary",
@@ -1214,6 +1260,9 @@
       "type": "java.util.AbstractCollection"
     },
     {
+      "type": "java.util.AbstractMap"
+    },
+    {
       "type": "java.util.ArrayList"
     },
     {
@@ -1235,10 +1284,19 @@
       "type": "java.util.ImmutableCollections$AbstractImmutableList"
     },
     {
+      "type": "java.util.ImmutableCollections$AbstractImmutableMap"
+    },
+    {
       "type": "java.util.ImmutableCollections$ListN"
     },
     {
+      "type": "java.util.ImmutableCollections$Map1"
+    },
+    {
       "type": "java.util.List"
+    },
+    {
+      "type": "java.util.Map"
     },
     {
       "type": "java.util.RandomAccess"
@@ -3077,6 +3135,9 @@
       "type": "org.springframework.beans.factory.annotation.Qualifier"
     },
     {
+      "type": "org.springframework.beans.factory.annotation.Value"
+    },
+    {
       "type": "org.springframework.beans.factory.aot.BeanFactoryInitializationAotProcessor"
     },
     {
@@ -4738,6 +4799,18 @@
         {
           "name": "<init>",
           "parameterTypes": []
+        },
+        {
+          "name": "setMaxFileSize",
+          "parameterTypes": [
+            "org.springframework.util.unit.DataSize"
+          ]
+        },
+        {
+          "name": "setMaxRequestSize",
+          "parameterTypes": [
+            "org.springframework.util.unit.DataSize"
+          ]
         }
       ]
     },
@@ -5959,6 +6032,9 @@
       "type": "org.springframework.util.PathMatcher"
     },
     {
+      "type": "org.springframework.util.unit.DataSizeEditor"
+    },
+    {
       "type": "org.springframework.validation.Validator"
     },
     {
@@ -6061,7 +6137,13 @@
       "type": "org.springframework.web.method.support.UriComponentsContributor"
     },
     {
+      "type": "org.springframework.web.multipart.MultipartFile"
+    },
+    {
       "type": "org.springframework.web.multipart.MultipartResolver"
+    },
+    {
+      "type": "org.springframework.web.multipart.support.StandardMultipartHttpServletRequest$StandardMultipartFile"
     },
     {
       "type": "org.springframework.web.multipart.support.StandardServletMultipartResolver"
