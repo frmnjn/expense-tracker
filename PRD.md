@@ -69,7 +69,7 @@ Tabel:
 
 | Tabel | Kolom |
 | ----- | ----- |
-| `budgets` | `id` PK, `name` UNIQUE, `balance`, `is_active` |
+| `budgets` | `id` PK, `name` UNIQUE, `balance`, `is_active`, `alert_threshold` (0 = nonaktif) |
 | `expenses` | `id` PK, `period`, `period_start`, `date_time`, `budget_id` FK→`budgets`, `name`, `amount`, `description`, `deleted`, `invoice_id` FK→`invoices` (nullable) |
 | `invoices` | `id` PK, `period`, `period_start`, `photo_path`, `deleted` |
 | `idempotency_keys` | `id_key` PK, `response_json`, `created_at` |
@@ -84,6 +84,7 @@ Migration saat ini:
 * `V5__invoices.sql` — tabel `invoices`, kolom `expenses.invoice_id`; memindahkan foto lama dari `expenses.photo_path` ke `invoices.photo_path` lalu menghapus `photo_path`.
 * `V6__idempotency.sql` — tabel `idempotency_keys` untuk idempotensi request POST.
 * `V7__indexes.sql` — index `expenses.invoice_id`, komposit `expenses(period, deleted)` (menggantikan `idx_expenses_period`), dan `idempotency_keys.created_at`.
+* `V8__budget_alert_threshold.sql` — kolom `budgets.alert_threshold` (0 = nonaktif) untuk notifikasi "budget menipis".
 
 Index yang ada: `budgets` PK(id) + UNIQUE(name); `expenses` PK(id), `budget_id` FK, `deleted`, `invoice_id`, komposit `(period, deleted)`; `invoices` PK(id) + `period`; `top_ups` PK(id) + `budget_id`; `idempotency_keys` PK(id_key) + `created_at`.
 
@@ -156,6 +157,25 @@ Field:
 ## Dark Mode
 
 Mode terang/gelap, toggle tersimpan di perangkat (localStorage), default gelap.
+
+## Notifikasi (email)
+
+Notifikasi dikirim via **microservice `notifier`** (Go) yang memakai **Gmail SMTP** (App Password). Backend memanggil notifier via HTTP (JDK HttpClient), **fire-and-log**: kalau gagal kirim hanya dicatat di log, tidak menggagalkan operasi utama. Penerima diambil dari env `NOTIFY_EMAILS` (comma-separated, mis. 2 alamat).
+
+Pemicu (realtime, tanpa scheduler):
+
+* **Expense tercatat** → konfirmasi pengeluaran.
+* **Budget menipis** → setelah saldo berubah, jika `budgets.alert_threshold > 0` dan `balance < alert_threshold`. Nilai threshold diset **manual via DB** (`UPDATE budgets SET alert_threshold = ...`), 0 = nonaktif, tidak ada UI.
+* **Top-up** dibuat → konfirmasi.
+* **Budget** dibuat → konfirmasi.
+
+Konfigurasi (env): `NOTIFIER_URL`, `NOTIFY_EMAILS`, dan untuk notifier `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_APP_PASSWORD`, `SMTP_FROM`.
+
+Email dikirim sebagai **HTML** (inline-style, aksen `#863bff`), dengan nominal terformat Rupiah (mis. `Rp35.000`), body menampilkan sisa saldo budget, dan bahasa **Inggris**. Subjek singkat dengan emoji subtil per jenis notifikasi. Pengiriman dijalankan **async** (thread pool) sehingga tidak memperlambat request.
+
+Mode testing: jika `NOTIFY_TEST_MODE=true`, email hanya dikirim ke `NOTIFY_TEST_EMAIL` (mengabaikan `NOTIFY_EMAILS`). Default `false`.
+
+> Catatan Gmail: butuh **App Password** (aktifkan 2FA dulu), bukan password biasa. Batas ±500 email/hari — jauh di atas kebutuhan 2 penerima realtime.
 
 ---
 
@@ -394,7 +414,7 @@ Untuk **produksi**, `docker-compose.prod.yml` memakai MySQL VPS dan image native
 * Kategori/tag
 * Grafik detail
 * Export PDF/Excel
-* Notifikasi
+* Notifikasi via WhatsApp (email sudah ada; WhatsApp bisa ditambahkan via Twilio/Meta Cloud API bila diperlukan)
 
 ---
 
@@ -403,4 +423,5 @@ Untuk **produksi**, `docker-compose.prod.yml` memakai MySQL VPS dan image native
 * Authentication & multi-user
 * Grafik tren yang lebih detail
 * Export CSV/Excel
-* Notifikasi/pengingat & peringatan budget menipis
+* Ringkasan notifikasi harian/bulanan terjadwal
+* Notifikasi via WhatsApp (Twilio / Meta Cloud API)

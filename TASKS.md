@@ -721,3 +721,46 @@ Mengganti `spring.sql.init` (schema.sql) dengan Flyway versioned migrations agar
 * [x] Idempotensi teruji (request key sama 2x → id sama, tidak duplikat)
 * [x] Delete photo → `hasPhoto` false; update dengan `invoiceId` → reuse foto
 * [x] Native config regen + build + deploy (terverifikasi di VPS, termasuk fix refleksi array)
+
+---
+
+# Phase 23 - Notifikasi Email (microservice notifier)
+
+## notifier/ (Go)
+
+* [x] `main.go` + `go.mod` (std lib `net/smtp`, tanpa dependency)
+* [x] `POST /send` `{to[], subject, body}` via Gmail SMTP (STARTTLS, App Password)
+* [x] `GET /health`
+* [x] `Dockerfile` multi-stage (Go → alpine, ca-certificates + tzdata)
+
+## Backend
+
+* [x] Flyway `V8__budget_alert_threshold.sql`: `budgets.alert_threshold` (0 = nonaktif)
+* [x] `BudgetRepository.getAlertThreshold`
+* [x] `NotificationService` (JDK HttpClient → notifier, fire-and-log, JSON escape)
+* [x] Notifikasi dikirim **async** (thread pool) agar tidak memperlambat request
+* [x] Mode testing: `NOTIFY_TEST_MODE` → hanya kirim ke `NOTIFY_TEST_EMAIL`
+* [x] Email HTML (inline CSS, rupiah via `NumberFormat(id)`), bahasa Inggris, sisa saldo di body, emoji subtil di subject
+* [x] `NOTIFY_EMAILS` toleran spasi & tanda kutip di sekitar koma
+* [x] Hook `ExpenseService`: konfirmasi expense, budget menipis (`balance < alert_threshold`), top-up, budget dibuat
+* [x] Config `notify.notifier-url` / `notify.emails`
+* [x] Unit test: alert terkirim saat < threshold, skip saat 0, notif top-up
+
+## Docker
+
+* [x] Service `notifier` di `docker-compose.yml` & `.docker-compose.prod.yml`
+* [x] Backend `NOTIFIER_URL=http://notifier:8081`
+* [x] `.env.example` di-update (NOTIFY_EMAILS, NOTIFIER_URL, SMTP_*)
+
+## Verifikasi (lokal)
+
+* [x] Backend test lolos (73)
+* [x] notifier health OK; `POST /send` mencapai Gmail SMTP (502 saat tanpa kredensial → wiring benar)
+* [x] Backend → notifier teruji (log `notification send failed: status=502` saat tanpa kredensial)
+* [x] V8 migration applied
+* [x] Latensi create expense turun (async) → ~0.1s; email terkirim sukses
+
+## Deploy (perlu kredensial pengguna)
+
+* [ ] User set App Password Gmail (2FA) + `NOTIFY_EMAILS` (2 alamat) + `alert_threshold` per budget
+* [ ] Native config regen + build native + deploy VPS

@@ -18,6 +18,12 @@ spring:
 upload:
   dir: ${UPLOAD_DIR:/app/uploads}
 
+notify:
+  notifier-url: ${NOTIFIER_URL:}
+  emails: ${NOTIFY_EMAILS:}
+  test-mode: ${NOTIFY_TEST_MODE:false}
+  test-email: ${NOTIFY_TEST_EMAIL:}
+
 flyway:
   locations: ${FLYWAY_LOCATIONS:filesystem:/app/db/migration}
 
