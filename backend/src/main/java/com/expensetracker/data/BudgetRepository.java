@@ -58,10 +58,20 @@ public class BudgetRepository {
     }
 
     public boolean softDelete(String name) {
-        return jdbcTemplate.update(
+        List<Long> ids = jdbcTemplate.query(
+                "SELECT id FROM budgets WHERE name = ? AND is_active = TRUE",
+                (rs, rowNum) -> rs.getLong("id"),
+                name);
+        if (ids.isEmpty()) {
+            return false;
+        }
+        Long id = ids.get(0);
+        jdbcTemplate.update("UPDATE expenses SET deleted = TRUE WHERE budget_id = ?", id);
+        jdbcTemplate.update(
                 "UPDATE budgets SET name = CONCAT('DELETED_', LEFT(name, 200), '_', id), is_active = FALSE "
-                        + "WHERE name = ? AND is_active = TRUE",
-                name) > 0;
+                        + "WHERE id = ?",
+                id);
+        return true;
     }
 
     public boolean update(String oldName, String newName, Long balance) {
