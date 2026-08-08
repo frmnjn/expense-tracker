@@ -59,11 +59,12 @@ docker run --rm \
 echo "==> [3/5] Jalankan jar dengan tracing agent & hit endpoint"
 docker run --rm \
     -v "${PROJECT_ROOT}/backend:/app:ro" \
-    -v "${PROJECT_ROOT}/backend/src/main/resources/db/migration:/app/db/migration:ro" \
+    -v "${PROJECT_ROOT}/backend/src/main/resources/db/migration:/migrations:ro" \
     -v "${OUTPUT_DIR}:/config" \
     -e "DB_URL=${DB_URL}" \
     -e "DB_USER=${DB_USER}" \
     -e "DB_PASSWORD=${DB_PASSWORD}" \
+    -e "FLYWAY_LOCATIONS=filesystem:/migrations" \
     --add-host=host.docker.internal:host-gateway \
     --entrypoint sh \
     "${GRAALVM_IMAGE}" -c '
@@ -99,6 +100,10 @@ docker run --rm \
             -d '{"budget":"Household","amount":1}' >/dev/null
         ID=$(curl -s "http://localhost:8080/expenses?period=${PERIOD}" | sed -n "s/.*\"id\":\"\([^\"]*\)\".*/\1/p" | head -n1)
         if [ -n "$ID" ]; then
+            printf '\x89PNG\r\n\x1a\n' > /tmp/p.png
+            curl -s -X POST "http://localhost:8080/expenses/${ID}/photo" \
+                -F "file=@/tmp/p.png;type=image/png" >/dev/null
+            curl -s "http://localhost:8080/expenses/${ID}/photo" >/dev/null
             curl -s -X PUT "http://localhost:8080/expenses/${ID}" \
                 -H "Content-Type: application/json" \
                 -d "{\"dateTime\":\"2026-01-01 09:00\",\"name\":\"native-config-gen\",\"budget\":\"Household\",\"amount\":2,\"description\":\"edit\"}" >/dev/null

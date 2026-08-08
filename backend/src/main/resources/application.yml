@@ -18,6 +18,9 @@ spring:
 upload:
   dir: ${UPLOAD_DIR:/app/uploads}
 
+flyway:
+  locations: ${FLYWAY_LOCATIONS:filesystem:/app/db/migration}
+
 logging:
   structured:
     format:
