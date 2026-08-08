@@ -167,13 +167,13 @@ Jika gagal:
 
 # Database (MySQL)
 
-Aplikasi memakai database `expense_tracker` pada instance MySQL yang berbagi dengan WordPress. Skema dibuat otomatis oleh backend saat start (`spring.sql.init` + `schema.sql`).
+Aplikasi memakai database `expense_tracker` pada instance MySQL yang berbagi dengan WordPress. Skema dibuat otomatis oleh backend saat start melalui **Flyway** (migration versioned di `backend/src/main/resources/db/migration`). Untuk DB yang sudah ada tanpa riwayat Flyway, `baselineOnMigrate` akan mem-baseline dan menerapkan migration berikutnya.
 
 Tabel:
 
 | Tabel | Kolom |
 | ----- | ----- |
-| `budgets` | `id` PK, `name` UNIQUE, `balance` |
+| `budgets` | `id` PK, `name` UNIQUE, `balance`, `is_active` |
 | `expenses` | `id` PK, `period`, `period_start`, `date_time`, `budget_id` FK→`budgets`, `name`, `amount`, `description`, `deleted` |
 | `top_ups` | `id` PK, `date_time`, `budget_id` FK→`budgets`, `amount`, `description` |
 
@@ -339,6 +339,76 @@ Response
 
 ---
 
+## POST /budgets
+
+Menambahkan budget baru.
+
+Request
+
+```json
+{
+    "name": "Gadget",
+    "balance": 100000
+}
+```
+
+`balance` opsional (default `0`).
+
+Response
+
+```json
+{
+    "success": true
+}
+```
+
+Jika nama sudah ada (termasuk budget yang dihapus), mengembalikan error `Budget already exists`.
+
+---
+
+## PUT /budgets/{name}
+
+Mengedit budget: mengubah nama dan/atau saldo.
+
+Request
+
+```json
+{
+    "name": "Gadget",
+    "balance": 150000
+}
+```
+
+`balance` opsional; jika kosong/null, saldo tidak diubah.
+
+Response
+
+```json
+{
+    "success": true
+}
+```
+
+Jika nama tujuan sudah dipakai budget lain, mengembalikan error `Budget already exists`. Jika budget tidak ditemukan, `Budget not found`.
+
+---
+
+## DELETE /budgets/{name}
+
+Menghapus budget (soft delete — baris dipertahankan dan namanya diubah menjadi `DELETED_<nama>_<id>`, ditandai tidak aktif, dan tidak muncul lagi). Pengubahan nama ini membebaskan nama asli sehingga budget dengan nama yang sama bisa dibuat ulang.
+
+Response
+
+```json
+{
+    "success": true
+}
+```
+
+Jika budget tidak ditemukan, mengembalikan error `Budget not found`.
+
+---
+
 ## GET /topups
 
 Mengembalikan daftar top-up saldo.
@@ -457,7 +527,10 @@ Komponen:
   * saldo saat ini (merah jika negatif)
   * ikon `+` untuk menambah saldo (modal: nominal + deskripsi)
   * ikon `📋` untuk membuka riwayat top-up budget tersebut
+  * ikon `✎` untuk mengedit budget (nama & saldo)
+  * ikon `🗑` untuk menghapus budget (soft delete, dengan konfirmasi)
   * saat periode dipilih: jumlah transaksi + pengeluaran periode budget tersebut
+* Tombol "Tambah Budget" (modal: nama + saldo awal opsional)
 * Ringkasan 3 bulan terakhir (total + transaksi per periode, dengan bar visual)
 
 Komponen halaman form:

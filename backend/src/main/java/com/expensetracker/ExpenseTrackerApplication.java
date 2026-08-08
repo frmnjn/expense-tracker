@@ -1,7 +1,9 @@
 package com.expensetracker;
 
 import com.expensetracker.model.ApiResponse;
+import com.expensetracker.model.BudgetCreateRequest;
 import com.expensetracker.model.BudgetOption;
+import com.expensetracker.model.BudgetUpdateRequest;
 import com.expensetracker.model.BudgetSummary;
 import com.expensetracker.model.ExpenseRequest;
 import com.expensetracker.model.ExpenseResponse;
@@ -21,7 +23,9 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 @RegisterReflectionForBinding({
         ApiResponse.class,
+        BudgetCreateRequest.class,
         BudgetOption.class,
+        BudgetUpdateRequest.class,
         BudgetSummary.class,
         ExpenseRequest.class,
         ExpenseResponse.class,

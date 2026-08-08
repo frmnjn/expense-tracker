@@ -1,6 +1,8 @@
 import apiClient from './api'
 import type {
   ApiResponse,
+  BudgetCreateRequest,
+  BudgetUpdateRequest,
   ExpenseRequest,
   ExpensesResponse,
   OptionsResponse,
@@ -10,6 +12,21 @@ import type {
   TopUpsResponse,
   TrendResponse,
 } from '../types/expense'
+
+export async function createBudget(request: BudgetCreateRequest): Promise<ApiResponse<void>> {
+  const response = await apiClient.post<ApiResponse<void>>('/budgets', request)
+  return response.data
+}
+
+export async function updateBudget(name: string, request: BudgetUpdateRequest): Promise<ApiResponse<void>> {
+  const response = await apiClient.put<ApiResponse<void>>(`/budgets/${encodeURIComponent(name)}`, request)
+  return response.data
+}
+
+export async function deleteBudget(name: string): Promise<ApiResponse<void>> {
+  const response = await apiClient.delete<ApiResponse<void>>(`/budgets/${encodeURIComponent(name)}`)
+  return response.data
+}
 
 export async function createExpense(request: ExpenseRequest): Promise<ApiResponse<void>> {
   const response = await apiClient.post<ApiResponse<void>>('/expenses', request)

@@ -1,0 +1,8 @@
+package com.expensetracker.model;
+
+import com.fasterxml.jackson.annotation.JsonProperty;
+
+public record BudgetCreateRequest(
+        @JsonProperty("name") String name,
+        @JsonProperty("balance") Long balance) {
+}

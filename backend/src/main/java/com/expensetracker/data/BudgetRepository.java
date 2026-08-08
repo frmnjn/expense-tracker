@@ -1,6 +1,7 @@
 package com.expensetracker.data;
 
 import com.expensetracker.model.BudgetOption;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
@@ -17,13 +18,13 @@ public class BudgetRepository {
 
     public List<BudgetOption> getOptions() {
         return jdbcTemplate.query(
-                "SELECT name, balance FROM budgets ORDER BY name",
+                "SELECT name, balance FROM budgets WHERE is_active = TRUE ORDER BY name",
                 (rs, rowNum) -> new BudgetOption(rs.getString("name"), rs.getLong("balance")));
     }
 
     public Long findIdByName(String name) {
         List<Long> ids = jdbcTemplate.query(
-                "SELECT id FROM budgets WHERE name = ?",
+                "SELECT id FROM budgets WHERE name = ? AND is_active = TRUE",
                 (rs, rowNum) -> rs.getLong("id"),
                 name);
         return ids.isEmpty() ? null : ids.get(0);
@@ -39,7 +40,7 @@ public class BudgetRepository {
 
     public void adjustBalance(String name, long delta) {
         int updated = jdbcTemplate.update(
-                "UPDATE budgets SET balance = balance + ? WHERE name = ?",
+                "UPDATE budgets SET balance = balance + ? WHERE name = ? AND is_active = TRUE",
                 delta, name);
         if (updated == 0) {
             throw new IllegalStateException("Budget not found: " + name);
@@ -47,8 +48,30 @@ public class BudgetRepository {
     }
 
     public void create(String name, long balance) {
-        jdbcTemplate.update(
-                "INSERT INTO budgets (name, balance) VALUES (?, ?)",
-                name, balance);
+        try {
+            jdbcTemplate.update(
+                    "INSERT INTO budgets (name, balance, is_active) VALUES (?, ?, TRUE)",
+                    name, balance);
+        } catch (DuplicateKeyException e) {
+            throw new IllegalStateException("Budget already exists: " + name, e);
+        }
+    }
+
+    public boolean softDelete(String name) {
+        return jdbcTemplate.update(
+                "UPDATE budgets SET name = CONCAT('DELETED_', LEFT(name, 200), '_', id), is_active = FALSE "
+                        + "WHERE name = ? AND is_active = TRUE",
+                name) > 0;
+    }
+
+    public boolean update(String oldName, String newName, Long balance) {
+        try {
+            return jdbcTemplate.update(
+                    "UPDATE budgets SET name = ?, balance = COALESCE(?, balance) "
+                            + "WHERE name = ? AND is_active = TRUE",
+                    newName, balance, oldName) > 0;
+        } catch (DuplicateKeyException e) {
+            throw new IllegalStateException("Budget already exists: " + newName, e);
+        }
     }
 }

@@ -566,7 +566,7 @@ Memindahkan penyimpanan dari Google Sheets ke database MySQL (berbagi instance d
 * [x] Hapus `GoogleSheetsClient` & config Google; full cutover
 * [x] Repository JdbcTemplate: `BudgetRepository`, `ExpenseRepository`, `TopUpRepository`
 * [x] `ExpenseService` dipindah ke repository (API & controller sama)
-* [x] Skema `schema.sql` (budgets, expenses, top_ups) dibuat via `spring.sql.init`
+* [x] Skema `schema.sql` (budgets, expenses, top_ups) dibuat via `spring.sql.init` *(digantikan Flyway di Phase 19)*
 * [x] `PeriodSheetName.periodStart` + `FORMATTER` untuk menghitung periode dari date_time
 * [x] Unit test diadaptasi (mock repository)
 * [ ] Regenerasi native config (MySQL JDBC driver refleksi)
@@ -579,7 +579,7 @@ Memindahkan penyimpanan dari Google Sheets ke database MySQL (berbagi instance d
 
 * [x] docker-compose: backend `extra_hosts` host.docker.internal + env DB dari `.env` (produksi)
 * [x] `scripts/seed_budgets.py` (impor budget + saldo dari tab Budget)
-* [x] docker-compose lokal: service `mysql` self-contained + initdb (schema + budget default) + backend konek ke `mysql:3306`
+* [x] docker-compose lokal: service `mysql` self-contained + backend konek ke `mysql:3306` (skema & seed budget via Flyway)
 * [ ] Setup database & user `expense_tracker` di MySQL VPS
 * [ ] Seed tabel `budgets` (via script)
 
@@ -587,5 +587,57 @@ Memindahkan penyimpanan dari Google Sheets ke database MySQL (berbagi instance d
 
 * [x] Backend build & test lolos
 * [x] Endpoint (options/expenses/summary/trend/topups/update/delete) jalan terhadap MySQL lokal
-* [x] `schema.sql` membuat tabel otomatis saat start
+* [x] `schema.sql` membuat tabel otomatis saat start *(digantikan Flyway di Phase 19)*
 * [ ] Native image + deploy ke VPS
+
+---
+
+# Phase 18 - Tambah & Hapus Budget
+
+## Backend
+
+* [x] `budgets` tambah kolom `is_active` (soft delete); DB fresh via `CREATE TABLE`, DB lama migrasi manual (`ALTER TABLE budgets ADD COLUMN is_active BOOLEAN NOT NULL DEFAULT TRUE`)
+* [x] `BudgetRepository`: filter `is_active`, `create`, `softDelete` (rename `DELETED_<nama>_<id>` agar nama asli bisa dipakai ulang), `update` (nama + saldo)
+* [x] Model `BudgetCreateRequest`, `BudgetUpdateRequest`; `ExpenseService.createBudget` / `deleteBudget` / `updateBudget`
+* [x] Controller: `POST /budgets`, `PUT /budgets/{name}`, `DELETE /budgets/{name}`
+* [x] Unit test create/duplicate/delete/update
+* [ ] Regenerasi native config (endpoint & model baru)
+
+## Frontend
+
+* [x] Types/service/hook: useCreateBudget, useUpdateBudget, useDeleteBudget
+* [x] `AddBudgetModal` (nama + saldo awal), `EditBudgetModal` (nama + saldo), `DeleteBudgetModal` (konfirmasi)
+* [x] Tombol "+ Budget" & ikon ✎/🗑 di tiap kartu budget di Dashboard
+* [x] Build & lint lolos
+* [x] Cek di docker local
+
+## Verifikasi
+
+* [ ] Backend build & test lolos
+* [ ] `/options` tidak menampilkan budget nonaktif
+
+---
+
+# Phase 19 - Migrasi DB dengan Flyway
+
+Mengganti `spring.sql.init` (schema.sql) dengan Flyway versioned migrations agar penambahan kolom/ubah skema ke depan lebih mudah.
+
+## Backend
+
+* [x] Tambah `flyway-core` + `flyway-mysql`
+* [x] `FlywayConfig` bean (Boot 4 tanpa auto-config) dengan `baselineOnMigrate(true)`
+* [x] Hapus `schema.sql` & `spring.sql.init`
+* [x] `V1__init.sql` (skema: budgets + expenses + top_ups)
+* [x] `V2__budget_is_active.sql` (tambah kolom is_active idempotent via stored procedure)
+* [x] `V3__seed_default_budgets.sql` (INSERT IGNORE)
+* [x] `scripts/seed_budgets.py` diubah jadi upsert (ON DUPLICATE KEY UPDATE)
+
+## Infra
+
+* [x] Hapus `scripts/initdb` & mount-nya (skema & seed kini via Flyway)
+
+## Verifikasi
+
+* [x] Fresh DB: V1+V2+V3 jalan, schema & seed budget ada
+* [x] Existing DB tanpa history & tanpa is_active: baseline V1 -> V2 tambah is_active -> V3, data dipertahankan
+* [ ] Native config regen + build (saat deploy)

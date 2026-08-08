@@ -21,6 +21,7 @@ Data disimpan di database **MySQL** (berbagi instance dengan WordPress di VPS, m
 * Dashboard ringkasan per periode (total, saldo per budget, pengeluaran terbesar)
 * Dashboard 3 bulan terakhir (total + transaksi per periode, bar visual)
 * Top-up saldo via aplikasi (tambah saldo budget + riwayat)
+* Tambah, edit, & hapus budget (edit nama & saldo; hapus soft delete)
 * Validasi input
 * Menyimpan data ke MySQL
 * REST API menggunakan Java Spring Boot
@@ -117,7 +118,7 @@ Tidak diperlukan instalasi Node.js, Java, maupun Maven apabila menjalankan proje
 
 # Database Setup (MySQL)
 
-Untuk **lokal**, `docker-compose.yml` sudah menyertakan service `mysql` sendiri (self-contained): schema + budget default dibuat otomatis saat pertama kali dijalankan (`scripts/initdb/01_init.sql`), dan backend terhubung ke service `mysql` tersebut. Tidak perlu setup manual untuk development lokal.
+Untuk **lokal**, `docker-compose.yml` sudah menyertakan service `mysql` sendiri (self-contained): skema & budget default dibuat otomatis oleh **Flyway** saat backend start. Tidak perlu setup manual untuk development lokal.
 
 Untuk **produksi**, aplikasi memakai MySQL yang sudah ada di VPS (berbagi instance dengan WordPress). Perlu database dan user terpisah untuk expense tracker:
 
@@ -135,7 +136,7 @@ GRANT ALL PRIVILEGES ON expense_tracker.* TO 'expense_tracker_user'@'%';
 FLUSH PRIVILEGES;
 ```
 
-3. Skema tabel dibuat otomatis oleh backend saat start (`spring.sql.init`, `schema.sql`).
+3. Skema tabel dibuat otomatis oleh backend saat start melalui **Flyway** (migration versioned di `backend/src/main/resources/db/migration`). Untuk DB yang sudah ada tanpa riwayat Flyway, `baselineOnMigrate` akan mem-baseline dan menerapkan migration selanjutnya.
 
 4. Isi tabel `budgets` (nama + saldo) — bisa diimpor dari tab `Budget` Google Sheets yang lama:
 

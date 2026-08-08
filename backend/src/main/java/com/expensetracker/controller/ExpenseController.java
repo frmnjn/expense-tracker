@@ -1,6 +1,8 @@
 package com.expensetracker.controller;
 
 import com.expensetracker.model.ApiResponse;
+import com.expensetracker.model.BudgetCreateRequest;
+import com.expensetracker.model.BudgetUpdateRequest;
 import com.expensetracker.model.ExpenseRequest;
 import com.expensetracker.model.TopUpRequest;
 import com.expensetracker.service.ExpenseService;
@@ -40,6 +42,55 @@ public class ExpenseController {
             return ResponseEntity.ok(ApiResponse.ok(expenseService.getOptions()));
         } catch (Exception e) {
             LOGGER.error("internal error getting options", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Internal server error"));
+        }
+    }
+
+    @PostMapping("/budgets")
+    public ResponseEntity<ApiResponse> createBudget(@RequestBody BudgetCreateRequest request) {
+        try {
+            expenseService.createBudget(request);
+            return ResponseEntity.ok(ApiResponse.ok());
+        } catch (ValidationException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            LOGGER.error("internal error creating budget", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Internal server error"));
+        }
+    }
+
+    @DeleteMapping("/budgets/{name}")
+    public ResponseEntity<ApiResponse> deleteBudget(@PathVariable String name) {
+        try {
+            expenseService.deleteBudget(name);
+            return ResponseEntity.ok(ApiResponse.ok());
+        } catch (ValidationException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            LOGGER.error("internal error deleting budget", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Internal server error"));
+        }
+    }
+
+    @PutMapping("/budgets/{name}")
+    public ResponseEntity<ApiResponse> updateBudget(@PathVariable String name,
+                                                    @RequestBody BudgetUpdateRequest request) {
+        try {
+            expenseService.updateBudget(name, request);
+            return ResponseEntity.ok(ApiResponse.ok());
+        } catch (ValidationException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            LOGGER.error("internal error updating budget", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("Internal server error"));
         }

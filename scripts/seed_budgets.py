@@ -77,13 +77,14 @@ def main():
             bal = int(raw.replace(",", "").replace(".", "").replace("Rp", "").replace(" ", ""))
         except ValueError:
             bal = 0
-        values.append(f"('{name}', {bal})")
+        values.append(f"('{name}', {bal}, TRUE)")
 
     if not values:
         print("-- no budgets found")
         return
-    print("INSERT INTO budgets (name, balance) VALUES")
+    print("INSERT INTO budgets (name, balance, is_active) VALUES")
     print(",\n".join(values) + ";")
+    print("ON DUPLICATE KEY UPDATE balance = VALUES(balance), is_active = TRUE;")
 
 
 if __name__ == "__main__":
