@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Button, Group, Modal, NumberInput, Stack, TextInput } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
 import { useUpdateBudget } from '../hooks/useBudgets'
@@ -13,8 +13,15 @@ function EditBudgetModal({
   onClose: () => void
 }) {
   const updateBudget = useUpdateBudget()
-  const [name, setName] = useState(budget ?? '')
-  const [newBalance, setNewBalance] = useState<string | number>(balance ?? '')
+  const [name, setName] = useState('')
+  const [newBalance, setNewBalance] = useState<string | number>('')
+
+  useEffect(() => {
+    if (budget) {
+      setName(budget)
+      setNewBalance(balance ?? '')
+    }
+  }, [budget, balance])
 
   const submitDisabled = name.trim() === '' || updateBudget.isPending
 
