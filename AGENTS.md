@@ -42,7 +42,7 @@ Frontend dan backend harus independen.
 
 Komunikasi dilakukan menggunakan REST API.
 
-Tidak boleh ada komunikasi langsung dari frontend ke Google Sheets.
+Data disimpan di database MySQL (dikelola backend).
 
 ---
 
@@ -50,9 +50,10 @@ Tidak boleh ada komunikasi langsung dari frontend ke Google Sheets.
 
 Framework
 
-* React
+* React 19
 * Vite
 * TypeScript
+* React Router
 
 UI
 
@@ -99,11 +100,11 @@ utils/
 
 Language
 
-Java
+Java 25
 
 Framework
 
-Spring Boot
+Spring Boot 4
 
 Build Tool
 
@@ -124,13 +125,13 @@ controller/
 
 service/
 
-google/
+data/
 
 model/
 
 config/
 
-src/main/resources/
+src/main/resources/db/migration/   (Flyway migration)
 
 src/test/java/
 ```
@@ -139,11 +140,9 @@ Rules
 
 * Controller hanya menerima HTTP Request.
 * Business logic berada di Service.
-* Google Sheets hanya boleh diakses melalui package google.
-* Jangan akses Google Sheets langsung dari Controller.
+* Akses database melalui layer `data/` (JdbcTemplate repository).
 * Jangan letakkan business logic di main application class.
-
-Catatan: `backend-golang/` berisi implementasi backend lama menggunakan Go dan tidak digunakan.
+* Skema dikelola Flyway (tambah migration baru `V<n>__desc.sql` bila mengubah skema; jangan ubah migration lama).
 
 ---
 
@@ -170,7 +169,7 @@ Log:
 
 * request masuk
 * response error
-* error Google Sheets
+* error database
 
 Jangan log credential.
 
@@ -182,10 +181,10 @@ Semua konfigurasi harus berasal dari Environment Variable.
 
 Jangan hardcode:
 
-* Sheet ID
-* API Key
-* Credential Path
+* DB URL / user / password
 * Port
+* UPLOAD_DIR
+* Kredensial apa pun
 
 ---
 
@@ -197,7 +196,7 @@ Seluruh aplikasi harus dapat dijalankan menggunakan:
 docker compose up --build
 ```
 
-Tidak boleh ada langkah manual selain menyiapkan file credential Google.
+Foto invoice tersimpan di direktori `./uploads` (bind mount) — jangan ubah menjadi named volume.
 
 ---
 
@@ -234,7 +233,7 @@ ExpenseService
 
 ExpenseController
 
-GoogleSheetsClient
+ExpenseRepository
 
 ExpenseRequest
 
@@ -275,16 +274,6 @@ Untuk setiap business logic baru:
 Untuk endpoint baru:
 
 * buat Integration Test jika diperlukan.
-
----
-
-# Git
-
-Buat perubahan sekecil mungkin.
-
-Jangan mengubah file yang tidak berhubungan.
-
-Jangan melakukan refactor besar ketika sedang mengerjakan fitur kecil.
 
 ---
 
@@ -348,13 +337,13 @@ Kedua `docker-compose.yml` & `docker-compose.prod.yml` memakai `image: expense-t
 ## Konsekuensi untuk perubahan kode
 
 * **Native memakai analisis statis.** Semua refleksi/resource yang dipakai runtime harus terdaftar di `backend/native-config/reachability-metadata.json`.
-* Google Sheets client memakai refleksi berat (Gson + request `@Key`). `google-http-client` sudah bundling config, tapi **`google-api-services-sheets`/`google-api-client`/`google-oauth-client` tidak** → wajib lewat config tracing.
-* Jika menambah **endpoint/kelas yang memakai refleksi** atau **upgrade library Google**, jalankan ulang:
+* Model yang di-bind JSON (request/response) harus didaftarkan via `@RegisterReflectionForBinding` di `ExpenseTrackerApplication`.
+* **Flyway** tidak bisa memindai `classpath:` di native — migration dibaca dari `filesystem:/app/db/migration` (file di-copy ke image). Jangan mengubah lokasi ini kecuali perlu.
+* Jika menambah **endpoint/kelas yang memakai refleksi** atau **model baru**, regenerasi native config:
   ```bash
-  ./backend/generate-native-config.sh   # regenerasi reachability-metadata (ke test sheet, aman)
+  ./backend/generate-native-config.sh   # regenerasi reachability-metadata terhadap MySQL lokal
   ./build-native.sh                     # rebuild image native
   ```
-* Verifikasi selalu dengan test sheet (`GOOGLE_TEST_SHEET_ID`), jangan menulis ke produksi.
 
 ---
 
@@ -364,10 +353,12 @@ Build & deploy **hanya dari PC lokal** (bukan di VPS, karena butuh RAM ~7GB).
 
 ```bash
 ./build-native.sh     # build image native lokal (docker build Dockerfile.native)
-./deploy-native.sh    # export -> scp -> VPS git pull -> docker load -> up -d
+./deploy-native.sh    # export -> scp -> VPS git pull -> docker load -> up -d -> prune dangling images
 ```
 
 `deploy-native.sh` berasumsi SSH key `root@expense.frmnjn.my.id` tanpa password sudah terdaftar.
+
+Backup MySQL otomatis (cron di VPS) dan manual via `scripts/backup_mysql.sh` / `scripts/restore_mysql.sh`.
 
 ---
 

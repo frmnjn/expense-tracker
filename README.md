@@ -1,541 +1,137 @@
 # Expense Tracker
 
-Aplikasi web sederhana untuk mencatat pengeluaran harian.
-
-Data disimpan di database **MySQL** (berbagi instance dengan WordPress di VPS, memakai database `expense_tracker` terpisah).
+Aplikasi web untuk mencatat pengeluaran harian, memantau saldo per budget, dan mengelola riwayat. Backend memakai **MySQL**.
 
 ---
 
-# Features
+## Fitur
 
-* Menambah pengeluaran
-* Input waktu otomatis atau manual
-* Dropdown budget dari database
-* Saldo per budget (otomatis berkurang saat pengeluaran, ditambah via top-up tiap gajian)
-* Preview "Saldo nanti" saat mengisi nominal
-* Daftar pengeluaran per periode (halaman Riwayat)
-* Filter & sort di Riwayat (search nama, filter budget, urutkan)
-* Edit pengeluaran
-* Hapus pengeluaran (soft delete, saldo dikembalikan)
-* Preview perubahan saldo saat edit/hapus
-* Dashboard ringkasan per periode (total, saldo per budget, pengeluaran terbesar)
-* Dashboard 3 bulan terakhir (total + transaksi per periode, bar visual)
-* Top-up saldo via aplikasi (tambah saldo budget + riwayat)
-* Tambah & hapus budget (soft delete, hapus juga expense-nya)
-* Upload & lihat foto invoice (opsional)
-* Validasi input
-* Menyimpan data ke MySQL
-* REST API menggunakan Java Spring Boot
-* React Frontend
-* Docker Compose
-* Mobile-friendly & PWA (bisa ditambahkan ke Home Screen dari HP)
-* Dark mode (toggle, tersimpan di perangkat)
+* Catat pengeluaran (waktu, nama, budget, nominal, deskripsi) + **foto invoice opsional** (kamera/galeri)
+* Saldo per budget (berkurang saat pengeluaran, bertambah via top-up)
+* Dashboard: saldo per budget, pengeluaran terbesar, 3 bulan terakhir
+* Riwayat per periode: search, filter, sort, edit, hapus, lihat foto
+* Kelola budget (tambah/edit/hapus, soft delete)
+* Dark mode (default gelap)
 
 ---
 
-# Tech Stack
+## Tech Stack
 
-## Frontend
-
-* React
-* TypeScript
-* Vite
-* Mantine UI
-* TanStack Query
-* Axios
-
-## Backend
-
-* Java 25 (LTS)
-* Spring Boot 4
-* Maven
-* Spring JDBC (JdbcTemplate)
-* **GraalVM 25 Native Image** (produksi memakai native executable, bukan JVM)
-
-## Storage
-
-* MySQL 8+
-
-## Infrastructure
-
-* Docker
-* Docker Compose
-* nginx (reverse proxy + SSL)
+* **Frontend:** React 19 + Vite + TypeScript, React Router, TanStack Query, Axios, Mantine UI
+* **Backend:** Java 25 + Spring Boot 4, Spring JDBC (JdbcTemplate), Flyway, GraalVM Native Image (produksi)
+* **Storage:** MySQL 8+
 
 ---
 
-# Project Structure
+## Menjalankan (lokal)
 
-```text
-expense-tracker/
-│
-├── PRD.md
-├── AGENTS.md
-├── TASKS.md
-├── STACK.md
-├── README.md
-│
-├── frontend/          (React + Mantine, nginx proxy /api)
-├── backend/           (Spring Boot, GraalVM native)
-│   ├── Dockerfile         (image JVM, untuk pengembangan)
-│   ├── Dockerfile.native  (image native, untuk produksi)
-│   ├── native-config/     (reachability-metadata.json hasil tracing agent)
-│   ├── generate-native-config.sh  (regenerate config native)
-│   └── src/
-│
-├── deploy/            (nginx config untuk VPS)
-├── build-native.sh    (build image native lokal)
-├── deploy-native.sh   (kirim image native ke VPS)
-│
-└── backend-golang/  (implementasi lama, tidak digunakan)
+```bash
+docker compose up --build
 ```
 
-## Runtime Backend: JVM vs Native
+* Frontend: http://localhost:3000
+* Backend: http://localhost:8080
 
-Produksi memakai **GraalVM Native Image** (bukan JVM). Lihat `backend/Dockerfile.native`.
-
-| Metrik | JVM | Native |
-|---|---|---|
-| RSS | ~171 MiB | **~54 MiB** |
-| Startup | ~2.3 s | **0.58 s** |
-| mem_limit | 256m | 128m |
-
-`docker-compose.yml` & `docker-compose.prod.yml` memakai image `expense-tracker-backend-native:latest`.
-
-`backend/Dockerfile` (JVM) tetap dipertahankan sebagai fallback & untuk pengembangan.
+`docker-compose.yml` menyertakan service `mysql` sendiri (self-contained). Skema & seed budget dibuat otomatis oleh **Flyway**. Foto invoice tersimpan di direktori `./uploads` (bind mount, tetap ada meski container/project dihapus).
 
 ---
 
-# Prerequisites
+## Menjalankan (produksi)
 
-Pastikan sudah menginstall:
+`docker-compose.prod.yml` memakai MySQL yang sudah ada di VPS (berbagi dengan WordPress) dan image backend **native**.
 
-* Docker
-* Docker Compose
-
-Tidak diperlukan instalasi Node.js, Java, maupun Maven apabila menjalankan project menggunakan Docker.
-
----
-
-# Database Setup (MySQL)
-
-Untuk **lokal**, `docker-compose.yml` sudah menyertakan service `mysql` sendiri (self-contained): skema & budget default dibuat otomatis oleh **Flyway** saat backend start. Tidak perlu setup manual untuk development lokal.
-
-Untuk **produksi**, aplikasi memakai MySQL yang sudah ada di VPS (berbagi instance dengan WordPress). Perlu database dan user terpisah untuk expense tracker:
-
-1. Buat database:
+Setup database (sekali):
 
 ```sql
 CREATE DATABASE expense_tracker;
-```
-
-2. Buat user khusus (terpisah dari WordPress) dan beri hak akses:
-
-```sql
 CREATE USER 'expense_tracker_user'@'%' IDENTIFIED BY 'password-kuat';
 GRANT ALL PRIVILEGES ON expense_tracker.* TO 'expense_tracker_user'@'%';
 FLUSH PRIVILEGES;
 ```
 
-3. Skema tabel dibuat otomatis oleh backend saat start melalui **Flyway** (migration versioned di `backend/src/main/resources/db/migration`). Untuk DB yang sudah ada tanpa riwayat Flyway, `baselineOnMigrate` akan mem-baseline dan menerapkan migration selanjutnya.
+Skema dibuat otomatis oleh Flyway saat backend start (`baselineOnMigrate` menangani DB yang sudah ada).
 
-4. Isi tabel `budgets` (nama + saldo) — bisa diimpor dari tab `Budget` Google Sheets yang lama:
+Import budget (opsional, dari Google Sheets lama):
 
 ```bash
 python3 scripts/seed_budgets.py > seed.sql
 mysql -u expense_tracker_user -p expense_tracker < seed.sql
 ```
 
-5. Backend menghubungi MySQL melalui host port (mis. `33060`) yang sudah di-expose oleh compose WordPress:
-
-```env
-DB_URL=jdbc:mysql://host.docker.internal:33060/expense_tracker?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
-DB_USER=expense_tracker_user
-DB_PASSWORD=password-kuat
-```
-
-Mode normal tetap menggunakan:
-
-```bash
-docker compose up --build
-```
-
 ---
 
-# Environment Variables
+## Environment Variables
 
-## Backend
-
-Buat file:
+### Backend (`backend/.env`)
 
 ```text
-backend/.env
-```
-
-Contoh:
-
-```env
 PORT=8080
 DB_URL=jdbc:mysql://host.docker.internal:33060/expense_tracker?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
 DB_USER=expense_tracker_user
-DB_PASSWORD=change-me
+DB_PASSWORD=password-kuat
 UPLOAD_DIR=/app/uploads
 ```
 
----
-
-## Frontend
-
-Buat file:
+### Frontend
 
 ```text
-frontend/.env
-```
-
-Contoh:
-
-```env
 VITE_API_URL=/api
 ```
 
-Jika kosong, frontend memakai `/api` (default). Nilai ini relatif dan diproxy oleh nginx ke backend, sehingga tidak perlu diubah untuk akses dari HP. Untuk development lokal dengan Vite, set `VITE_API_URL=http://localhost:8080`.
-
 ---
 
-# Backup & Restore MySQL
+## Backup & Restore MySQL
 
-Backup database `expense_tracker` (berbagi instance MySQL dengan WordPress) via script di VPS.
-
-## Backup
+Script di VPS (membaca kredensial dari `backend/.env`).
 
 ```bash
+# backup (mysqldump + gzip + simpan 14 terakhir)
 cd /root/expense-tracker
 ./scripts/backup_mysql.sh
+
+# restore (menimpa DB saat ini!)
+./scripts/restore_mysql.sh backups/expense_tracker_<timestamp>.sql.gz
 ```
 
-Membuat `backups/expense_tracker_<timestamp>.sql.gz` dan menyimpan 14 backup terakhir (variabel `KEEP`, `BACKUP_DIR`, `MYSQL_CONTAINER` bisa di-override).
+Cron harian sudah terpasang di VPS (03:00 WIB), log di `/var/log/expense-backup.log`.
 
-## Jadwal otomatis (cron)
+---
 
-Cron harian pukul 20:00 UTC (03:00 WIB) sudah dipasang di VPS:
+## API
 
-```
-0 20 * * * /root/expense-tracker/scripts/backup_mysql.sh >> /var/log/expense-backup.log 2>&1
-```
+Dokumentasi lengkap ada di `PRD.md`. Ringkasan endpoint (`/api`):
 
-## Restore
+* `GET /health`, `/options`, `/periods`
+* `GET/POST /expenses`, `PUT/DELETE /expenses/{id}`
+* `POST/GET /expenses/{id}/photo`
+* `GET /summary?period=`, `/trend?months=`
+* `GET/POST /topups`
+* `POST /budgets`, `PUT/DELETE /budgets/{name}`
+
+---
+
+## Build & Deploy Native (produksi)
+
+Build & deploy hanya dari PC lokal (butuh RAM ~7GB untuk build native).
 
 ```bash
-cd /root/expense-tracker
-./scripts/restore_mysql.sh backups/expense_tracker_20260808_124931.sql.gz
+./build-native.sh       # build image native lokal (~6 menit)
+./deploy-native.sh      # export -> scp -> VPS git pull -> docker load -> up -d -> prune dangling images
 ```
 
-**Peringatan:** restore akan menimpa data `expense_tracker` saat ini.
+* Regenerasi native config saat menambah endpoint/model: `./backend/generate-native-config.sh`
+* `deploy-native.sh` mengasumsikan SSH key `root@expense.frmnjn.my.id` sudah terdaftar.
 
 ---
 
-# Running the Application
+## Project Structure
 
-Jalankan:
-
-```bash
-docker compose up --build
 ```
-
-Frontend:
-
-```text
-http://localhost:3000
+frontend/   # React (Vite)
+backend/    # Spring Boot
+  src/main/resources/db/migration/   # Flyway migration
+scripts/    # backup, restore, seed
+docker-compose.yml       # lokal (dengan mysql service)
+docker-compose.prod.yml  # produksi (MySQL VPS)
+uploads/                 # foto invoice (bind mount)
 ```
-
-Backend:
-
-```text
-http://localhost:8080
-```
-
-Untuk menghentikan aplikasi:
-
-```bash
-docker compose down
-```
-
-## Akses dari HP
-
-Frontend sudah dikonfigurasi agar API dipanggil relatif (`/api`) dan diproxy oleh nginx ke backend, sehingga bisa diakses dari perangkat lain (termasuk HP) tanpa mengubah konfigurasi:
-
-1. Cari IP komputer di jaringan lokal (misal `192.168.1.10`).
-2. Dari HP, buka browser ke `http://<IP-KOMPUTER>:3000`.
-3. Pastikan HP dan komputer berada di jaringan yang sama.
-
-Untuk pengalaman seperti aplikasi native di HP, buka halaman tersebut lalu pilih **Add to Home Screen** (PWA).
-
----
-
-# API
-
-## POST /expenses
-
-Request
-
-```json
-{
-  "dateTime": "2026-08-06 14:30",
-  "name": "Makan Siang",
-  "budget": "Daily",
-  "amount": 35000,
-  "description": "Catatan"
-}
-```
-
-Response
-
-```json
-{
-  "success": true
-}
-```
-
----
-
-## GET /options
-
-Response
-
-```json
-{
-  "success": true,
-  "data": {
-    "budgets": [
-      { "name": "Daily", "balance": 500000 },
-      { "name": "Weekly", "balance": -10000 }
-    ]
-  }
-}
-```
-
----
-
-## GET /periods
-
-Response
-
-```json
-{
-  "success": true,
-  "data": {
-    "periods": ["2026-JUL-AUG", "2026-AUG-SEP"]
-  }
-}
-```
-
----
-
-## GET /expenses
-
-Query param `period` (nama sheet periode, wajib).
-
-Response
-
-```json
-{
-  "success": true,
-  "data": {
-    "expenses": [
-      {
-        "id": "abc123",
-        "dateTime": "2026-08-06 14:30",
-        "name": "Makan Siang",
-        "budget": "Daily",
-        "amount": 35000,
-        "description": "Catatan"
-      }
-    ]
-  }
-}
-```
-
-Baris yang dihapus (soft delete) tidak dikembalikan.
-
----
-
-## GET /topups
-
-Mengembalikan daftar top-up saldo.
-
-```json
-{
-  "success": true,
-  "data": {
-    "topUps": [
-      { "id": "abc123", "dateTime": "2026-08-07 10:00", "budget": "Daily", "amount": 50000, "description": "Gaji" }
-    ]
-  }
-}
-```
-
----
-
-## GET /trend
-
-Ringkasan beberapa periode terakhir. Query param `months` (default 3).
-
-```json
-{
-  "success": true,
-  "data": {
-    "periods": [
-      { "period": "2026-JUL-AUG", "total": 30000, "count": 2 }
-    ]
-  }
-}
-```
-
----
-
-## POST /topups
-
-Menambahkan saldo pada budget. Body: `{ "budget": "Daily", "amount": 50000, "description": "Gaji" }`. `dateTime` opsional (default waktu sekarang). Saldo budget bertambah dan riwayat dicatat di tab `TopUp`.
-
----
-
-## PUT /expenses/{id}
-
-Body sama seperti `POST /expenses`. Mengedit pengeluaran dan menyesuaikan saldo budget.
-
----
-
-## DELETE /expenses/{id}
-
-Menghapus (soft delete) pengeluaran dan mengembalikan saldo budget.
-
----
-
-# Validation Rules
-
-Waktu
-
-* Required
-* Format `yyyy-MM-dd HH:mm`
-
-Name
-
-* Required
-* Maksimal 255 karakter
-
-Budget
-
-* Required
-
-Nominal (amount)
-
-* Required
-* Harus lebih besar dari 0
-
-Description
-
-* Opsional
-* Maksimal 255 karakter
-
----
-
-# Development Workflow
-
-1. Baca `PRD.md`.
-2. Ikuti aturan pada `AGENTS.md`.
-3. Kerjakan item pada `TASKS.md`.
-4. Gunakan teknologi yang ditentukan pada `STACK.md`.
-5. Jalankan aplikasi menggunakan Docker Compose.
-6. Pastikan fitur bekerja sebelum menandai task sebagai selesai.
-
----
-
-# Deployment ke VPS
-
-> **Penting:** Produksi memakai **image native** yang di-build di lokal, lalu dikirim ke VPS via `deploy-native.sh`. VPS **tidak build native** (butuh RAM besar).
-
-## Prasyarat
-
-* Repo sudah di-clone di VPS (`/root/expense-tracker`).
-* `backend/.env` berisi `GOOGLE_SHEET_ID` produksi.
-* `backend/credentials.json` (Service Account) sudah ada di VPS. Kedua file tidak ikut di-track git (lihat `.gitignore`), jadi harus disiapkan manual di VPS.
-* SSH key (`~/.ssh/id_ed25519`) terdaftar di `root@<VPS>` authorized_keys (tanpa password).
-* DNS: `expense.frmnjn.my.id` → A record ke IP VPS.
-
-## Alur deploy (native image)
-
-Dari PC lokal:
-
-```bash
-./build-native.sh     # 1. Build image native: expense-tracker-backend-native:latest (~6 menit, RAM ~7GB)
-./deploy-native.sh    # 2. export tar.gz -> scp ke VPS -> git pull -> docker load -> up -d
-```
-
-`deploy-native.sh` menangani:
-1. `docker save <image> | gzip > /tmp/backend-native.tar.gz`
-2. `scp` tar.gz ke VPS
-3. VPS: `git pull` (update compose file)
-4. VPS: `docker load`
-5. VPS: `docker compose -f docker-compose.prod.yml up -d --build` (rebuild frontend, backend pakai image native)
-6. Verifikasi `docker compose ps` + memory
-
-## Reverse proxy + SSL
-
-1. Install nginx & certbot di VPS:
-   ```bash
-   sudo apt update && sudo apt install -y nginx certbot python3-certbot-nginx
-   ```
-2. Copy konfigurasi nginx:
-   ```bash
-   sudo cp deploy/nginx-expense.conf /etc/nginx/sites-available/expense
-   sudo ln -s /etc/nginx/sites-available/expense /etc/nginx/sites-enabled/expense
-   ```
-3. Terbitkan sertifikat SSL (Let's Encrypt):
-   ```bash
-   sudo certbot --nginx -d expense.frmnjn.my.id
-   ```
-4. Verifikasi:
-   ```bash
-   sudo nginx -t && sudo systemctl reload nginx
-   ```
-
-nginx proxy ke `127.0.0.1:23824` (port frontend yang di-expose oleh `docker-compose.prod.yml`).
-
-## Mengelola config native (reachability-metadata)
-
-Backend Google Sheets butuh config refleksi untuk native image. File `backend/native-config/reachability-metadata.json` di-generate via tracing agent:
-
-```bash
-./backend/generate-native-config.sh   # build jar -> jalankan agent -> hit test sheet -> simpan config
-```
-
-Jalankan ulang bila:
-* Upgrade versi library Google (`google-api-services-sheets`, `google-http-client`, dll)
-* Menambah endpoint baru yang memanggil Google Sheets
-
-> Aman: script memakai `GOOGLE_TEST_SHEET_ID`, bukan sheet produksi.
-
-## Rollback ke image JVM
-
-Jika native bermasalah, kembalikan ke image JVM:
-
-1. VPS: `docker compose -f docker-compose.prod.yml down`
-2. Ubah `docker-compose.prod.yml` backend dari `image:` kembali ke `build: ./backend`
-3. `docker compose -f docker-compose.prod.yml up -d --build`
-
----
-
-# Future Roadmap
-
-Versi berikutnya dapat menambahkan:
-
-* Kategori
-* Grafik tren yang lebih detail
-* Multi-user
-* Authentication
-
----
-
-# License
-
-Project ini dibuat untuk pembelajaran dan penggunaan pribadi.
