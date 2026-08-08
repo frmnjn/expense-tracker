@@ -28,8 +28,19 @@ export async function deleteBudget(name: string): Promise<ApiResponse<void>> {
   return response.data
 }
 
-export async function createExpense(request: ExpenseRequest): Promise<ApiResponse<void>> {
-  const response = await apiClient.post<ApiResponse<void>>('/expenses', request)
+export async function createExpense(request: ExpenseRequest): Promise<{ id: string }> {
+  const response = await apiClient.post<ApiResponse<{ id: string }>>('/expenses', request)
+  return response.data.data ?? { id: '' }
+}
+
+export function getPhotoUrl(id: string): string {
+  return `${apiClient.defaults.baseURL}/expenses/${encodeURIComponent(id)}/photo`
+}
+
+export async function uploadPhoto(id: string, file: File): Promise<ApiResponse<void>> {
+  const formData = new FormData()
+  formData.append('file', file)
+  const response = await apiClient.post<ApiResponse<void>>(`/expenses/${id}/photo`, formData)
   return response.data
 }
 

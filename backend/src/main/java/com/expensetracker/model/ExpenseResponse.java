@@ -8,5 +8,6 @@ public record ExpenseResponse(
         @JsonProperty("name") String name,
         @JsonProperty("budget") String budget,
         @JsonProperty("amount") Long amount,
-        @JsonProperty("description") String description) {
+        @JsonProperty("description") String description,
+        @JsonProperty("hasPhoto") boolean hasPhoto) {
 }

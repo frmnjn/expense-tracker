@@ -9,7 +9,9 @@ import com.expensetracker.service.ExpenseService;
 import com.expensetracker.service.ValidationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -19,6 +21,12 @@ import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Map;
 
 @RestController
 public class ExpenseController {
@@ -182,8 +190,8 @@ public class ExpenseController {
     @PostMapping("/expenses")
     public ResponseEntity<ApiResponse> createExpense(@RequestBody ExpenseRequest request) {
         try {
-            expenseService.createExpense(request);
-            return ResponseEntity.ok(ApiResponse.ok());
+            String id = expenseService.createExpense(request);
+            return ResponseEntity.ok(ApiResponse.ok(Map.of("id", id)));
         } catch (ValidationException e) {
             LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -193,6 +201,50 @@ public class ExpenseController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("Internal server error"));
         }
+    }
+
+    @PostMapping(value = "/expenses/{id}/photo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<ApiResponse> uploadPhoto(@PathVariable String id,
+                                                   @RequestParam("file") MultipartFile file) {
+        try {
+            expenseService.attachPhoto(id, file);
+            return ResponseEntity.ok(ApiResponse.ok());
+        } catch (ValidationException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            LOGGER.error("internal error uploading photo", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Internal server error"));
+        }
+    }
+
+    @GetMapping("/expenses/{id}/photo")
+    public ResponseEntity<byte[]> getPhoto(@PathVariable String id) {
+        try {
+            String photoPath = expenseService.getPhotoPath(id);
+            if (photoPath == null) {
+                return ResponseEntity.notFound().build();
+            }
+            Path file = Path.of(photoPath);
+            byte[] bytes = Files.readAllBytes(file);
+            MediaType mediaType = mediaTypeFor(photoPath);
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_TYPE, mediaType.toString())
+                    .body(bytes);
+        } catch (Exception e) {
+            LOGGER.error("internal error getting photo", e);
+            return ResponseEntity.notFound().build();
+        }
+    }
+
+    private static MediaType mediaTypeFor(String filename) {
+        String lower = filename.toLowerCase();
+        if (lower.endsWith(".png")) return MediaType.IMAGE_PNG;
+        if (lower.endsWith(".gif")) return MediaType.IMAGE_GIF;
+        if (lower.endsWith(".webp")) return MediaType.parseMediaType("image/webp");
+        return MediaType.IMAGE_JPEG;
     }
 
     @PutMapping("/expenses/{id}")

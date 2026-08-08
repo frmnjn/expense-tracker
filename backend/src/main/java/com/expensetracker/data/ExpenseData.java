@@ -8,5 +8,6 @@ public record ExpenseData(
         String budgetName,
         long amount,
         String description,
-        boolean deleted) {
+        boolean deleted,
+        boolean hasPhoto) {
 }

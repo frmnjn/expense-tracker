@@ -7,6 +7,11 @@ services:
       - ./backend/.env
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    volumes:
+      - uploads:/app/uploads
+
+volumes:
+  uploads:
 
   frontend:
     build:

@@ -32,6 +32,7 @@ export interface Expense {
   budget: string
   amount: number
   description?: string
+  hasPhoto: boolean
 }
 
 export interface PeriodsResponse {

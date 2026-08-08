@@ -660,3 +660,32 @@ Mengganti `spring.sql.init` (schema.sql) dengan Flyway versioned migrations agar
 ## Docs
 
 * [x] README: section Backup & Restore MySQL
+
+---
+
+# Phase 21 - Upload & Lihat Foto Invoice
+
+## Backend
+
+* [x] Flyway `V4__expense_photo.sql`: `expenses.photo_path`
+* [x] Env `UPLOAD_DIR` (default `/app/uploads`)
+* [x] `POST /expenses` mengembalikan `data.id`
+* [x] `POST /expenses/{id}/photo` (multipart, validasi jpg/png/webp/gif, max 10MB)
+* [x] `GET /expenses/{id}/photo` (sajikan file; 404 jika tak ada)
+* [x] `ExpenseResponse.hasPhoto`; multipart config
+
+## Frontend
+
+* [x] `/catat`: `PhotoInput` (modal pilihan Kamera / Galeri) + preview; upload setelah create
+* [x] Fix Content-Type: apiClient tidak memaksa JSON (agar FormData upload foto terkirim multipart)
+* [x] `/riwayat`: tombol 📷 jika `hasPhoto` -> modal tampil gambar
+
+## Infra
+
+* [x] docker-compose (local & prod): volume `uploads` -> `/app/uploads`
+
+## Verifikasi
+
+* [x] Upload + tampil foto (local, langsung & via proxy)
+* [x] Non-image ditolak
+* [x] Native config regen + build (saat deploy)

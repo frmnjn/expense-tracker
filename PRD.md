@@ -150,7 +150,10 @@ Response:
 
 ```json
 {
-    "success": true
+    "success": true,
+    "data": {
+        "id": "abc123"
+    }
 }
 ```
 
@@ -213,6 +216,29 @@ Response
 }
 ```
 
+
+## POST /expenses/{id}/photo
+
+Mengunggah foto invoice (multipart `file`). Opsional.
+
+* Hanya tipe gambar: jpeg, png, webp, gif.
+* Maksimal 10MB.
+
+Response
+
+```json
+{
+    "success": true
+}
+```
+
+---
+
+## GET /expenses/{id}/photo
+
+Mengembalikan file foto invoice expense. Jika tidak ada, `404`.
+
+---
 ---
 
 ## GET /options
@@ -540,6 +566,7 @@ Komponen halaman form:
 * Budget Dropdown
 * Nominal Number Field
 * Description Text Field (opsional)
+* Foto invoice (opsional) — tombol membuka pilihan "Ambil Foto (Kamera)" atau "Dari Galeri"
 * Save Button
 
 ### Budget Dropdown & Preview Saldo
@@ -576,6 +603,7 @@ Komponen:
 * Tabel daftar expense aktif pada periode terpilih
 * Tombol Edit (membuka modal berisi form yang sudah terisi)
 * Tombol Hapus (dengan konfirmasi)
+* Tombol lihat foto (📷) jika expense memiliki foto invoice
 
 Search, filter, dan sort muncul setelah periode dipilih.
 
@@ -655,6 +683,7 @@ Backend:
 DB_URL=jdbc:mysql://host.docker.internal:33060/expense_tracker?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
 DB_USER=expense_tracker_user
 DB_PASSWORD=password-kuat
+UPLOAD_DIR=/app/uploads
 PORT=8080
 ```
 

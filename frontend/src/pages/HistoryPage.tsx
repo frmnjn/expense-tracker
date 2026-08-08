@@ -5,6 +5,7 @@ import {
   Button,
   Container,
   Group,
+  Image,
   LoadingOverlay,
   Modal,
   NumberInput,
@@ -23,6 +24,7 @@ import dayjs from 'dayjs'
 import { useDeleteExpense, useExpenses, usePeriods, useUpdateExpense } from '../hooks/useExpenses'
 import { useOptions } from '../hooks/useOptions'
 import ColorSchemeToggle from '../components/ColorSchemeToggle'
+import { getPhotoUrl } from '../services/expense'
 import { formatCurrency } from '../utils/currency'
 import type { Expense } from '../types/expense'
 
@@ -47,6 +49,7 @@ function HistoryPage() {
   const [search, setSearch] = useState('')
   const [budgetFilter, setBudgetFilter] = useState<string | null>(null)
   const [sortBy, setSortBy] = useState<string>('waktu-desc')
+  const [viewingPhoto, setViewingPhoto] = useState<Expense | null>(null)
 
   const visibleExpenses = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -189,6 +192,11 @@ function HistoryPage() {
                   </Text>
                 </Group>
                 <Group justify="flex-end" gap="xs">
+                  {expense.hasPhoto && (
+                    <ActionIcon variant="subtle" color="gray" onClick={() => setViewingPhoto(expense)}>
+                      <span>📷</span>
+                    </ActionIcon>
+                  )}
                   <ActionIcon
                     variant="subtle"
                     color="blue"
@@ -229,6 +237,11 @@ function HistoryPage() {
                   <Table.Td ta="right">{formatCurrency(expense.amount)}</Table.Td>
                   <Table.Td ta="right">
                     <Group gap="xs" justify="flex-end" wrap="nowrap">
+                      {expense.hasPhoto && (
+                        <ActionIcon variant="subtle" color="gray" onClick={() => setViewingPhoto(expense)}>
+                          <span>📷</span>
+                        </ActionIcon>
+                      )}
                       <ActionIcon
                         variant="subtle"
                         color="blue"
@@ -255,6 +268,18 @@ function HistoryPage() {
       </Paper>
 
       {editing && <EditExpenseModal expense={editing} onClose={() => setEditing(null)} />}
+
+      <Modal
+        opened={!!viewingPhoto}
+        onClose={() => setViewingPhoto(null)}
+        title={viewingPhoto?.name}
+        size="md"
+        centered
+      >
+        {viewingPhoto && (
+          <Image src={getPhotoUrl(viewingPhoto.id)} alt="Invoice" fit="contain" />
+        )}
+      </Modal>
 
       <Modal opened={!!deleting} onClose={() => setDeleting(null)} title="Hapus pengeluaran" centered>
         <Text>
