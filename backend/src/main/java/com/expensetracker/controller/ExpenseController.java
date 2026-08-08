@@ -6,6 +6,7 @@ import com.expensetracker.model.BudgetUpdateRequest;
 import com.expensetracker.model.ExpenseRequest;
 import com.expensetracker.model.TopUpRequest;
 import com.expensetracker.service.ExpenseService;
+import com.expensetracker.service.IdempotencyService;
 import com.expensetracker.service.ValidationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -19,6 +20,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
@@ -27,6 +29,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Map;
+import java.util.Optional;
 
 @RestController
 public class ExpenseController {
@@ -34,9 +37,11 @@ public class ExpenseController {
     private static final Logger LOGGER = LoggerFactory.getLogger(ExpenseController.class);
 
     private final ExpenseService expenseService;
+    private final IdempotencyService idempotencyService;
 
-    public ExpenseController(ExpenseService expenseService) {
+    public ExpenseController(ExpenseService expenseService, IdempotencyService idempotencyService) {
         this.expenseService = expenseService;
+        this.idempotencyService = idempotencyService;
     }
 
     @GetMapping("/health")
@@ -56,10 +61,17 @@ public class ExpenseController {
     }
 
     @PostMapping("/budgets")
-    public ResponseEntity<ApiResponse> createBudget(@RequestBody BudgetCreateRequest request) {
+    public ResponseEntity<ApiResponse> createBudget(@RequestBody BudgetCreateRequest request,
+                                                    @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
+        Optional<ApiResponse> cached = idempotencyService.find(idempotencyKey);
+        if (cached.isPresent()) {
+            return ResponseEntity.ok(cached.get());
+        }
         try {
             expenseService.createBudget(request);
-            return ResponseEntity.ok(ApiResponse.ok());
+            ApiResponse response = ApiResponse.ok();
+            idempotencyService.save(idempotencyKey, response);
+            return ResponseEntity.ok(response);
         } catch (ValidationException e) {
             LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -172,10 +184,17 @@ public class ExpenseController {
     }
 
     @PostMapping("/topups")
-    public ResponseEntity<ApiResponse> createTopUp(@RequestBody TopUpRequest request) {
+    public ResponseEntity<ApiResponse> createTopUp(@RequestBody TopUpRequest request,
+                                                   @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
+        Optional<ApiResponse> cached = idempotencyService.find(idempotencyKey);
+        if (cached.isPresent()) {
+            return ResponseEntity.ok(cached.get());
+        }
         try {
             expenseService.createTopUp(request);
-            return ResponseEntity.ok(ApiResponse.ok());
+            ApiResponse response = ApiResponse.ok();
+            idempotencyService.save(idempotencyKey, response);
+            return ResponseEntity.ok(response);
         } catch (ValidationException e) {
             LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -188,10 +207,17 @@ public class ExpenseController {
     }
 
     @PostMapping("/expenses")
-    public ResponseEntity<ApiResponse> createExpense(@RequestBody ExpenseRequest request) {
+    public ResponseEntity<ApiResponse> createExpense(@RequestBody ExpenseRequest request,
+                                                     @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
+        Optional<ApiResponse> cached = idempotencyService.find(idempotencyKey);
+        if (cached.isPresent()) {
+            return ResponseEntity.ok(cached.get());
+        }
         try {
             String id = expenseService.createExpense(request);
-            return ResponseEntity.ok(ApiResponse.ok(Map.of("id", id)));
+            ApiResponse response = ApiResponse.ok(Map.of("id", id));
+            idempotencyService.save(idempotencyKey, response);
+            return ResponseEntity.ok(response);
         } catch (ValidationException e) {
             LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -205,10 +231,17 @@ public class ExpenseController {
 
     @PostMapping(value = "/expenses/{id}/photo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     public ResponseEntity<ApiResponse> uploadPhoto(@PathVariable String id,
-                                                   @RequestParam("file") MultipartFile file) {
+                                                   @RequestParam("file") MultipartFile file,
+                                                   @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
+        Optional<ApiResponse> cached = idempotencyService.find(idempotencyKey);
+        if (cached.isPresent()) {
+            return ResponseEntity.ok(cached.get());
+        }
         try {
             expenseService.attachPhoto(id, file);
-            return ResponseEntity.ok(ApiResponse.ok());
+            ApiResponse response = ApiResponse.ok();
+            idempotencyService.save(idempotencyKey, response);
+            return ResponseEntity.ok(response);
         } catch (ValidationException e) {
             LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)

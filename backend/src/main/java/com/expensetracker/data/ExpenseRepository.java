@@ -15,7 +15,7 @@ public class ExpenseRepository {
 
     private static final String SELECT_COLS =
             "SELECT e.id, e.period, e.date_time, e.name, b.name AS budget_name, e.amount, e.description, e.deleted, "
-                    + "e.photo_path "
+                    + "e.invoice_id "
                     + "FROM expenses e JOIN budgets b ON b.id = e.budget_id ";
 
     private final JdbcTemplate jdbcTemplate;
@@ -66,16 +66,8 @@ public class ExpenseRepository {
         jdbcTemplate.update("UPDATE expenses SET deleted = TRUE WHERE id = ?", id);
     }
 
-    public String getPhotoPath(String id) {
-        List<String> paths = jdbcTemplate.query(
-                "SELECT photo_path FROM expenses WHERE id = ?",
-                (rs, rowNum) -> rs.getString("photo_path"),
-                id);
-        return paths.isEmpty() ? null : paths.get(0);
-    }
-
-    public void attachPhoto(String id, String photoPath) {
-        jdbcTemplate.update("UPDATE expenses SET photo_path = ? WHERE id = ?", photoPath, id);
+    public void attachInvoice(String id, String invoiceId) {
+        jdbcTemplate.update("UPDATE expenses SET invoice_id = ? WHERE id = ?", invoiceId, id);
     }
 
     public long totalForPeriod(String period) {
@@ -105,6 +97,7 @@ public class ExpenseRepository {
                 rs.getLong("amount"),
                 rs.getString("description"),
                 rs.getBoolean("deleted"),
-                rs.getString("photo_path") != null && !rs.getString("photo_path").isBlank());
+                rs.getString("invoice_id") != null && !rs.getString("invoice_id").isBlank(),
+                rs.getString("invoice_id"));
     }
 }

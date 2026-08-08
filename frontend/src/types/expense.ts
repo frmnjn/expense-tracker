@@ -4,6 +4,7 @@ export interface ExpenseRequest {
   budget: string
   amount: number
   description?: string
+  invoiceId?: string
 }
 
 export interface BudgetOption {
@@ -83,6 +84,14 @@ export interface TrendPoint {
 
 export interface TrendResponse {
   periods: TrendPoint[]
+}
+
+export interface Invoice {
+  id: string
+}
+
+export interface InvoicesResponse {
+  invoices: Invoice[]
 }
 
 export interface ApiResponse<T> {

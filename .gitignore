@@ -8,3 +8,4 @@ project-personal-firman-budi-s-1f804135428a.json
 target/
 deploy/nginx-expense.conf
 uploads/
+.idea/

@@ -3,6 +3,7 @@ package com.expensetracker.service;
 import com.expensetracker.data.BudgetRepository;
 import com.expensetracker.data.ExpenseData;
 import com.expensetracker.data.ExpenseRepository;
+import com.expensetracker.data.InvoiceData;
 import com.expensetracker.data.TopUpRepository;
 import com.expensetracker.model.BudgetCreateRequest;
 import com.expensetracker.model.BudgetSummary;
@@ -17,14 +18,11 @@ import com.expensetracker.model.TopUpRequest;
 import com.expensetracker.model.TopUpsResponse;
 import com.expensetracker.model.TrendPoint;
 import com.expensetracker.model.TrendResponse;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
@@ -32,29 +30,25 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
 @Service
 public class ExpenseService {
 
-    private static final Set<String> ALLOWED_EXTENSIONS = Set.of("jpg", "jpeg", "png", "webp", "gif");
-
     private final BudgetRepository budgetRepository;
     private final ExpenseRepository expenseRepository;
     private final TopUpRepository topUpRepository;
-
-    @Value("${upload.dir:/app/uploads}")
-    private String uploadDir;
+    private final InvoiceService invoiceService;
 
     public ExpenseService(BudgetRepository budgetRepository,
                           ExpenseRepository expenseRepository,
-                          TopUpRepository topUpRepository) {
+                          TopUpRepository topUpRepository,
+                          InvoiceService invoiceService) {
         this.budgetRepository = budgetRepository;
         this.expenseRepository = expenseRepository;
         this.topUpRepository = topUpRepository;
+        this.invoiceService = invoiceService;
     }
 
     public OptionsResponse getOptions() {
@@ -113,17 +107,30 @@ public class ExpenseService {
         LocalDateTime dateTime = LocalDateTime.parse(request.dateTime(), PeriodSheetName.FORMATTER);
         Long budgetId = requireBudgetId(request.budget());
         String id = UUID.randomUUID().toString();
+        String period = PeriodSheetName.forDate(dateTime.toLocalDate());
+        LocalDate periodStart = PeriodSheetName.periodStart(dateTime.toLocalDate());
         expenseRepository.insert(
                 id,
-                PeriodSheetName.forDate(dateTime.toLocalDate()),
-                PeriodSheetName.periodStart(dateTime.toLocalDate()),
+                period,
+                periodStart,
                 dateTime,
                 budgetId,
                 request.name(),
                 request.amount(),
                 request.description());
+        if (request.invoiceId() != null && !request.invoiceId().isBlank()) {
+            attachInvoiceToExpense(id, request.invoiceId(), period);
+        }
         budgetRepository.adjustBalance(request.budget(), -request.amount());
         return id;
+    }
+
+    private void attachInvoiceToExpense(String expenseId, String invoiceId, String period) {
+        InvoiceData invoice = invoiceService.requireInvoice(invoiceId);
+        if (!invoice.period().equals(period)) {
+            throw new ValidationException("Invoice is not in the same period as the expense");
+        }
+        expenseRepository.attachInvoice(expenseId, invoiceId);
     }
 
     public PeriodsResponse getPeriods() {
@@ -251,39 +258,20 @@ public class ExpenseService {
 
     @Transactional
     public void attachPhoto(String id, MultipartFile file) {
-        requireExpense(id);
-        if (file == null || file.isEmpty()) {
-            throw new ValidationException("Photo is required");
-        }
-        String ext = extensionOf(file.getOriginalFilename());
-        if (!ALLOWED_EXTENSIONS.contains(ext)) {
-            throw new ValidationException("Only jpg, png, webp, gif are allowed");
-        }
-        try {
-            String filename = id + "." + ext;
-            Path target = Path.of(uploadDir).resolve(filename).normalize();
-            Files.createDirectories(target.getParent());
-            file.transferTo(target);
-            expenseRepository.attachPhoto(id, filename);
-        } catch (IOException e) {
-            throw new IllegalStateException("Failed to save photo", e);
-        }
+        ExpenseData expense = requireExpense(id);
+        String period = expense.period();
+        LocalDate periodStart = PeriodSheetName.periodStart(
+                LocalDateTime.parse(expense.dateTime(), PeriodSheetName.FORMATTER).toLocalDate());
+        String invoiceId = invoiceService.createInvoice(period, periodStart, file);
+        expenseRepository.attachInvoice(id, invoiceId);
     }
 
     public String getPhotoPath(String id) {
         ExpenseData expense = requireExpense(id);
-        String photoPath = expenseRepository.getPhotoPath(id);
-        if (photoPath == null) {
+        if (expense.invoiceId() == null || expense.invoiceId().isBlank()) {
             return null;
         }
-        return Path.of(uploadDir).resolve(photoPath).normalize().toString();
-    }
-
-    private static String extensionOf(String filename) {
-        if (filename == null || !filename.contains(".")) {
-            return "";
-        }
-        return filename.substring(filename.lastIndexOf('.') + 1).toLowerCase(Locale.ROOT);
+        return invoiceService.getInvoicePhotoPath(expense.invoiceId());
     }
 
     private ExpenseData requireExpense(String id) {

@@ -3,6 +3,7 @@ package com.expensetracker.service;
 import com.expensetracker.data.BudgetRepository;
 import com.expensetracker.data.ExpenseData;
 import com.expensetracker.data.ExpenseRepository;
+import com.expensetracker.data.InvoiceData;
 import com.expensetracker.data.TopUpRepository;
 import com.expensetracker.model.BudgetCreateRequest;
 import com.expensetracker.model.BudgetUpdateRequest;
@@ -13,6 +14,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -29,6 +31,7 @@ import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.mock;
 
 @ExtendWith(MockitoExtension.class)
 class ExpenseServiceTest {
@@ -39,21 +42,23 @@ class ExpenseServiceTest {
     private ExpenseRepository expenseRepository;
     @Mock
     private TopUpRepository topUpRepository;
+    @Mock
+    private InvoiceService invoiceService;
 
     private ExpenseService expenseService;
 
     @BeforeEach
     void setUp() {
-        expenseService = new ExpenseService(budgetRepository, expenseRepository, topUpRepository);
+        expenseService = new ExpenseService(budgetRepository, expenseRepository, topUpRepository, invoiceService);
     }
 
     private static ExpenseRequest validRequest() {
-        return new ExpenseRequest("2026-08-06 14:30", "Makan Siang", "Daily", 35000L, null);
+        return new ExpenseRequest("2026-08-06 14:30", "Makan Siang", "Daily", 35000L, null, null);
     }
 
     private static ExpenseData expenseData() {
         return new ExpenseData("id123", "2026-JUL-AUG", "2026-08-06 14:30", "Makan Siang", "Daily",
-                35000L, null, false, false);
+                35000L, null, false, false, null);
     }
 
     @Test
@@ -68,7 +73,7 @@ class ExpenseServiceTest {
     @Test
     void createExpense_dateTimeOnCutoff_shouldUseNextPeriod() {
         when(budgetRepository.findIdByName("Daily")).thenReturn(1L);
-        ExpenseRequest request = new ExpenseRequest("2026-08-25 08:00", "Makan Siang", "Daily", 35000L, null);
+        ExpenseRequest request = new ExpenseRequest("2026-08-25 08:00", "Makan Siang", "Daily", 35000L, null, null);
         assertDoesNotThrow(() -> expenseService.createExpense(request));
         verify(expenseRepository).insert(anyString(), eq("2026-AUG-SEP"), eq(LocalDate.of(2026, 8, 25)),
                 eq(LocalDateTime.of(2026, 8, 25, 8, 0)), anyLong(), anyString(), anyLong(), any());
@@ -76,7 +81,7 @@ class ExpenseServiceTest {
 
     @Test
     void createExpense_missingDateTime_shouldReject() {
-        ExpenseRequest request = new ExpenseRequest(null, "Makan Siang", "Daily", 35000L, null);
+        ExpenseRequest request = new ExpenseRequest(null, "Makan Siang", "Daily", 35000L, null, null);
         ValidationException ex = assertThrows(ValidationException.class, () -> expenseService.createExpense(request));
         assertEquals("DateTime is required", ex.getMessage());
         verify(expenseRepository, never()).insert(any(), any(), any(), any(), anyLong(), any(), anyLong(), any());
@@ -85,42 +90,42 @@ class ExpenseServiceTest {
 
     @Test
     void createExpense_invalidDateTimeFormat_shouldReject() {
-        ExpenseRequest request = new ExpenseRequest("06-08-2026", "Makan Siang", "Daily", 35000L, null);
+        ExpenseRequest request = new ExpenseRequest("06-08-2026", "Makan Siang", "Daily", 35000L, null, null);
         ValidationException ex = assertThrows(ValidationException.class, () -> expenseService.createExpense(request));
         assertEquals("DateTime must be in yyyy-MM-dd HH:mm format", ex.getMessage());
     }
 
     @Test
     void createExpense_missingName_shouldReject() {
-        ExpenseRequest request = new ExpenseRequest("2026-08-06 14:30", null, "Daily", 35000L, null);
+        ExpenseRequest request = new ExpenseRequest("2026-08-06 14:30", null, "Daily", 35000L, null, null);
         ValidationException ex = assertThrows(ValidationException.class, () -> expenseService.createExpense(request));
         assertEquals("Name is required", ex.getMessage());
     }
 
     @Test
     void createExpense_nameTooLong_shouldReject() {
-        ExpenseRequest request = new ExpenseRequest("2026-08-06 14:30", "x".repeat(256), "Daily", 35000L, null);
+        ExpenseRequest request = new ExpenseRequest("2026-08-06 14:30", "x".repeat(256), "Daily", 35000L, null, null);
         ValidationException ex = assertThrows(ValidationException.class, () -> expenseService.createExpense(request));
         assertEquals("Name must be at most 255 characters", ex.getMessage());
     }
 
     @Test
     void createExpense_missingBudget_shouldReject() {
-        ExpenseRequest request = new ExpenseRequest("2026-08-06 14:30", "Makan Siang", null, 35000L, null);
+        ExpenseRequest request = new ExpenseRequest("2026-08-06 14:30", "Makan Siang", null, 35000L, null, null);
         ValidationException ex = assertThrows(ValidationException.class, () -> expenseService.createExpense(request));
         assertEquals("Budget is required", ex.getMessage());
     }
 
     @Test
     void createExpense_missingAmount_shouldReject() {
-        ExpenseRequest request = new ExpenseRequest("2026-08-06 14:30", "Makan Siang", "Daily", null, null);
+        ExpenseRequest request = new ExpenseRequest("2026-08-06 14:30", "Makan Siang", "Daily", null, null, null);
         ValidationException ex = assertThrows(ValidationException.class, () -> expenseService.createExpense(request));
         assertEquals("Amount is required", ex.getMessage());
     }
 
     @Test
     void createExpense_zeroAmount_shouldReject() {
-        ExpenseRequest request = new ExpenseRequest("2026-08-06 14:30", "Makan Siang", "Daily", 0L, null);
+        ExpenseRequest request = new ExpenseRequest("2026-08-06 14:30", "Makan Siang", "Daily", 0L, null, null);
         ValidationException ex = assertThrows(ValidationException.class, () -> expenseService.createExpense(request));
         assertEquals("Amount must be greater than 0", ex.getMessage());
     }
@@ -128,7 +133,7 @@ class ExpenseServiceTest {
     @Test
     void createExpense_descriptionTooLong_shouldReject() {
         ExpenseRequest request = new ExpenseRequest(
-                "2026-08-06 14:30", "Makan Siang", "Daily", 35000L, "x".repeat(256));
+                "2026-08-06 14:30", "Makan Siang", "Daily", 35000L, "x".repeat(256), null);
         ValidationException ex = assertThrows(ValidationException.class, () -> expenseService.createExpense(request));
         assertEquals("Description must be at most 255 characters", ex.getMessage());
     }
@@ -137,7 +142,7 @@ class ExpenseServiceTest {
     void updateExpense_changeAmount_sameBudget_shouldAdjustBalanceByDelta() {
         when(expenseRepository.findById("id123")).thenReturn(expenseData());
         when(budgetRepository.findIdByName("Daily")).thenReturn(1L);
-        ExpenseRequest request = new ExpenseRequest("2026-08-06 14:30", "Makan Siang", "Daily", 20000L, null);
+        ExpenseRequest request = new ExpenseRequest("2026-08-06 14:30", "Makan Siang", "Daily", 20000L, null, null);
         assertDoesNotThrow(() -> expenseService.updateExpense("id123", request));
         verify(budgetRepository).adjustBalance("Daily", 15000L);
         verify(expenseRepository).update(eq("id123"), eq(LocalDate.of(2026, 7, 25)),
@@ -148,7 +153,7 @@ class ExpenseServiceTest {
     void updateExpense_changeBudget_shouldMoveBalanceBetweenBudgets() {
         when(expenseRepository.findById("id123")).thenReturn(expenseData());
         when(budgetRepository.findIdByName("Weekly")).thenReturn(2L);
-        ExpenseRequest request = new ExpenseRequest("2026-08-06 14:30", "Makan Siang", "Weekly", 35000L, null);
+        ExpenseRequest request = new ExpenseRequest("2026-08-06 14:30", "Makan Siang", "Weekly", 35000L, null, null);
         assertDoesNotThrow(() -> expenseService.updateExpense("id123", request));
         verify(budgetRepository).adjustBalance("Daily", 35000L);
         verify(budgetRepository).adjustBalance("Weekly", -35000L);
@@ -179,9 +184,9 @@ class ExpenseServiceTest {
     @Test
     void getSummary_shouldAggregateTotalAndByBudget() {
         when(expenseRepository.getExpenses("2026-JUL-AUG")).thenReturn(List.of(
-                new ExpenseData("1", "2026-JUL-AUG", "2026-08-01 09:00", "a", "Daily", 1000L, null, false, false),
-                new ExpenseData("2", "2026-JUL-AUG", "2026-08-02 09:00", "b", "Daily", 2000L, null, false, false),
-                new ExpenseData("3", "2026-JUL-AUG", "2026-08-03 09:00", "c", "Weekly", 5000L, null, false, false)));
+                new ExpenseData("1", "2026-JUL-AUG", "2026-08-01 09:00", "a", "Daily", 1000L, null, false, false, null),
+                new ExpenseData("2", "2026-JUL-AUG", "2026-08-02 09:00", "b", "Daily", 2000L, null, false, false, null),
+                new ExpenseData("3", "2026-JUL-AUG", "2026-08-03 09:00", "c", "Weekly", 5000L, null, false, false, null)));
         var summary = expenseService.getSummary("2026-JUL-AUG");
         assertEquals(8000L, summary.total());
         assertEquals(3, summary.count());
@@ -313,5 +318,60 @@ class ExpenseServiceTest {
         ValidationException ex = assertThrows(ValidationException.class,
                 () -> expenseService.updateBudget("Gadget", new BudgetUpdateRequest("", null)));
         assertEquals("Name is required", ex.getMessage());
+    }
+
+    @Test
+    void createExpense_withInvoiceInSamePeriod_shouldAttachInvoice() {
+        when(budgetRepository.findIdByName("Daily")).thenReturn(1L);
+        when(invoiceService.requireInvoice("inv-1")).thenReturn(new InvoiceData("inv-1", "2026-JUL-AUG", "f.jpg"));
+        ExpenseRequest request = new ExpenseRequest("2026-08-06 14:30", "Makan Siang", "Daily", 35000L, null, "inv-1");
+        assertDoesNotThrow(() -> expenseService.createExpense(request));
+        verify(expenseRepository).attachInvoice(anyString(), eq("inv-1"));
+    }
+
+    @Test
+    void createExpense_withInvoiceFromOtherPeriod_shouldReject() {
+        when(budgetRepository.findIdByName("Daily")).thenReturn(1L);
+        when(invoiceService.requireInvoice("inv-9")).thenReturn(new InvoiceData("inv-9", "2026-AUG-SEP", "f.jpg"));
+        ExpenseRequest request = new ExpenseRequest("2026-08-06 14:30", "Makan Siang", "Daily", 35000L, null, "inv-9");
+        ValidationException ex = assertThrows(ValidationException.class, () -> expenseService.createExpense(request));
+        assertEquals("Invoice is not in the same period as the expense", ex.getMessage());
+        verify(expenseRepository, never()).attachInvoice(any(), any());
+    }
+
+    @Test
+    void createExpense_withMissingInvoice_shouldReject() {
+        when(budgetRepository.findIdByName("Daily")).thenReturn(1L);
+        when(invoiceService.requireInvoice("missing")).thenThrow(new ValidationException("Invoice not found"));
+        ExpenseRequest request = new ExpenseRequest("2026-08-06 14:30", "Makan Siang", "Daily", 35000L, null, "missing");
+        ValidationException ex = assertThrows(ValidationException.class, () -> expenseService.createExpense(request));
+        assertEquals("Invoice not found", ex.getMessage());
+    }
+
+    @Test
+    void attachPhoto_shouldCreateInvoiceAndAttach() {
+        when(expenseRepository.findById("id123")).thenReturn(expenseData());
+        when(invoiceService.createInvoice(eq("2026-JUL-AUG"), eq(LocalDate.of(2026, 7, 25)), any()))
+                .thenReturn("inv-new");
+        MultipartFile file = mock(MultipartFile.class);
+        assertDoesNotThrow(() -> expenseService.attachPhoto("id123", file));
+        verify(invoiceService).createInvoice(eq("2026-JUL-AUG"), eq(LocalDate.of(2026, 7, 25)), eq(file));
+        verify(expenseRepository).attachInvoice("id123", "inv-new");
+    }
+
+    @Test
+    void getPhotoPath_withInvoice_shouldResolveViaInvoice() {
+        when(expenseRepository.findById("id123")).thenReturn(
+                new ExpenseData("id123", "2026-JUL-AUG", "2026-08-06 14:30", "Makan Siang", "Daily",
+                        35000L, null, false, true, "inv-1"));
+        when(invoiceService.getInvoicePhotoPath("inv-1")).thenReturn("/uploads/inv-1.jpg");
+        assertEquals("/uploads/inv-1.jpg", expenseService.getPhotoPath("id123"));
+    }
+
+    @Test
+    void getPhotoPath_withoutInvoice_shouldReturnNull() {
+        when(expenseRepository.findById("id123")).thenReturn(expenseData());
+        assertEquals(null, expenseService.getPhotoPath("id123"));
+        verify(invoiceService, never()).getInvoicePhotoPath(anyString());
     }
 }
