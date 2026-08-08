@@ -44,6 +44,18 @@ public class InvoiceRepository {
         return paths.isEmpty() ? null : paths.get(0);
     }
 
+    public int countExpensesUsing(String id) {
+        List<Integer> counts = jdbcTemplate.query(
+                "SELECT COUNT(*) FROM expenses WHERE invoice_id = ?",
+                (rs, rowNum) -> rs.getInt(1),
+                id);
+        return counts.isEmpty() ? 0 : counts.get(0);
+    }
+
+    public void delete(String id) {
+        jdbcTemplate.update("DELETE FROM invoices WHERE id = ?", id);
+    }
+
     private InvoiceData mapRow(ResultSet rs, int rowNum) throws SQLException {
         return new InvoiceData(
                 rs.getString("id"),

@@ -374,4 +374,53 @@ class ExpenseServiceTest {
         assertEquals(null, expenseService.getPhotoPath("id123"));
         verify(invoiceService, never()).getInvoicePhotoPath(anyString());
     }
+
+    @Test
+    void detachPhoto_shouldClearInvoice() {
+        when(expenseRepository.findById("id123")).thenReturn(expenseData());
+        assertDoesNotThrow(() -> expenseService.detachPhoto("id123"));
+        verify(expenseRepository).detachPhoto("id123");
+        verify(invoiceService, never()).deleteIfUnused(anyString());
+    }
+
+    @Test
+    void detachPhoto_withInvoice_shouldCleanupIfUnused() {
+        when(expenseRepository.findById("id123")).thenReturn(
+                new ExpenseData("id123", "2026-JUL-AUG", "2026-08-06 14:30", "Makan Siang", "Daily",
+                        35000L, null, false, true, "inv-1"));
+        when(invoiceService.deleteIfUnused("inv-1")).thenReturn(true);
+        assertDoesNotThrow(() -> expenseService.detachPhoto("id123"));
+        verify(expenseRepository).detachPhoto("id123");
+        verify(invoiceService).deleteIfUnused("inv-1");
+    }
+
+    @Test
+    void detachPhoto_notFound_shouldReject() {
+        when(expenseRepository.findById("missing")).thenReturn(null);
+        ValidationException ex = assertThrows(ValidationException.class, () -> expenseService.detachPhoto("missing"));
+        assertEquals("Expense not found", ex.getMessage());
+        verify(expenseRepository, never()).detachPhoto(anyString());
+    }
+
+    @Test
+    void updateExpense_withInvoiceInSamePeriod_shouldAttachInvoice() {
+        when(expenseRepository.findById("id123")).thenReturn(expenseData());
+        when(budgetRepository.findIdByName("Daily")).thenReturn(1L);
+        when(invoiceService.requireInvoice("inv-1")).thenReturn(new InvoiceData("inv-1", "2026-JUL-AUG", "f.jpg"));
+        ExpenseRequest request = new ExpenseRequest("2026-08-06 14:30", "Makan Siang", "Daily", 35000L, null, "inv-1");
+        assertDoesNotThrow(() -> expenseService.updateExpense("id123", request));
+        verify(expenseRepository).attachInvoice("id123", "inv-1");
+    }
+
+    @Test
+    void updateExpense_withInvoiceFromOtherPeriod_shouldReject() {
+        when(expenseRepository.findById("id123")).thenReturn(expenseData());
+        when(budgetRepository.findIdByName("Daily")).thenReturn(1L);
+        when(invoiceService.requireInvoice("inv-9")).thenReturn(new InvoiceData("inv-9", "2026-AUG-SEP", "f.jpg"));
+        ExpenseRequest request = new ExpenseRequest("2026-08-06 14:30", "Makan Siang", "Daily", 35000L, null, "inv-9");
+        ValidationException ex = assertThrows(ValidationException.class,
+                () -> expenseService.updateExpense("id123", request));
+        assertEquals("Invoice is not in the same period as the expense", ex.getMessage());
+        verify(expenseRepository, never()).attachInvoice(any(), any());
+    }
 }

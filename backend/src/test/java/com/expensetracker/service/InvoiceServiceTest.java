@@ -11,14 +11,19 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.time.LocalDate;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -98,5 +103,34 @@ class InvoiceServiceTest {
     void requireInvoice_found_shouldReturnInvoice() {
         when(invoiceRepository.findById("inv-1")).thenReturn(new InvoiceData("inv-1", "2026-JUL-AUG", "a.jpg"));
         assertEquals("2026-JUL-AUG", invoiceService.requireInvoice("inv-1").period());
+    }
+
+    @Test
+    void deleteIfUnused_stillUsed_shouldDoNothing() {
+        when(invoiceRepository.countExpensesUsing("inv-1")).thenReturn(2);
+        assertFalse(invoiceService.deleteIfUnused("inv-1"));
+        verify(invoiceRepository, never()).delete("inv-1");
+    }
+
+    @Test
+    void deleteIfUnused_unused_shouldDeleteRowAndFile() throws Exception {
+        when(invoiceRepository.countExpensesUsing("inv-1")).thenReturn(0);
+        when(invoiceRepository.getPhotoPath("inv-1")).thenReturn("inv-1.jpg");
+        // buat file dummy di uploadDir agar Files.deleteIfExists benar-benar menghapus
+        Path target = Path.of("/tmp", "inv-1.jpg");
+        Files.createDirectories(target.getParent());
+        Files.write(target, new byte[]{1, 2, 3});
+        ReflectionTestUtils.setField(invoiceService, "uploadDir", "/tmp");
+
+        assertTrue(invoiceService.deleteIfUnused("inv-1"));
+        verify(invoiceRepository).delete("inv-1");
+        assertFalse(Files.exists(target));
+    }
+
+    @Test
+    void deleteIfUnused_blankOrNull_shouldDoNothing() {
+        assertFalse(invoiceService.deleteIfUnused(null));
+        assertFalse(invoiceService.deleteIfUnused("  "));
+        verify(invoiceRepository, never()).delete(anyString());
     }
 }
