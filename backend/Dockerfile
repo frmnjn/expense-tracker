@@ -8,5 +8,6 @@ RUN mvn -q package -DskipTests
 FROM eclipse-temurin:25-jre
 WORKDIR /app
 COPY --from=build /app/target/app.jar app.jar
+COPY --from=build /app/src/main/resources/db/migration /app/db/migration
 EXPOSE 8080
 ENTRYPOINT ["java", "-Xms32m", "-Xmx128m", "-XX:MaxMetaspaceSize=128m", "-XX:ReservedCodeCacheSize=64m", "-XX:+UseSerialGC", "-Djava.awt.headless=true", "-Dspring.jmx.enabled=false", "-jar", "app.jar"]

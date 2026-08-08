@@ -59,6 +59,7 @@ docker run --rm \
 echo "==> [3/5] Jalankan jar dengan tracing agent & hit endpoint"
 docker run --rm \
     -v "${PROJECT_ROOT}/backend:/app:ro" \
+    -v "${PROJECT_ROOT}/backend/src/main/resources/db/migration:/app/db/migration:ro" \
     -v "${OUTPUT_DIR}:/config" \
     -e "DB_URL=${DB_URL}" \
     -e "DB_USER=${DB_USER}" \
