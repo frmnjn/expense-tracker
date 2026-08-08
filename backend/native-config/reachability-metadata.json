@@ -6793,18 +6793,6 @@
       "glob": "db/callback"
     },
     {
-      "glob": "db/migration"
-    },
-    {
-      "glob": "db/migration/V1__init.sql"
-    },
-    {
-      "glob": "db/migration/V2__budget_is_active.sql"
-    },
-    {
-      "glob": "db/migration/V3__seed_default_budgets.sql"
-    },
-    {
       "glob": "git.properties"
     },
     {
