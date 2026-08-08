@@ -44,12 +44,15 @@ class ExpenseServiceTest {
     private TopUpRepository topUpRepository;
     @Mock
     private InvoiceService invoiceService;
+    @Mock
+    private NotificationService notificationService;
 
     private ExpenseService expenseService;
 
     @BeforeEach
     void setUp() {
-        expenseService = new ExpenseService(budgetRepository, expenseRepository, topUpRepository, invoiceService);
+        expenseService = new ExpenseService(budgetRepository, expenseRepository, topUpRepository,
+                invoiceService, notificationService);
     }
 
     private static ExpenseRequest validRequest() {
@@ -422,5 +425,36 @@ class ExpenseServiceTest {
                 () -> expenseService.updateExpense("id123", request));
         assertEquals("Invoice is not in the same period as the expense", ex.getMessage());
         verify(expenseRepository, never()).attachInvoice(any(), any());
+    }
+
+    @Test
+    void createExpense_budgetBelowThreshold_shouldSendAlert() {
+        when(budgetRepository.findIdByName("Daily")).thenReturn(1L);
+        when(budgetRepository.getAlertThreshold("Daily")).thenReturn(50000L);
+        when(budgetRepository.getBalance("Daily")).thenReturn(30000L);
+        assertDoesNotThrow(() -> expenseService.createExpense(validRequest()));
+        verify(notificationService).sendExpenseCreated(eq("Makan Siang"), eq("Daily"), eq(35000L), anyString(),
+                eq(30000L));
+        verify(notificationService).sendBudgetAlert(eq("Daily"), eq(30000L), eq(50000L));
+    }
+
+    @Test
+    void createExpense_thresholdZero_shouldNotSendAlert() {
+        when(budgetRepository.findIdByName("Daily")).thenReturn(1L);
+        when(budgetRepository.getAlertThreshold("Daily")).thenReturn(0L);
+        when(budgetRepository.getBalance("Daily")).thenReturn(10000L);
+        assertDoesNotThrow(() -> expenseService.createExpense(validRequest()));
+        verify(notificationService).sendExpenseCreated(eq("Makan Siang"), eq("Daily"), eq(35000L), anyString(),
+                eq(10000L));
+        verify(notificationService, never()).sendBudgetAlert(anyString(), anyLong(), anyLong());
+    }
+
+    @Test
+    void createTopUp_shouldSendTopUpNotification() {
+        when(budgetRepository.findIdByName("Daily")).thenReturn(1L);
+        when(budgetRepository.getBalance("Daily")).thenReturn(150000L);
+        assertDoesNotThrow(() -> expenseService.createTopUp(
+                new TopUpRequest("2026-08-07 10:00", "Daily", 50000L, "Gaji")));
+        verify(notificationService).sendTopUp("Daily", 50000L, 150000L);
     }
 }

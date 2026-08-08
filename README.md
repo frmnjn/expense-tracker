@@ -12,6 +12,7 @@ Aplikasi web untuk mencatat pengeluaran harian, memantau saldo per budget, dan m
 * Riwayat per periode: search, filter, sort, edit (termasuk ganti/hapus foto), hapus, lihat foto
 * Kelola budget (tambah/edit/hapus, soft delete)
 * Idempotensi POST (header `Idempotency-Key`) untuk mencegah duplikat
+* Notifikasi email (Gmail SMTP via microservice `notifier`): konfirmasi expense/top-up/budget + peringatan budget menipis (threshold per budget)
 * Dark mode (default gelap)
 
 ---
@@ -20,6 +21,7 @@ Aplikasi web untuk mencatat pengeluaran harian, memantau saldo per budget, dan m
 
 * **Frontend:** React 19 + Vite + TypeScript, React Router, TanStack Query, Axios, Mantine UI
 * **Backend:** Java 25 + Spring Boot 4, Spring JDBC (JdbcTemplate), Flyway, GraalVM Native Image (produksi)
+* **Notifier:** Go (std lib `net/smtp`), kirim email via Gmail SMTP
 * **Storage:** MySQL 8+
 
 ---
@@ -71,7 +73,23 @@ DB_URL=jdbc:mysql://host.docker.internal:33060/expense_tracker?useSSL=false&allo
 DB_USER=expense_tracker_user
 DB_PASSWORD=password-kuat
 UPLOAD_DIR=/app/uploads
+NOTIFIER_URL=http://notifier:8081
+NOTIFY_EMAILS=email1@example.com,email2@example.com
+NOTIFY_TEST_MODE=false
+NOTIFY_TEST_EMAIL=your-email@gmail.com
 ```
+
+### Notifier (`notifier`, Gmail SMTP)
+
+```text
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your-email@gmail.com
+SMTP_APP_PASSWORD=your-gmail-app-password
+SMTP_FROM=your-email@gmail.com
+```
+
+Gmail wajib memakai **App Password** (aktifkan 2FA dulu).
 
 ### Frontend
 
@@ -134,6 +152,7 @@ Build & deploy hanya dari PC lokal (butuh RAM ~7GB untuk build native).
 frontend/   # React (Vite)
 backend/    # Spring Boot
   src/main/resources/db/migration/   # Flyway migration
+notifier/   # Go microservice notifikasi email (SMTP)
 scripts/    # backup, restore, seed
 docker-compose.yml       # lokal (dengan mysql service)
 docker-compose.prod.yml  # produksi (MySQL VPS)

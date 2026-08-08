@@ -2,13 +2,27 @@ services:
   backend:
     image: expense-tracker-backend-native:latest
     restart: unless-stopped
-    mem_limit: 128m
+    mem_limit: 192m
     env_file:
       - ./backend/.env
     extra_hosts:
       - "host.docker.internal:host-gateway"
+    environment:
+      NOTIFIER_URL: http://notifier:8081
     volumes:
       - ./uploads:/app/uploads
+
+  notifier:
+    build:
+      context: ./notifier
+    restart: unless-stopped
+    environment:
+      SMTP_HOST: ${SMTP_HOST:-smtp.gmail.com}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_APP_PASSWORD: ${SMTP_APP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+      PORT: 8081
 
   frontend:
     build:

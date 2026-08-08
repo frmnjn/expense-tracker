@@ -38,6 +38,14 @@ public class BudgetRepository {
         return balances.isEmpty() ? 0 : balances.get(0);
     }
 
+    public long getAlertThreshold(String name) {
+        List<Long> thresholds = jdbcTemplate.query(
+                "SELECT alert_threshold FROM budgets WHERE name = ?",
+                (rs, rowNum) -> rs.getLong("alert_threshold"),
+                name);
+        return thresholds.isEmpty() ? 0 : thresholds.get(0);
+    }
+
     public void adjustBalance(String name, long delta) {
         int updated = jdbcTemplate.update(
                 "UPDATE budgets SET balance = balance + ? WHERE name = ? AND is_active = TRUE",

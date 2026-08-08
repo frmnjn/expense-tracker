@@ -40,15 +40,18 @@ public class ExpenseService {
     private final ExpenseRepository expenseRepository;
     private final TopUpRepository topUpRepository;
     private final InvoiceService invoiceService;
+    private final NotificationService notificationService;
 
     public ExpenseService(BudgetRepository budgetRepository,
                           ExpenseRepository expenseRepository,
                           TopUpRepository topUpRepository,
-                          InvoiceService invoiceService) {
+                          InvoiceService invoiceService,
+                          NotificationService notificationService) {
         this.budgetRepository = budgetRepository;
         this.expenseRepository = expenseRepository;
         this.topUpRepository = topUpRepository;
         this.invoiceService = invoiceService;
+        this.notificationService = notificationService;
     }
 
     public OptionsResponse getOptions() {
@@ -69,6 +72,7 @@ public class ExpenseService {
         } catch (IllegalStateException e) {
             throw new ValidationException("Budget already exists");
         }
+        notificationService.sendBudgetCreated(request.name().trim(), balance);
     }
 
     @Transactional
@@ -122,7 +126,17 @@ public class ExpenseService {
             attachInvoiceToExpense(id, request.invoiceId(), period);
         }
         budgetRepository.adjustBalance(request.budget(), -request.amount());
+        notificationService.sendExpenseCreated(request.name(), request.budget(), request.amount(),
+                dateTime.format(PeriodSheetName.FORMATTER), budgetRepository.getBalance(request.budget()));
+        checkBudgetAlert(request.budget());
         return id;
+    }
+
+    private void checkBudgetAlert(String budget) {
+        long threshold = budgetRepository.getAlertThreshold(budget);
+        if (threshold > 0 && budgetRepository.getBalance(budget) < threshold) {
+            notificationService.sendBudgetAlert(budget, budgetRepository.getBalance(budget), threshold);
+        }
     }
 
     private void attachInvoiceToExpense(String expenseId, String invoiceId, String period) {
@@ -223,6 +237,7 @@ public class ExpenseService {
                 request.amount(),
                 request.description());
         budgetRepository.adjustBalance(request.budget(), request.amount());
+        notificationService.sendTopUp(request.budget(), request.amount(), budgetRepository.getBalance(request.budget()));
     }
 
     @Transactional
