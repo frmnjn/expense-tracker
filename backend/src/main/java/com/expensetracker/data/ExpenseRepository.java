@@ -40,7 +40,7 @@ public class ExpenseRepository {
 
     public List<String> getPeriods() {
         return jdbcTemplate.query(
-                "SELECT period FROM expenses GROUP BY period ORDER BY MAX(period_start) DESC",
+                "SELECT period FROM expenses WHERE deleted = FALSE GROUP BY period ORDER BY MAX(period_start) DESC",
                 (rs, rowNum) -> rs.getString("period"));
     }
 
