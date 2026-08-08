@@ -641,3 +641,22 @@ Mengganti `spring.sql.init` (schema.sql) dengan Flyway versioned migrations agar
 * [x] Fresh DB: V1+V2+V3 jalan, schema & seed budget ada
 * [x] Existing DB tanpa history & tanpa is_active: baseline V1 -> V2 tambah is_active -> V3, data dipertahankan
 * [ ] Native config regen + build (saat deploy)
+
+---
+
+# Phase 20 - Backup & Restore MySQL
+
+## Scripts
+
+* [x] `scripts/backup_mysql.sh` (mysqldump + gzip + rotasi, baca kredensial dari `.env`)
+* [x] `scripts/restore_mysql.sh`
+
+## VPS
+
+* [x] Backup manual teruji (dump berisi data produksi)
+* [x] Restore teruji (menimpa DB dengan isi backup)
+* [x] Cron harian terpasang (20:00 UTC / 03:00 WIB) + log `/var/log/expense-backup.log`
+
+## Docs
+
+* [x] README: section Backup & Restore MySQL

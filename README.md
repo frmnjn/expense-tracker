@@ -200,6 +200,38 @@ Jika kosong, frontend memakai `/api` (default). Nilai ini relatif dan diproxy ol
 
 ---
 
+# Backup & Restore MySQL
+
+Backup database `expense_tracker` (berbagi instance MySQL dengan WordPress) via script di VPS.
+
+## Backup
+
+```bash
+cd /root/expense-tracker
+./scripts/backup_mysql.sh
+```
+
+Membuat `backups/expense_tracker_<timestamp>.sql.gz` dan menyimpan 14 backup terakhir (variabel `KEEP`, `BACKUP_DIR`, `MYSQL_CONTAINER` bisa di-override).
+
+## Jadwal otomatis (cron)
+
+Cron harian pukul 20:00 UTC (03:00 WIB) sudah dipasang di VPS:
+
+```
+0 20 * * * /root/expense-tracker/scripts/backup_mysql.sh >> /var/log/expense-backup.log 2>&1
+```
+
+## Restore
+
+```bash
+cd /root/expense-tracker
+./scripts/restore_mysql.sh backups/expense_tracker_20260808_124931.sql.gz
+```
+
+**Peringatan:** restore akan menimpa data `expense_tracker` saat ini.
+
+---
+
 # Running the Application
 
 Jalankan:
