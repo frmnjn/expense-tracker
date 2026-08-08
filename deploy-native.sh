@@ -46,7 +46,10 @@ ssh -o BatchMode=yes "root@${VPS_HOST}" "docker load < /tmp/backend-native.tar.g
 echo "==> [5/6] up -d dengan docker-compose.prod.yml"
 ssh -o BatchMode=yes "root@${VPS_HOST}" "cd ${VPS_DIR} && docker compose -f docker-compose.prod.yml up -d --build"
 
-echo "==> [6/6] Verifikasi"
+echo "==> [6/6] Bersihkan image lama (dangling) di VPS"
+ssh -o BatchMode=yes "root@${VPS_HOST}" "docker image prune -f" || true
+
+echo "==> [7/7] Verifikasi"
 sleep 5
 ssh -o BatchMode=yes "root@${VPS_HOST}" "cd ${VPS_DIR} && docker compose -f docker-compose.prod.yml ps; echo '--- memory ---'; docker stats --no-stream --format '{{.Name}} | {{.MemUsage}}' \$(docker ps -q --filter name=expense-tracker_backend) 2>/dev/null || true"
 
