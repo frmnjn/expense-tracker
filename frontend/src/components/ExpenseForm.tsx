@@ -16,7 +16,8 @@ import { DateTimePicker } from '@mantine/dates'
 import { notifications } from '@mantine/notifications'
 import { useQueryClient } from '@tanstack/react-query'
 import dayjs from 'dayjs'
-import { useCreateExpense } from '../hooks/useCreateExpense'
+import PhotoInput from './PhotoInput'
+import { useCreateExpense, useUploadPhoto } from '../hooks/useCreateExpense'
 import { useOptions } from '../hooks/useOptions'
 import { formatCurrency } from '../utils/currency'
 
@@ -30,9 +31,11 @@ function ExpenseForm() {
   const [budget, setBudget] = useState<string | null>(null)
   const [amount, setAmount] = useState<string | number>('')
   const [description, setDescription] = useState('')
+  const [photo, setPhoto] = useState<File | null>(null)
 
   const { data: options, isPending: optionsLoading } = useOptions()
   const createExpense = useCreateExpense()
+  const uploadPhoto = useUploadPhoto()
   const queryClient = useQueryClient()
 
   const nowDisabled = mode === 'now'
@@ -40,6 +43,15 @@ function ExpenseForm() {
 
   const submitDisabled =
     name.trim() === '' || !budget || Number(amount) <= 0 || createExpense.isPending
+
+  const resetForm = () => {
+    setName('')
+    setBudget(null)
+    setAmount('')
+    setDescription('')
+    setPhoto(null)
+    setDateTime(dayjs().format(DATE_TIME_SECONDS_FORMAT))
+  }
 
   const handleSubmit = () => {
     createExpense.mutate(
@@ -51,18 +63,24 @@ function ExpenseForm() {
         description: description.trim() === '' ? undefined : description.trim(),
       },
       {
-        onSuccess: () => {
-          notifications.show({
-            title: 'Berhasil',
-            message: 'Pengeluaran berhasil disimpan',
-            color: 'green',
-          })
-          queryClient.invalidateQueries({ queryKey: ['options'] })
-          setName('')
-          setBudget(null)
-          setAmount('')
-          setDescription('')
-          setDateTime(dayjs().format(DATE_TIME_SECONDS_FORMAT))
+        onSuccess: (result) => {
+          const finish = () => {
+            notifications.show({
+              title: 'Berhasil',
+              message: 'Pengeluaran berhasil disimpan',
+              color: 'green',
+            })
+            queryClient.invalidateQueries({ queryKey: ['options'] })
+            resetForm()
+          }
+          if (photo && result.id) {
+            uploadPhoto.mutate(
+              { id: result.id, file: photo },
+              { onSuccess: finish, onError: finish },
+            )
+          } else {
+            finish()
+          }
         },
         onError: (error) => {
           const message =
@@ -204,6 +222,8 @@ function ExpenseForm() {
           maxLength={255}
           size="md"
         />
+
+        <PhotoInput value={photo} onChange={setPhoto} />
 
         <Box
           mt="md"

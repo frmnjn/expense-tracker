@@ -53,7 +53,7 @@ class ExpenseServiceTest {
 
     private static ExpenseData expenseData() {
         return new ExpenseData("id123", "2026-JUL-AUG", "2026-08-06 14:30", "Makan Siang", "Daily",
-                35000L, null, false);
+                35000L, null, false, false);
     }
 
     @Test
@@ -179,9 +179,9 @@ class ExpenseServiceTest {
     @Test
     void getSummary_shouldAggregateTotalAndByBudget() {
         when(expenseRepository.getExpenses("2026-JUL-AUG")).thenReturn(List.of(
-                new ExpenseData("1", "2026-JUL-AUG", "2026-08-01 09:00", "a", "Daily", 1000L, null, false),
-                new ExpenseData("2", "2026-JUL-AUG", "2026-08-02 09:00", "b", "Daily", 2000L, null, false),
-                new ExpenseData("3", "2026-JUL-AUG", "2026-08-03 09:00", "c", "Weekly", 5000L, null, false)));
+                new ExpenseData("1", "2026-JUL-AUG", "2026-08-01 09:00", "a", "Daily", 1000L, null, false, false),
+                new ExpenseData("2", "2026-JUL-AUG", "2026-08-02 09:00", "b", "Daily", 2000L, null, false, false),
+                new ExpenseData("3", "2026-JUL-AUG", "2026-08-03 09:00", "c", "Weekly", 5000L, null, false, false)));
         var summary = expenseService.getSummary("2026-JUL-AUG");
         assertEquals(8000L, summary.total());
         assertEquals(3, summary.count());

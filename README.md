@@ -21,7 +21,8 @@ Data disimpan di database **MySQL** (berbagi instance dengan WordPress di VPS, m
 * Dashboard ringkasan per periode (total, saldo per budget, pengeluaran terbesar)
 * Dashboard 3 bulan terakhir (total + transaksi per periode, bar visual)
 * Top-up saldo via aplikasi (tambah saldo budget + riwayat)
-* Tambah, edit, & hapus budget (edit nama & saldo; hapus soft delete)
+* Tambah & hapus budget (soft delete, hapus juga expense-nya)
+* Upload & lihat foto invoice (opsional)
 * Validasi input
 * Menyimpan data ke MySQL
 * REST API menggunakan Java Spring Boot
@@ -178,6 +179,7 @@ PORT=8080
 DB_URL=jdbc:mysql://host.docker.internal:33060/expense_tracker?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
 DB_USER=expense_tracker_user
 DB_PASSWORD=change-me
+UPLOAD_DIR=/app/uploads
 ```
 
 ---
