@@ -4,6 +4,8 @@ import com.expensetracker.data.BudgetRepository;
 import com.expensetracker.data.ExpenseData;
 import com.expensetracker.data.ExpenseRepository;
 import com.expensetracker.data.TopUpRepository;
+import com.expensetracker.model.BudgetCreateRequest;
+import com.expensetracker.model.BudgetUpdateRequest;
 import com.expensetracker.model.ExpenseRequest;
 import com.expensetracker.model.TopUpRequest;
 import org.junit.jupiter.api.BeforeEach;
@@ -26,6 +28,7 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.doThrow;
 
 @ExtendWith(MockitoExtension.class)
 class ExpenseServiceTest {
@@ -239,5 +242,76 @@ class ExpenseServiceTest {
     void getTrend_invalidMonths_shouldReject() {
         ValidationException ex = assertThrows(ValidationException.class, () -> expenseService.getTrend(0));
         assertEquals("Months must be greater than 0", ex.getMessage());
+    }
+
+    @Test
+    void createBudget_validRequest_shouldCreateWithDefaultBalance() {
+        assertDoesNotThrow(() -> expenseService.createBudget(new BudgetCreateRequest("Gadget", null)));
+        verify(budgetRepository).create("Gadget", 0L);
+    }
+
+    @Test
+    void createBudget_withBalance_shouldCreateWithBalance() {
+        assertDoesNotThrow(() -> expenseService.createBudget(new BudgetCreateRequest("Gadget", 100000L)));
+        verify(budgetRepository).create("Gadget", 100000L);
+    }
+
+    @Test
+    void createBudget_missingName_shouldReject() {
+        ValidationException ex = assertThrows(ValidationException.class,
+                () -> expenseService.createBudget(new BudgetCreateRequest("", null)));
+        assertEquals("Name is required", ex.getMessage());
+    }
+
+    @Test
+    void createBudget_duplicate_shouldReject() {
+        doThrow(new IllegalStateException("dup")).when(budgetRepository).create("Gadget", 0L);
+        ValidationException ex = assertThrows(ValidationException.class,
+                () -> expenseService.createBudget(new BudgetCreateRequest("Gadget", null)));
+        assertEquals("Budget already exists", ex.getMessage());
+    }
+
+    @Test
+    void deleteBudget_found_shouldSoftDelete() {
+        when(budgetRepository.softDelete("Gadget")).thenReturn(true);
+        assertDoesNotThrow(() -> expenseService.deleteBudget("Gadget"));
+        verify(budgetRepository).softDelete("Gadget");
+    }
+
+    @Test
+    void deleteBudget_notFound_shouldReject() {
+        when(budgetRepository.softDelete("Gadget")).thenReturn(false);
+        ValidationException ex = assertThrows(ValidationException.class, () -> expenseService.deleteBudget("Gadget"));
+        assertEquals("Budget not found", ex.getMessage());
+    }
+
+    @Test
+    void updateBudget_shouldRenameAndSetBalance() {
+        when(budgetRepository.update("Gadget", "Gadget2", 200000L)).thenReturn(true);
+        assertDoesNotThrow(() -> expenseService.updateBudget("Gadget", new BudgetUpdateRequest("Gadget2", 200000L)));
+        verify(budgetRepository).update("Gadget", "Gadget2", 200000L);
+    }
+
+    @Test
+    void updateBudget_notFound_shouldReject() {
+        when(budgetRepository.update("Gadget", "Gadget2", null)).thenReturn(false);
+        ValidationException ex = assertThrows(ValidationException.class,
+                () -> expenseService.updateBudget("Gadget", new BudgetUpdateRequest("Gadget2", null)));
+        assertEquals("Budget not found", ex.getMessage());
+    }
+
+    @Test
+    void updateBudget_duplicateName_shouldReject() {
+        when(budgetRepository.update("Gadget", "Household", null)).thenThrow(new IllegalStateException("dup"));
+        ValidationException ex = assertThrows(ValidationException.class,
+                () -> expenseService.updateBudget("Gadget", new BudgetUpdateRequest("Household", null)));
+        assertEquals("Budget already exists", ex.getMessage());
+    }
+
+    @Test
+    void updateBudget_missingName_shouldReject() {
+        ValidationException ex = assertThrows(ValidationException.class,
+                () -> expenseService.updateBudget("Gadget", new BudgetUpdateRequest("", null)));
+        assertEquals("Name is required", ex.getMessage());
     }
 }

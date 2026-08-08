@@ -11,6 +11,16 @@ export interface BudgetOption {
   balance: number
 }
 
+export interface BudgetCreateRequest {
+  name: string
+  balance?: number
+}
+
+export interface BudgetUpdateRequest {
+  name: string
+  balance?: number
+}
+
 export interface OptionsResponse {
   budgets: BudgetOption[]
 }

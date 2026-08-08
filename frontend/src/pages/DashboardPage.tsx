@@ -4,6 +4,7 @@ import {
   Anchor,
   Badge,
   Box,
+  Button,
   Container,
   Group,
   LoadingOverlay,
@@ -20,6 +21,9 @@ import { useOptions } from '../hooks/useOptions'
 import ColorSchemeToggle from '../components/ColorSchemeToggle'
 import TopUpModal from '../components/TopUpModal'
 import TopUpHistoryModal from '../components/TopUpHistoryModal'
+import AddBudgetModal from '../components/AddBudgetModal'
+import EditBudgetModal from '../components/EditBudgetModal'
+import DeleteBudgetModal from '../components/DeleteBudgetModal'
 import { formatCurrency } from '../utils/currency'
 import type { BudgetSummary } from '../types/expense'
 
@@ -31,6 +35,9 @@ function DashboardPage() {
   const [period, setPeriod] = useState<string | null>(null)
   const [selectedTopUpBudget, setSelectedTopUpBudget] = useState<string | null>(null)
   const [selectedTopUpHistoryBudget, setSelectedTopUpHistoryBudget] = useState<string | null>(null)
+  const [addBudgetOpened, setAddBudgetOpened] = useState(false)
+  const [deleteBudgetName, setDeleteBudgetName] = useState<string | null>(null)
+  const [editBudget, setEditBudget] = useState<{ name: string; balance: number | undefined } | null>(null)
   const { data: summary, isPending: summaryLoading } = useSummary(period)
   const { data: trend } = useTrend(3)
   const isMobile = useMediaQuery('(max-width: 48em)')
@@ -86,6 +93,17 @@ function DashboardPage() {
             <ActionIcon size="sm" variant="subtle" color="green" onClick={() => setSelectedTopUpBudget(name)}>
               <span>+</span>
             </ActionIcon>
+            <ActionIcon
+              size="sm"
+              variant="subtle"
+              color="gray"
+              onClick={() => setEditBudget({ name, balance })}
+            >
+              <span>✎</span>
+            </ActionIcon>
+            <ActionIcon size="sm" variant="subtle" color="red" onClick={() => setDeleteBudgetName(name)}>
+              <span>🗑</span>
+            </ActionIcon>
           </Group>
         </Group>
         {info && (
@@ -129,9 +147,12 @@ function DashboardPage() {
         <LoadingOverlay visible={summaryLoading && !!period} zIndex={1000} overlayProps={{ radius: 'sm', blur: 1 }} />
 
         <Paper withBorder p={{ base: 'md', sm: 'lg' }} radius="md" shadow="sm">
-          <Title order={4} mb="sm">
-            Saldo per Budget
-          </Title>
+          <Group justify="space-between" mb="sm">
+            <Title order={4}>Saldo per Budget</Title>
+            <Button size="xs" variant="light" onClick={() => setAddBudgetOpened(true)}>
+              + Budget
+            </Button>
+          </Group>
           {allBudgets.length === 0 ? (
             <Text c="dimmed">Belum ada budget.</Text>
           ) : isMobile ? (
@@ -188,6 +209,14 @@ function DashboardPage() {
           budget={selectedTopUpHistoryBudget ?? ''}
           onClose={() => setSelectedTopUpHistoryBudget(null)}
         />
+
+        <AddBudgetModal opened={addBudgetOpened} onClose={() => setAddBudgetOpened(false)} />
+        <EditBudgetModal
+          budget={editBudget?.name ?? null}
+          balance={editBudget?.balance}
+          onClose={() => setEditBudget(null)}
+        />
+        <DeleteBudgetModal name={deleteBudgetName} onClose={() => setDeleteBudgetName(null)} />
       </Stack>
     </Container>
   )

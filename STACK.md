@@ -16,6 +16,7 @@
 - Spring Boot 4
 - Maven
 - Spring JDBC (JdbcTemplate)
+- Flyway (DB migration)
 - MySQL (Connector/J)
 - GraalVM 25 Native Image (produksi; native executable bukan JVM)
 

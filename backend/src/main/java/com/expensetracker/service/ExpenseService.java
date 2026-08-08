@@ -4,7 +4,9 @@ import com.expensetracker.data.BudgetRepository;
 import com.expensetracker.data.ExpenseData;
 import com.expensetracker.data.ExpenseRepository;
 import com.expensetracker.data.TopUpRepository;
+import com.expensetracker.model.BudgetCreateRequest;
 import com.expensetracker.model.BudgetSummary;
+import com.expensetracker.model.BudgetUpdateRequest;
 import com.expensetracker.model.ExpenseRequest;
 import com.expensetracker.model.ExpenseResponse;
 import com.expensetracker.model.ExpensesResponse;
@@ -45,6 +47,52 @@ public class ExpenseService {
 
     public OptionsResponse getOptions() {
         return new OptionsResponse(budgetRepository.getOptions());
+    }
+
+    @Transactional
+    public void createBudget(BudgetCreateRequest request) {
+        if (request.name() == null || request.name().isBlank()) {
+            throw new ValidationException("Name is required");
+        }
+        if (request.name().length() > 255) {
+            throw new ValidationException("Name must be at most 255 characters");
+        }
+        long balance = request.balance() == null ? 0 : request.balance();
+        try {
+            budgetRepository.create(request.name().trim(), balance);
+        } catch (IllegalStateException e) {
+            throw new ValidationException("Budget already exists");
+        }
+    }
+
+    @Transactional
+    public void deleteBudget(String name) {
+        if (name == null || name.isBlank()) {
+            throw new ValidationException("Name is required");
+        }
+        if (!budgetRepository.softDelete(name)) {
+            throw new ValidationException("Budget not found");
+        }
+    }
+
+    @Transactional
+    public void updateBudget(String oldName, BudgetUpdateRequest request) {
+        if (oldName == null || oldName.isBlank()) {
+            throw new ValidationException("Name is required");
+        }
+        if (request.name() == null || request.name().isBlank()) {
+            throw new ValidationException("Name is required");
+        }
+        if (request.name().length() > 255) {
+            throw new ValidationException("Name must be at most 255 characters");
+        }
+        try {
+            if (!budgetRepository.update(oldName.trim(), request.name().trim(), request.balance())) {
+                throw new ValidationException("Budget not found");
+            }
+        } catch (IllegalStateException e) {
+            throw new ValidationException("Budget already exists");
+        }
     }
 
     @Transactional
