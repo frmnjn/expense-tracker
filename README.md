@@ -79,9 +79,14 @@ NOTIFY_TEST_MODE=false
 NOTIFY_TEST_EMAIL=your-email@gmail.com
 ```
 
-### Notifier (`notifier`, Gmail SMTP)
+### Notifier (`notifier`)
+
+Provider diatur via `MAIL_PROVIDER` (`smtp` atau `resend`).
+
+**SMTP (Gmail):**
 
 ```text
+MAIL_PROVIDER=smtp
 SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USER=your-email@gmail.com
@@ -89,7 +94,17 @@ SMTP_APP_PASSWORD=your-gmail-app-password
 SMTP_FROM=your-email@gmail.com
 ```
 
-Gmail wajib memakai **App Password** (aktifkan 2FA dulu).
+Gmail wajib memakai **App Password** (aktifkan 2FA dulu). Catatan: SMTP keluar bisa **diblokir** di sebagian provider VPS (mis. Linode memblokir port SMTP); pakai Resend jika begitu.
+
+**Resend:**
+
+```text
+MAIL_PROVIDER=resend
+RESEND_API_KEY=re_xxxxxxxx
+RESEND_FROM=Expense Tracker <onboarding@resend.dev>
+```
+
+Jika limit Resend tercapai (respons `429`), notifier melewatkan pengiriman (tidak dikirim, tidak retry).
 
 ### Frontend
 

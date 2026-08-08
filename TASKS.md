@@ -729,7 +729,8 @@ Mengganti `spring.sql.init` (schema.sql) dengan Flyway versioned migrations agar
 ## notifier/ (Go)
 
 * [x] `main.go` + `go.mod` (std lib `net/smtp`, tanpa dependency)
-* [x] `POST /send` `{to[], subject, body}` via Gmail SMTP (STARTTLS, App Password)
+* [x] `POST /send` `{to[], subject, body}` — dukungan **SMTP (Gmail)** & **Resend** (`MAIL_PROVIDER`)
+* [x] Resend: jika limit tercapai (`429`) → lewati kirim (tanpa retry)
 * [x] `GET /health`
 * [x] `Dockerfile` multi-stage (Go → alpine, ca-certificates + tzdata)
 
