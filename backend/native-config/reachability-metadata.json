@@ -7,6 +7,9 @@
       "type": "boolean[]"
     },
     {
+      "type": "com.expensetracker.model.InvoiceResponse[]"
+    },
+    {
       "type": "ch.qos.logback.classic.LoggerContext"
     },
     {
