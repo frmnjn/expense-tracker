@@ -77,6 +77,13 @@ docker run --rm \
         curl -s http://localhost:8080/health >/dev/null
         curl -s http://localhost:8080/options >/dev/null
         curl -s http://localhost:8080/periods >/dev/null
+        curl -s -X POST http://localhost:8080/budgets \
+            -H "Content-Type: application/json" \
+            -d '{"name":"NativeConfigBudget","balance":1}' >/dev/null
+        curl -s -X PUT http://localhost:8080/budgets/NativeConfigBudget \
+            -H "Content-Type: application/json" \
+            -d '{"name":"NativeConfigBudget2","balance":2}' >/dev/null
+        curl -s -X DELETE http://localhost:8080/budgets/NativeConfigBudget2 >/dev/null
         curl -s -X POST http://localhost:8080/expenses \
             -H "Content-Type: application/json" \
             -d "{\"dateTime\":\"2026-01-01 09:00\",\"name\":\"native-config-gen\",\"budget\":\"Household\",\"amount\":1,\"description\":\"tracing agent\"}" >/dev/null

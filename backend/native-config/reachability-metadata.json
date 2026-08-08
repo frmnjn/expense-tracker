@@ -85,6 +85,65 @@
       "type": "com.expensetracker.config.AppConfig$1"
     },
     {
+      "type": "com.expensetracker.config.FlywayConfig",
+      "methods": [
+        {
+          "name": "flyway",
+          "parameterTypes": [
+            "javax.sql.DataSource"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "com.expensetracker.config.FlywayConfig$$SpringCGLIB$$0",
+      "fields": [
+        {
+          "name": "$$beanFactory"
+        },
+        {
+          "name": "CGLIB$CALLBACK_FILTER"
+        },
+        {
+          "name": "CGLIB$FACTORY_DATA"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        },
+        {
+          "name": "CGLIB$SET_STATIC_CALLBACKS",
+          "parameterTypes": [
+            "org.springframework.cglib.proxy.Callback[]"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "com.expensetracker.config.FlywayConfig$$SpringCGLIB$$FastClass$$0",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.Class"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "com.expensetracker.config.FlywayConfig$$SpringCGLIB$$FastClass$$1",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.Class"
+          ]
+        }
+      ]
+    },
+    {
       "type": "com.expensetracker.config.RequestLoggingFilter",
       "methods": [
         {
@@ -106,6 +165,18 @@
           "name": "createExpense",
           "parameterTypes": [
             "com.expensetracker.model.ExpenseRequest"
+          ]
+        },
+        {
+          "name": "deleteBudget",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        },
+        {
+          "name": "deleteExpense",
+          "parameterTypes": [
+            "java.lang.String"
           ]
         },
         {
@@ -141,6 +212,13 @@
         {
           "name": "health",
           "parameterTypes": []
+        },
+        {
+          "name": "updateExpense",
+          "parameterTypes": [
+            "java.lang.String",
+            "com.expensetracker.model.ExpenseRequest"
+          ]
         }
       ]
     },
@@ -154,6 +232,13 @@
           ]
         },
         {
+          "name": "adjustBalance",
+          "parameterTypes": [
+            "java.lang.String",
+            "long"
+          ]
+        },
+        {
           "name": "findIdByName",
           "parameterTypes": [
             "java.lang.String"
@@ -162,6 +247,12 @@
         {
           "name": "getOptions",
           "parameterTypes": []
+        },
+        {
+          "name": "softDelete",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
         }
       ]
     },
@@ -186,6 +277,18 @@
           ]
         },
         {
+          "name": "countForPeriod",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        },
+        {
+          "name": "findById",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        },
+        {
           "name": "getExpenses",
           "parameterTypes": [
             "java.lang.String"
@@ -194,6 +297,43 @@
         {
           "name": "getPeriods",
           "parameterTypes": []
+        },
+        {
+          "name": "insert",
+          "parameterTypes": [
+            "java.lang.String",
+            "java.lang.String",
+            "java.time.LocalDate",
+            "java.time.LocalDateTime",
+            "long",
+            "java.lang.String",
+            "long",
+            "java.lang.String"
+          ]
+        },
+        {
+          "name": "softDelete",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        },
+        {
+          "name": "totalForPeriod",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        },
+        {
+          "name": "update",
+          "parameterTypes": [
+            "java.lang.String",
+            "java.time.LocalDate",
+            "java.time.LocalDateTime",
+            "long",
+            "java.lang.String",
+            "long",
+            "java.lang.String"
+          ]
         }
       ]
     },
@@ -252,13 +392,43 @@
       ]
     },
     {
-      "type": "com.expensetracker.model.BudgetOption"
+      "type": "com.expensetracker.model.BudgetCreateRequest"
     },
     {
-      "type": "com.expensetracker.model.BudgetSummary"
+      "type": "com.expensetracker.model.BudgetOption",
+      "methods": [
+        {
+          "name": "balance",
+          "parameterTypes": []
+        },
+        {
+          "name": "name",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.expensetracker.model.BudgetSummary",
+      "methods": [
+        {
+          "name": "amount",
+          "parameterTypes": []
+        },
+        {
+          "name": "budget",
+          "parameterTypes": []
+        },
+        {
+          "name": "count",
+          "parameterTypes": []
+        }
+      ]
     },
     {
       "type": "com.expensetracker.model.BudgetSummary[]"
+    },
+    {
+      "type": "com.expensetracker.model.BudgetUpdateRequest"
     },
     {
       "type": "com.expensetracker.model.ExpenseRequest",
@@ -276,7 +446,33 @@
       ]
     },
     {
-      "type": "com.expensetracker.model.ExpenseResponse"
+      "type": "com.expensetracker.model.ExpenseResponse",
+      "methods": [
+        {
+          "name": "amount",
+          "parameterTypes": []
+        },
+        {
+          "name": "budget",
+          "parameterTypes": []
+        },
+        {
+          "name": "dateTime",
+          "parameterTypes": []
+        },
+        {
+          "name": "description",
+          "parameterTypes": []
+        },
+        {
+          "name": "id",
+          "parameterTypes": []
+        },
+        {
+          "name": "name",
+          "parameterTypes": []
+        }
+      ]
     },
     {
       "type": "com.expensetracker.model.ExpenseResponse[]"
@@ -345,7 +541,21 @@
       ]
     },
     {
-      "type": "com.expensetracker.model.TrendPoint"
+      "type": "com.expensetracker.model.TrendPoint",
+      "methods": [
+        {
+          "name": "count",
+          "parameterTypes": []
+        },
+        {
+          "name": "period",
+          "parameterTypes": []
+        },
+        {
+          "name": "total",
+          "parameterTypes": []
+        }
+      ]
     },
     {
       "type": "com.expensetracker.model.TrendResponse",
@@ -371,6 +581,18 @@
           "name": "createExpense",
           "parameterTypes": [
             "com.expensetracker.model.ExpenseRequest"
+          ]
+        },
+        {
+          "name": "deleteBudget",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        },
+        {
+          "name": "deleteExpense",
+          "parameterTypes": [
+            "java.lang.String"
           ]
         },
         {
@@ -401,6 +623,13 @@
           "name": "getTrend",
           "parameterTypes": [
             "int"
+          ]
+        },
+        {
+          "name": "updateExpense",
+          "parameterTypes": [
+            "java.lang.String",
+            "com.expensetracker.model.ExpenseRequest"
           ]
         }
       ]
@@ -454,6 +683,17 @@
           "parameterTypes": [
             "com.mysql.cj.conf.ConnectionUrlParser",
             "java.util.Properties"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "com.mysql.cj.exceptions.CJException",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.String"
           ]
         }
       ]
@@ -697,6 +937,9 @@
       "type": "java.lang.CloneNotSupportedException"
     },
     {
+      "type": "java.lang.Comparable"
+    },
+    {
       "type": "java.lang.Comparable[]"
     },
     {
@@ -734,6 +977,9 @@
     },
     {
       "type": "java.lang.String[]"
+    },
+    {
+      "type": "java.lang.System"
     },
     {
       "type": "java.lang.Thread"
@@ -823,6 +1069,9 @@
     },
     {
       "type": "java.sql.DriverManager"
+    },
+    {
+      "type": "java.sql.SQLException"
     },
     {
       "type": "java.sql.Statement[]"
@@ -2517,6 +2766,165 @@
       "type": "org.eclipse.core.runtime.FileLocator"
     },
     {
+      "type": "org.flywaydb.core.Flyway",
+      "methods": [
+        {
+          "name": "migrate",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.flywaydb.core.api.migration.baseline.BaselineAppliedMigration"
+    },
+    {
+      "type": "org.flywaydb.core.api.migration.baseline.BaselineMigrationConfigurationExtension",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        },
+        {
+          "name": "getBaselineMigrationPrefix",
+          "parameterTypes": []
+        },
+        {
+          "name": "setBaselineMigrationPrefix",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.flywaydb.core.api.migration.baseline.BaselineMigrationResolver"
+    },
+    {
+      "type": "org.flywaydb.core.api.migration.baseline.BaselineResourceTypeProvider"
+    },
+    {
+      "type": "org.flywaydb.core.extensibility.ConfigurationExtension"
+    },
+    {
+      "type": "org.flywaydb.core.extensibility.Plugin"
+    },
+    {
+      "type": "org.flywaydb.core.internal.NullFlywayTelemetryManager"
+    },
+    {
+      "type": "org.flywaydb.core.internal.configuration.resolvers.EnvironmentProvisionerNone"
+    },
+    {
+      "type": "org.flywaydb.core.internal.configuration.resolvers.EnvironmentVariableResolver"
+    },
+    {
+      "type": "org.flywaydb.core.internal.configuration.resolvers.PlaceholderPropertyResolver"
+    },
+    {
+      "type": "org.flywaydb.core.internal.database.base.TestContainersDatabaseType"
+    },
+    {
+      "type": "org.flywaydb.core.internal.database.h2.H2DatabaseType"
+    },
+    {
+      "type": "org.flywaydb.core.internal.database.sqlite.SQLiteDatabaseType"
+    },
+    {
+      "type": "org.flywaydb.core.internal.jdbc.ErrorOverrideInitializerStub"
+    },
+    {
+      "type": "org.flywaydb.core.internal.logging.slf4j.Slf4jLogCreator",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "org.flywaydb.core.internal.proprietaryStubs.AuthCommandExtensionStub"
+    },
+    {
+      "type": "org.flywaydb.core.internal.proprietaryStubs.CheckCommandExtensionStub"
+    },
+    {
+      "type": "org.flywaydb.core.internal.proprietaryStubs.DeployCommandExtensionStub"
+    },
+    {
+      "type": "org.flywaydb.core.internal.proprietaryStubs.DiffCommandExtensionStub"
+    },
+    {
+      "type": "org.flywaydb.core.internal.proprietaryStubs.DiffTextCommandExtensionStub"
+    },
+    {
+      "type": "org.flywaydb.core.internal.proprietaryStubs.GenerateCommandExtensionStub"
+    },
+    {
+      "type": "org.flywaydb.core.internal.proprietaryStubs.LicensingConfigurationExtensionStub"
+    },
+    {
+      "type": "org.flywaydb.core.internal.proprietaryStubs.ModelCommandExtensionStub"
+    },
+    {
+      "type": "org.flywaydb.core.internal.proprietaryStubs.OfflinePermitConfigurationExtensionStub"
+    },
+    {
+      "type": "org.flywaydb.core.internal.proprietaryStubs.PATTokenConfigurationExtensionStub"
+    },
+    {
+      "type": "org.flywaydb.core.internal.proprietaryStubs.PrepareCommandExtensionStub"
+    },
+    {
+      "type": "org.flywaydb.core.internal.proprietaryStubs.UndoCommandExtensionStub"
+    },
+    {
+      "type": "org.flywaydb.core.internal.publishing.PublishingConfigurationExtension",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        },
+        {
+          "name": "isCheckDriftOnMigrate",
+          "parameterTypes": []
+        },
+        {
+          "name": "isPublishResult",
+          "parameterTypes": []
+        },
+        {
+          "name": "setCheckDriftOnMigrate",
+          "parameterTypes": [
+            "boolean"
+          ]
+        },
+        {
+          "name": "setPublishResult",
+          "parameterTypes": [
+            "boolean"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "org.flywaydb.core.internal.resource.CoreResourceTypeProvider"
+    },
+    {
+      "type": "org.flywaydb.core.internal.scanner.classpath.ClasspathLocationHandlerImpl"
+    },
+    {
+      "type": "org.flywaydb.core.internal.scanner.filesystem.FilesystemLocationHandler"
+    },
+    {
+      "type": "org.flywaydb.core.internal.schemahistory.BaseAppliedMigration"
+    },
+    {
+      "type": "org.flywaydb.database.mysql.MySQLDatabaseType"
+    },
+    {
+      "type": "org.flywaydb.database.mysql.mariadb.MariaDBDatabaseType"
+    },
+    {
       "type": "org.graalvm.nativeimage.ImageInfo",
       "methods": [
         {
@@ -2536,6 +2944,15 @@
     },
     {
       "type": "org.reactivestreams.Publisher"
+    },
+    {
+      "type": "org.slf4j.Logger"
+    },
+    {
+      "type": "org.slf4j.impl.StaticLoggerBinder"
+    },
+    {
+      "type": "org.slf4j.spi.SLF4JServiceProvider"
     },
     {
       "type": "org.springframework.aop.PointcutAdvisor"
@@ -2616,6 +3033,12 @@
     },
     {
       "type": "org.springframework.aot.hint.annotation.Reflective"
+    },
+    {
+      "type": "org.springframework.aot.hint.annotation.RegisterReflection"
+    },
+    {
+      "type": "org.springframework.aot.hint.annotation.RegisterReflectionForBinding"
     },
     {
       "type": "org.springframework.beans.factory.Aware"
@@ -4360,26 +4783,11 @@
         {
           "name": "<init>",
           "parameterTypes": []
-        },
-        {
-          "name": "setContinueOnError",
-          "parameterTypes": [
-            "boolean"
-          ]
-        },
-        {
-          "name": "setMode",
-          "parameterTypes": [
-            "org.springframework.boot.sql.init.DatabaseInitializationMode"
-          ]
         }
       ]
     },
     {
       "type": "org.springframework.boot.sql.init.AbstractScriptDatabaseInitializer"
-    },
-    {
-      "type": "org.springframework.boot.sql.init.DatabaseInitializationModeEditor"
     },
     {
       "type": "org.springframework.boot.sql.init.dependency.AnnotationDependsOnDatabaseInitializationDetector",
@@ -5581,6 +5989,9 @@
       "type": "org.springframework.web.bind.annotation.Mapping"
     },
     {
+      "type": "org.springframework.web.bind.annotation.PathVariable"
+    },
+    {
       "type": "org.springframework.web.bind.annotation.PostMapping"
     },
     {
@@ -6008,6 +6419,15 @@
       ]
     },
     {
+      "type": "sun.text.resources.FormatData"
+    },
+    {
+      "type": "sun.text.resources.FormatData_en"
+    },
+    {
+      "type": "sun.text.resources.JavaTimeSupplementary"
+    },
+    {
       "type": "sun.text.resources.cldr.FormatData"
     },
     {
@@ -6135,6 +6555,13 @@
     {
       "type": {
         "proxy": [
+          "org.springframework.web.bind.annotation.PathVariable"
+        ]
+      }
+    },
+    {
+      "type": {
+        "proxy": [
           "org.springframework.web.bind.annotation.RequestMapping"
         ]
       }
@@ -6243,6 +6670,9 @@
       "glob": "META-INF/services/org.apache.logging.log4j.util.PropertySource"
     },
     {
+      "glob": "META-INF/services/org.flywaydb.core.extensibility.Plugin"
+    },
+    {
       "glob": "META-INF/services/org.slf4j.spi.SLF4JServiceProvider"
     },
     {
@@ -6292,6 +6722,9 @@
     },
     {
       "glob": "com/expensetracker/config/AppConfig.class"
+    },
+    {
+      "glob": "com/expensetracker/config/FlywayConfig.class"
     },
     {
       "glob": "com/expensetracker/config/RequestLoggingFilter.class"
@@ -6355,6 +6788,21 @@
     },
     {
       "glob": "data.sql"
+    },
+    {
+      "glob": "db/callback"
+    },
+    {
+      "glob": "db/migration"
+    },
+    {
+      "glob": "db/migration/V1__init.sql"
+    },
+    {
+      "glob": "db/migration/V2__budget_is_active.sql"
+    },
+    {
+      "glob": "db/migration/V3__seed_default_budgets.sql"
     },
     {
       "glob": "git.properties"
@@ -6637,6 +7085,9 @@
     },
     {
       "glob": "org/apache/tomcat/websocket/server/LocalStrings.properties"
+    },
+    {
+      "glob": "org/flywaydb/core/internal/version.txt"
     },
     {
       "glob": "org/springframework/beans/factory/Aware.class"
