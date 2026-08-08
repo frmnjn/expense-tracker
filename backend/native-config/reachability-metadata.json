@@ -163,13 +163,15 @@
         {
           "name": "<init>",
           "parameterTypes": [
-            "com.expensetracker.service.ExpenseService"
+            "com.expensetracker.service.ExpenseService",
+            "com.expensetracker.service.IdempotencyService"
           ]
         },
         {
           "name": "createExpense",
           "parameterTypes": [
-            "com.expensetracker.model.ExpenseRequest"
+            "com.expensetracker.model.ExpenseRequest",
+            "java.lang.String"
           ]
         },
         {
@@ -235,7 +237,19 @@
           "name": "uploadPhoto",
           "parameterTypes": [
             "java.lang.String",
-            "org.springframework.web.multipart.MultipartFile"
+            "org.springframework.web.multipart.MultipartFile",
+            "java.lang.String"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "com.expensetracker.controller.InvoiceController",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "com.expensetracker.service.InvoiceService"
           ]
         }
       ]
@@ -317,12 +331,6 @@
           "parameterTypes": []
         },
         {
-          "name": "getPhotoPath",
-          "parameterTypes": [
-            "java.lang.String"
-          ]
-        },
-        {
           "name": "insert",
           "parameterTypes": [
             "java.lang.String",
@@ -363,6 +371,50 @@
     },
     {
       "type": "com.expensetracker.data.ExpenseRepository$$SpringCGLIB$$0",
+      "fields": [
+        {
+          "name": "CGLIB$CALLBACK_FILTER"
+        },
+        {
+          "name": "CGLIB$FACTORY_DATA"
+        }
+      ]
+    },
+    {
+      "type": "com.expensetracker.data.IdempotencyRepository",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "org.springframework.jdbc.core.JdbcTemplate"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "com.expensetracker.data.IdempotencyRepository$$SpringCGLIB$$0",
+      "fields": [
+        {
+          "name": "CGLIB$CALLBACK_FILTER"
+        },
+        {
+          "name": "CGLIB$FACTORY_DATA"
+        }
+      ]
+    },
+    {
+      "type": "com.expensetracker.data.InvoiceRepository",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "org.springframework.jdbc.core.JdbcTemplate"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "com.expensetracker.data.InvoiceRepository$$SpringCGLIB$$0",
       "fields": [
         {
           "name": "CGLIB$CALLBACK_FILTER"
@@ -464,6 +516,7 @@
             "java.lang.String",
             "java.lang.String",
             "java.lang.Long",
+            "java.lang.String",
             "java.lang.String"
           ]
         }
@@ -596,18 +649,14 @@
     },
     {
       "type": "com.expensetracker.service.ExpenseService",
-      "fields": [
-        {
-          "name": "uploadDir"
-        }
-      ],
       "methods": [
         {
           "name": "<init>",
           "parameterTypes": [
             "com.expensetracker.data.BudgetRepository",
             "com.expensetracker.data.ExpenseRepository",
-            "com.expensetracker.data.TopUpRepository"
+            "com.expensetracker.data.TopUpRepository",
+            "com.expensetracker.service.InvoiceService"
           ]
         },
         {
@@ -688,6 +737,34 @@
         },
         {
           "name": "CGLIB$FACTORY_DATA"
+        }
+      ]
+    },
+    {
+      "type": "com.expensetracker.service.IdempotencyService",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "com.expensetracker.data.IdempotencyRepository",
+            "tools.jackson.databind.ObjectMapper"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "com.expensetracker.service.InvoiceService",
+      "fields": [
+        {
+          "name": "uploadDir"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "com.expensetracker.data.InvoiceRepository"
+          ]
         }
       ]
     },
@@ -3085,9 +3162,6 @@
     },
     {
       "type": "org.springframework.aop.support.AbstractPointcutAdvisor"
-    },
-    {
-      "type": "org.springframework.aot.generate.Generated"
     },
     {
       "type": "org.springframework.aot.hint.annotation.Reflective"
@@ -6077,6 +6151,9 @@
       "type": "org.springframework.web.bind.annotation.RequestBody"
     },
     {
+      "type": "org.springframework.web.bind.annotation.RequestHeader"
+    },
+    {
       "type": "org.springframework.web.bind.annotation.RequestMapping"
     },
     {
@@ -6644,6 +6721,13 @@
     {
       "type": {
         "proxy": [
+          "org.springframework.web.bind.annotation.RequestHeader"
+        ]
+      }
+    },
+    {
+      "type": {
+        "proxy": [
           "org.springframework.web.bind.annotation.RequestMapping"
         ]
       }
@@ -6815,16 +6899,31 @@
       "glob": "com/expensetracker/controller/ExpenseController.class"
     },
     {
+      "glob": "com/expensetracker/controller/InvoiceController.class"
+    },
+    {
       "glob": "com/expensetracker/data/BudgetRepository.class"
     },
     {
       "glob": "com/expensetracker/data/ExpenseRepository.class"
     },
     {
+      "glob": "com/expensetracker/data/IdempotencyRepository.class"
+    },
+    {
+      "glob": "com/expensetracker/data/InvoiceRepository.class"
+    },
+    {
       "glob": "com/expensetracker/data/TopUpRepository.class"
     },
     {
       "glob": "com/expensetracker/service/ExpenseService.class"
+    },
+    {
+      "glob": "com/expensetracker/service/IdempotencyService.class"
+    },
+    {
+      "glob": "com/expensetracker/service/InvoiceService.class"
     },
     {
       "glob": "com/mysql/cj/LocalizedErrorMessages.properties"
