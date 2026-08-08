@@ -10,9 +10,6 @@ services:
     volumes:
       - uploads:/app/uploads
 
-volumes:
-  uploads:
-
   frontend:
     build:
       context: ./frontend
@@ -23,3 +20,6 @@ volumes:
       - "23824:80"
     depends_on:
       - backend
+
+volumes:
+  uploads:
