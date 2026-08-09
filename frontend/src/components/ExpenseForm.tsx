@@ -20,6 +20,7 @@ import PhotoInput, { type PhotoSelection } from './PhotoInput'
 import { useCreateExpense, useUploadPhoto } from '../hooks/useCreateExpense'
 import { useOptions } from '../hooks/useOptions'
 import { formatCurrency } from '../utils/currency'
+import { getErrorMessage } from '../utils/error'
 
 const DATE_TIME_FORMAT = 'YYYY-MM-DD HH:mm'
 const DATE_TIME_SECONDS_FORMAT = 'YYYY-MM-DD HH:mm:ss'
@@ -68,33 +69,41 @@ function ExpenseForm() {
       },
       {
         onSuccess: (result) => {
-          const finish = () => {
+          const reset = () => {
             submittingRef.current = false
+            queryClient.invalidateQueries({ queryKey: ['options'] })
+            resetForm()
+          }
+          const showSuccess = () => {
+            reset()
             notifications.show({
               title: 'Berhasil',
               message: 'Pengeluaran berhasil disimpan',
               color: 'green',
             })
-            queryClient.invalidateQueries({ queryKey: ['options'] })
-            resetForm()
+          }
+          const showPhotoError = (error: unknown) => {
+            reset()
+            notifications.show({
+              title: 'Tersimpan, tapi foto gagal diupload',
+              message: getErrorMessage(error),
+              color: 'orange',
+            })
           }
           if (photo && photo.kind === 'new' && result.id) {
             uploadPhoto.mutate(
               { id: result.id, file: photo.file },
-              { onSuccess: finish, onError: finish },
+              { onSuccess: showSuccess, onError: showPhotoError },
             )
           } else {
-            finish()
+            showSuccess()
           }
         },
         onError: (error) => {
           submittingRef.current = false
-          const message =
-            (error as { response?: { data?: { message?: string } } }).response?.data?.message ??
-            'Terjadi kesalahan, coba lagi'
           notifications.show({
             title: 'Gagal',
-            message,
+            message: getErrorMessage(error),
             color: 'red',
           })
         },
