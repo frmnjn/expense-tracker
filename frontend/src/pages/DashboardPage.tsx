@@ -37,7 +37,11 @@ function DashboardPage() {
   const [selectedTopUpHistoryBudget, setSelectedTopUpHistoryBudget] = useState<string | null>(null)
   const [addBudgetOpened, setAddBudgetOpened] = useState(false)
   const [deleteBudgetName, setDeleteBudgetName] = useState<string | null>(null)
-  const [editBudget, setEditBudget] = useState<{ name: string; balance: number | undefined } | null>(null)
+  const [editBudget, setEditBudget] = useState<{
+    name: string
+    balance: number | undefined
+    alertThreshold: number | undefined
+  } | null>(null)
   const { data: summary, isPending: summaryLoading } = useSummary(period)
   const { data: trend } = useTrend(3)
   const isMobile = useMediaQuery('(max-width: 48em)')
@@ -45,6 +49,8 @@ function DashboardPage() {
   const periods = useMemo(() => (periodsData?.periods ?? []).map((p) => ({ value: p, label: p })), [periodsData])
 
   const balanceOf = (name: string): number | undefined => options?.budgets.find((b) => b.name === name)?.balance
+  const thresholdOf = (name: string): number | undefined =>
+    options?.budgets.find((b) => b.name === name)?.alertThreshold
 
   const byBudget = summary?.byBudget ?? []
   const budgetInfo = (name: string): BudgetSummary | undefined => byBudget.find((b) => b.budget === name)
@@ -63,6 +69,7 @@ function DashboardPage() {
 
   const renderBudgetCard = (name: string) => {
     const balance = balanceOf(name)
+    const threshold = thresholdOf(name)
     const rank = rankOf.get(name)
     const info = budgetInfo(name)
     return (
@@ -97,7 +104,7 @@ function DashboardPage() {
               size="sm"
               variant="subtle"
               color="gray"
-              onClick={() => setEditBudget({ name, balance })}
+              onClick={() => setEditBudget({ name, balance, alertThreshold: threshold })}
             >
               <span>✎</span>
             </ActionIcon>
@@ -109,6 +116,11 @@ function DashboardPage() {
         {info && (
           <Text size="sm" c="dimmed">
             {info.count} transaksi · {formatCurrency(info.amount)}
+          </Text>
+        )}
+        {threshold !== undefined && threshold > 0 && (
+          <Text size="xs" c="orange" fw={600}>
+            ⚠️ Ambang {formatCurrency(threshold)}
           </Text>
         )}
       </Paper>
@@ -214,6 +226,7 @@ function DashboardPage() {
         <EditBudgetModal
           budget={editBudget?.name ?? null}
           balance={editBudget?.balance}
+          alertThreshold={editBudget?.alertThreshold}
           onClose={() => setEditBudget(null)}
         />
         <DeleteBudgetModal name={deleteBudgetName} onClose={() => setDeleteBudgetName(null)} />

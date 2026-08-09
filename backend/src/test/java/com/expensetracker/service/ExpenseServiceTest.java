@@ -254,28 +254,41 @@ class ExpenseServiceTest {
 
     @Test
     void createBudget_validRequest_shouldCreateWithDefaultBalance() {
-        assertDoesNotThrow(() -> expenseService.createBudget(new BudgetCreateRequest("Gadget", null)));
-        verify(budgetRepository).create("Gadget", 0L);
+        assertDoesNotThrow(() -> expenseService.createBudget(new BudgetCreateRequest("Gadget", null, null)));
+        verify(budgetRepository).create("Gadget", 0L, 0L);
     }
 
     @Test
     void createBudget_withBalance_shouldCreateWithBalance() {
-        assertDoesNotThrow(() -> expenseService.createBudget(new BudgetCreateRequest("Gadget", 100000L)));
-        verify(budgetRepository).create("Gadget", 100000L);
+        assertDoesNotThrow(() -> expenseService.createBudget(new BudgetCreateRequest("Gadget", 100000L, null)));
+        verify(budgetRepository).create("Gadget", 100000L, 0L);
+    }
+
+    @Test
+    void createBudget_withAlertThreshold_shouldCreateWithThreshold() {
+        assertDoesNotThrow(() -> expenseService.createBudget(new BudgetCreateRequest("Gadget", 100000L, 50000L)));
+        verify(budgetRepository).create("Gadget", 100000L, 50000L);
+    }
+
+    @Test
+    void createBudget_negativeThreshold_shouldReject() {
+        ValidationException ex = assertThrows(ValidationException.class,
+                () -> expenseService.createBudget(new BudgetCreateRequest("Gadget", null, -1L)));
+        assertEquals("Alert threshold must be greater than or equal to 0", ex.getMessage());
     }
 
     @Test
     void createBudget_missingName_shouldReject() {
         ValidationException ex = assertThrows(ValidationException.class,
-                () -> expenseService.createBudget(new BudgetCreateRequest("", null)));
+                () -> expenseService.createBudget(new BudgetCreateRequest("", null, null)));
         assertEquals("Name is required", ex.getMessage());
     }
 
     @Test
     void createBudget_duplicate_shouldReject() {
-        doThrow(new IllegalStateException("dup")).when(budgetRepository).create("Gadget", 0L);
+        doThrow(new IllegalStateException("dup")).when(budgetRepository).create("Gadget", 0L, 0L);
         ValidationException ex = assertThrows(ValidationException.class,
-                () -> expenseService.createBudget(new BudgetCreateRequest("Gadget", null)));
+                () -> expenseService.createBudget(new BudgetCreateRequest("Gadget", null, null)));
         assertEquals("Budget already exists", ex.getMessage());
     }
 
@@ -295,31 +308,45 @@ class ExpenseServiceTest {
 
     @Test
     void updateBudget_shouldRenameAndSetBalance() {
-        when(budgetRepository.update("Gadget", "Gadget2", 200000L)).thenReturn(true);
-        assertDoesNotThrow(() -> expenseService.updateBudget("Gadget", new BudgetUpdateRequest("Gadget2", 200000L)));
-        verify(budgetRepository).update("Gadget", "Gadget2", 200000L);
+        when(budgetRepository.update("Gadget", "Gadget2", 200000L, null)).thenReturn(true);
+        assertDoesNotThrow(() -> expenseService.updateBudget("Gadget", new BudgetUpdateRequest("Gadget2", 200000L, null)));
+        verify(budgetRepository).update("Gadget", "Gadget2", 200000L, null);
+    }
+
+    @Test
+    void updateBudget_withAlertThreshold_shouldUpdateThreshold() {
+        when(budgetRepository.update("Gadget", "Gadget", 200000L, 50000L)).thenReturn(true);
+        assertDoesNotThrow(() -> expenseService.updateBudget("Gadget", new BudgetUpdateRequest("Gadget", 200000L, 50000L)));
+        verify(budgetRepository).update("Gadget", "Gadget", 200000L, 50000L);
+    }
+
+    @Test
+    void updateBudget_negativeThreshold_shouldReject() {
+        ValidationException ex = assertThrows(ValidationException.class,
+                () -> expenseService.updateBudget("Gadget", new BudgetUpdateRequest("Gadget", 200000L, -1L)));
+        assertEquals("Alert threshold must be greater than or equal to 0", ex.getMessage());
     }
 
     @Test
     void updateBudget_notFound_shouldReject() {
-        when(budgetRepository.update("Gadget", "Gadget2", null)).thenReturn(false);
+        when(budgetRepository.update("Gadget", "Gadget2", null, null)).thenReturn(false);
         ValidationException ex = assertThrows(ValidationException.class,
-                () -> expenseService.updateBudget("Gadget", new BudgetUpdateRequest("Gadget2", null)));
+                () -> expenseService.updateBudget("Gadget", new BudgetUpdateRequest("Gadget2", null, null)));
         assertEquals("Budget not found", ex.getMessage());
     }
 
     @Test
     void updateBudget_duplicateName_shouldReject() {
-        when(budgetRepository.update("Gadget", "Household", null)).thenThrow(new IllegalStateException("dup"));
+        when(budgetRepository.update("Gadget", "Household", null, null)).thenThrow(new IllegalStateException("dup"));
         ValidationException ex = assertThrows(ValidationException.class,
-                () -> expenseService.updateBudget("Gadget", new BudgetUpdateRequest("Household", null)));
+                () -> expenseService.updateBudget("Gadget", new BudgetUpdateRequest("Household", null, null)));
         assertEquals("Budget already exists", ex.getMessage());
     }
 
     @Test
     void updateBudget_missingName_shouldReject() {
         ValidationException ex = assertThrows(ValidationException.class,
-                () -> expenseService.updateBudget("Gadget", new BudgetUpdateRequest("", null)));
+                () -> expenseService.updateBudget("Gadget", new BudgetUpdateRequest("", null, null)));
         assertEquals("Name is required", ex.getMessage());
     }
 

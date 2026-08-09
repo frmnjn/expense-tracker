@@ -145,8 +145,9 @@ Field:
 
 ## Budget
 
-* Tambah (nama + saldo awal opsional).
-* Edit (nama + saldo).
+* Tambah (nama + saldo awal opsional + ambang notifikasi opsional).
+* Edit (nama + saldo + ambang notifikasi).
+* Kartu budget di Dashboard menampilkan indikator `⚠️ Ambang Rp…` jika `alert_threshold > 0`.
 * Hapus (soft delete): nama diubah jadi `DELETED_<nama>_<id>` sehingga nama asli bisa dipakai ulang; expense di bawah budget ikut soft-delete.
 
 ## Top-up
@@ -165,7 +166,7 @@ Notifikasi dikirim via **microservice `notifier`** (Go) yang memakai **Gmail SMT
 Pemicu (realtime, tanpa scheduler):
 
 * **Expense tercatat** → konfirmasi pengeluaran.
-* **Budget menipis** → setelah saldo berubah, jika `budgets.alert_threshold > 0` dan `balance < alert_threshold`. Nilai threshold diset **manual via DB** (`UPDATE budgets SET alert_threshold = ...`), 0 = nonaktif, tidak ada UI.
+* **Budget menipis** → setelah saldo berubah, jika `budgets.alert_threshold > 0` dan `balance < alert_threshold`. Threshold diset per budget **dari UI** (modal Tambah/Edit Budget, input "Ambang notifikasi"); nilai `0` = nonaktif.
 * **Top-up** dibuat → konfirmasi.
 * **Budget** dibuat → konfirmasi.
 
@@ -348,14 +349,14 @@ Menambah saldo budget.
 Menambah budget.
 
 ```json
-{ "name": "Gadget", "balance": 100000 }
+{ "name": "Gadget", "balance": 100000, "alertThreshold": 50000 }
 ```
 
-`balance` opsional (default 0). Duplikat nama → `Budget already exists`.
+`balance` opsional (default 0). `alertThreshold` opsional (default 0 = nonaktif, memicu notifikasi "budget menipis" saat `balance < alertThreshold`). Duplikat nama → `Budget already exists`.
 
 ## PUT /budgets/{name}
 
-Mengedit budget (nama dan/atau saldo). `balance` opsional (jika null, saldo tidak diubah).
+Mengedit budget (nama, saldo, dan/atau `alertThreshold`). `balance` dan `alertThreshold` opsional (jika null, tidak diubah).
 
 ## DELETE /budgets/{name}
 

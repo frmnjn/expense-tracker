@@ -738,6 +738,8 @@ Mengganti `spring.sql.init` (schema.sql) dengan Flyway versioned migrations agar
 
 * [x] Flyway `V8__budget_alert_threshold.sql`: `budgets.alert_threshold` (0 = nonaktif)
 * [x] `BudgetRepository.getAlertThreshold`
+* [x] Threshold diset dari UI: input "Ambang notifikasi" di modal Tambah & Edit Budget; indikator `⚠️ Ambang` di kartu budget
+* [x] `BudgetOption` + `alertThreshold`; `BudgetCreateRequest`/`BudgetUpdateRequest` + `alertThreshold`
 * [x] `NotificationService` (JDK HttpClient → notifier, fire-and-log, JSON escape)
 * [x] Notifikasi dikirim **async** (thread pool) agar tidak memperlambat request
 * [x] Mode testing: `NOTIFY_TEST_MODE` → hanya kirim ke `NOTIFY_TEST_EMAIL`

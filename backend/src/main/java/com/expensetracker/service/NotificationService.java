@@ -99,13 +99,14 @@ public class NotificationService {
         send("💰 Top-up: " + budget + " +" + RUPIAH.format(amount), body);
     }
 
-    public void sendBudgetCreated(String name, long balance) {
+    public void sendBudgetCreated(String name, long balance, long alertThreshold) {
         String body = buildEmail(
                 "New budget created",
                 "A new budget is ready to use.",
                 balance,
                 "Initial balance",
-                row("Budget", name));
+                row("Budget", name),
+                row("Alert threshold", alertThreshold > 0 ? RUPIAH.format(alertThreshold) : "Disabled"));
         send("🎉 New budget: " + name, body);
     }
 
