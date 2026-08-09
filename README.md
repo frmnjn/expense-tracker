@@ -10,7 +10,7 @@ Aplikasi web untuk mencatat pengeluaran harian, memantau saldo per budget, dan m
 * Saldo per budget (berkurang saat pengeluaran, bertambah via top-up)
 * Dashboard: saldo per budget, pengeluaran terbesar, 3 bulan terakhir
 * Riwayat per periode: search, filter, sort, edit (termasuk ganti/hapus foto), hapus, lihat foto
-* Kelola budget (tambah/edit/hapus, soft delete)
+* Kelola budget (tambah/edit/hapus, soft delete) — termasuk ambang notifikasi "budget menipis" per budget
 * Idempotensi POST (header `Idempotency-Key`) untuk mencegah duplikat
 * Notifikasi email (Gmail SMTP via microservice `notifier`): konfirmasi expense/top-up/budget + peringatan budget menipis (threshold per budget)
 * Dark mode (default gelap)

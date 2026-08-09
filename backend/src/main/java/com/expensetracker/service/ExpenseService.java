@@ -67,12 +67,20 @@ public class ExpenseService {
             throw new ValidationException("Name must be at most 255 characters");
         }
         long balance = request.balance() == null ? 0 : request.balance();
+        long alertThreshold = requireAlertThreshold(request.alertThreshold());
         try {
-            budgetRepository.create(request.name().trim(), balance);
+            budgetRepository.create(request.name().trim(), balance, alertThreshold);
         } catch (IllegalStateException e) {
             throw new ValidationException("Budget already exists");
         }
-        notificationService.sendBudgetCreated(request.name().trim(), balance);
+        notificationService.sendBudgetCreated(request.name().trim(), balance, alertThreshold);
+    }
+
+    private static long requireAlertThreshold(Long value) {
+        if (value != null && value < 0) {
+            throw new ValidationException("Alert threshold must be greater than or equal to 0");
+        }
+        return value == null ? 0 : value;
     }
 
     @Transactional
@@ -96,8 +104,13 @@ public class ExpenseService {
         if (request.name().length() > 255) {
             throw new ValidationException("Name must be at most 255 characters");
         }
+        Long alertThreshold = request.alertThreshold();
+        if (alertThreshold != null && alertThreshold < 0) {
+            throw new ValidationException("Alert threshold must be greater than or equal to 0");
+        }
         try {
-            if (!budgetRepository.update(oldName.trim(), request.name().trim(), request.balance())) {
+            if (!budgetRepository.update(oldName.trim(), request.name().trim(), request.balance(),
+                    alertThreshold)) {
                 throw new ValidationException("Budget not found");
             }
         } catch (IllegalStateException e) {

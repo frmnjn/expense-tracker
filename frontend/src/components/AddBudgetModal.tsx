@@ -7,12 +7,14 @@ function AddBudgetModal({ opened, onClose }: { opened: boolean; onClose: () => v
   const createBudget = useCreateBudget()
   const [name, setName] = useState('')
   const [balance, setBalance] = useState<string | number>('')
+  const [alertThreshold, setAlertThreshold] = useState<string | number>('')
 
   const submitDisabled = name.trim() === '' || createBudget.isPending
 
   const handleClose = () => {
     setName('')
     setBalance('')
+    setAlertThreshold('')
     onClose()
   }
 
@@ -21,6 +23,7 @@ function AddBudgetModal({ opened, onClose }: { opened: boolean; onClose: () => v
       {
         name: name.trim(),
         balance: balance === '' ? undefined : Number(balance),
+        alertThreshold: alertThreshold === '' ? 0 : Number(alertThreshold),
       },
       {
         onSuccess: () => {
@@ -54,6 +57,18 @@ function AddBudgetModal({ opened, onClose }: { opened: boolean; onClose: () => v
           placeholder="0"
           value={balance}
           onChange={setBalance}
+          prefix="Rp"
+          thousandSeparator="."
+          decimalSeparator=","
+          size="md"
+        />
+        <NumberInput
+          label="Ambang notifikasi (opsional)"
+          placeholder="0"
+          description="Kirim notifikasi saat saldo < ambang. 0 = nonaktif."
+          value={alertThreshold}
+          onChange={setAlertThreshold}
+          min={0}
           prefix="Rp"
           thousandSeparator="."
           decimalSeparator=","

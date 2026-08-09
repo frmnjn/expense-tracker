@@ -6,22 +6,26 @@ import { useUpdateBudget } from '../hooks/useBudgets'
 function EditBudgetModal({
   budget,
   balance,
+  alertThreshold,
   onClose,
 }: {
   budget: string | null
   balance: number | undefined
+  alertThreshold: number | undefined
   onClose: () => void
 }) {
   const updateBudget = useUpdateBudget()
   const [name, setName] = useState('')
   const [newBalance, setNewBalance] = useState<string | number>('')
+  const [newThreshold, setNewThreshold] = useState<string | number>('')
 
   useEffect(() => {
     if (budget) {
       setName(budget)
       setNewBalance(balance ?? '')
+      setNewThreshold(alertThreshold ?? '')
     }
-  }, [budget, balance])
+  }, [budget, balance, alertThreshold])
 
   const submitDisabled = name.trim() === '' || updateBudget.isPending
 
@@ -33,6 +37,7 @@ function EditBudgetModal({
         request: {
           name: name.trim(),
           balance: newBalance === '' ? undefined : Number(newBalance),
+          alertThreshold: newThreshold === '' ? 0 : Number(newThreshold),
         },
       },
       {
@@ -65,6 +70,18 @@ function EditBudgetModal({
           label="Saldo"
           value={newBalance}
           onChange={setNewBalance}
+          prefix="Rp"
+          thousandSeparator="."
+          decimalSeparator=","
+          size="md"
+        />
+        <NumberInput
+          label="Ambang notifikasi"
+          placeholder="0"
+          description="Kirim notifikasi saat saldo < ambang. 0 = nonaktif."
+          value={newThreshold}
+          onChange={setNewThreshold}
+          min={0}
           prefix="Rp"
           thousandSeparator="."
           decimalSeparator=","
