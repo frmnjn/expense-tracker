@@ -10,6 +10,16 @@ import '@mantine/notifications/styles.css'
 import './index.css'
 import App from './App.tsx'
 
+// Console on-device untuk debugging HP: buka app dengan ?debug di URL.
+if (new URLSearchParams(window.location.search).has('debug')) {
+  const script = document.createElement('script')
+  script.src = 'https://cdn.jsdelivr.net/npm/eruda'
+  script.onload = () => {
+    ;(window as unknown as { eruda?: { init: () => void } }).eruda?.init()
+  }
+  document.head.appendChild(script)
+}
+
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
   window.addEventListener('load', () => {
     navigator.serviceWorker.register('/sw.js')
