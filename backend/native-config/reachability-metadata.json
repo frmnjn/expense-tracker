@@ -489,6 +489,10 @@
       "type": "com.expensetracker.model.BudgetOption",
       "methods": [
         {
+          "name": "alertThreshold",
+          "parameterTypes": []
+        },
+        {
           "name": "balance",
           "parameterTypes": []
         },
