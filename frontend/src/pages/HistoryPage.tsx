@@ -28,6 +28,7 @@ import ColorSchemeToggle from '../components/ColorSchemeToggle'
 import PhotoInput, { type PhotoSelection } from '../components/PhotoInput'
 import { getPhotoUrl } from '../services/expense'
 import { formatCurrency } from '../utils/currency'
+import { getErrorMessage } from '../utils/error'
 import type { Expense } from '../types/expense'
 
 const DATE_TIME_FORMAT = 'YYYY-MM-DD HH:mm'
@@ -373,23 +374,24 @@ function EditExpenseModal({ expense, onClose }: { expense: Expense; onClose: () 
       },
       {
         onSuccess: () => {
-          const finish = () => {
+          const success = () => {
             notifications.show({ title: 'Berhasil', message: 'Pengeluaran diperbarui', color: 'green' })
             onClose()
           }
+          const photoError = (error: unknown) => {
+            notifications.show({ title: 'Tersimpan, tapi foto gagal diupload', message: getErrorMessage(error), color: 'orange' })
+            onClose()
+          }
           if (removePhoto) {
-            deletePhoto.mutate(expense.id, { onSuccess: finish, onError: finish })
+            deletePhoto.mutate(expense.id, { onSuccess: success, onError: photoError })
           } else if (photo?.kind === 'new') {
-            uploadPhoto.mutate({ id: expense.id, file: photo.file }, { onSuccess: finish, onError: finish })
+            uploadPhoto.mutate({ id: expense.id, file: photo.file }, { onSuccess: success, onError: photoError })
           } else {
-            finish()
+            success()
           }
         },
         onError: (error) => {
-          const message =
-            (error as { response?: { data?: { message?: string } } }).response?.data?.message ??
-            'Terjadi kesalahan, coba lagi'
-          notifications.show({ title: 'Gagal', message, color: 'red' })
+          notifications.show({ title: 'Gagal', message: getErrorMessage(error), color: 'red' })
         },
       },
     )
