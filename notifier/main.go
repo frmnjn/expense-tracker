@@ -58,10 +58,16 @@ func main() {
 		}
 
 		var err error
-		if provider == "resend" {
+		// Urutan provider: primer = MAIL_PROVIDER; jika gagal dan RESEND_FALLBACK=true,
+		// coba Resend (asalkan terkonfigurasi).
+		switch provider {
+		case "resend":
 			err = resendSend(req)
-		} else {
+		default: // smtp
 			err = smtpSend(req)
+			if err != nil && env("RESEND_FALLBACK", "false") == "true" {
+				err = resendSend(req)
+			}
 		}
 
 		if err != nil {
