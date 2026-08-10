@@ -730,9 +730,11 @@ Mengganti `spring.sql.init` (schema.sql) dengan Flyway versioned migrations agar
 
 * [x] `main.go` + `go.mod` (std lib `net/smtp`, tanpa dependency)
 * [x] `POST /send` `{to[], subject, body}` — dukungan **SMTP (Gmail)** & **Resend** (`MAIL_PROVIDER`)
+* [x] Fallback otomatis: `RESEND_FALLBACK=true` → SMTP gagal, coba Resend
 * [x] Resend: jika limit tercapai (`429`) → lewati kirim (tanpa retry)
 * [x] `GET /health`
 * [x] `Dockerfile` multi-stage (Go → alpine, ca-certificates + tzdata)
+* [x] Produksi: notifier dijalankan di **STB Armbian** (`docker-compose.stb.yml`), diakses backend VPS via **WireGuard** `10.8.0.4:8081` (karena SMTP dari Linode diblokir)
 
 ## Backend
 

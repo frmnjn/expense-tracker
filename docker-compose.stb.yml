@@ -1,0 +1,11 @@
+services:
+  notifier:
+    build:
+      context: ./notifier
+    restart: unless-stopped
+    env_file:
+      - ./.env
+    environment:
+      PORT: 8081
+    ports:
+      - "8081:8081"

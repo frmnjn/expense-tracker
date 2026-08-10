@@ -21,7 +21,7 @@ Aplikasi web untuk mencatat pengeluaran harian, memantau saldo per budget, dan m
 
 * **Frontend:** React 19 + Vite + TypeScript, React Router, TanStack Query, Axios, Mantine UI
 * **Backend:** Java 25 + Spring Boot 4, Spring JDBC (JdbcTemplate), Flyway, GraalVM Native Image (produksi)
-* **Notifier:** Go (std lib `net/smtp`), kirim email via Gmail SMTP
+* **Notifier:** Go (std lib `net/smtp`), kirim email via SMTP (Gmail), fallback Resend
 * **Storage:** MySQL 8+
 
 ---
@@ -79,9 +79,18 @@ NOTIFY_TEST_MODE=false
 NOTIFY_TEST_EMAIL=your-email@gmail.com
 ```
 
-### Notifier (`notifier`)
+### Notifier (STB Armbian, `docker-compose.stb.yml`)
 
-Provider diatur via `MAIL_PROVIDER` (`smtp` atau `resend`).
+Di produksi, microservice notifier dijalankan di **perangkat STB (Armbian)** yang menyala 24/7, diakses VPS lewat **WireGuard** (`10.8.0.4:8081`). Jalankan di STB:
+
+```bash
+git clone https://github.com/frmnjn/expense-tracker.git
+cd expense-tracker
+# buat .env (SMTP + Resend fallback)
+docker compose -f docker-compose.stb.yml up -d --build
+```
+
+Provider diatur via `MAIL_PROVIDER` (`smtp` default, atau `resend`). Jika `RESEND_FALLBACK=true` dan SMTP gagal, otomatis coba Resend.
 
 **SMTP (Gmail):**
 
@@ -94,17 +103,19 @@ SMTP_APP_PASSWORD=your-gmail-app-password
 SMTP_FROM=your-email@gmail.com
 ```
 
-Gmail wajib memakai **App Password** (aktifkan 2FA dulu). Catatan: SMTP keluar bisa **diblokir** di sebagian provider VPS (mis. Linode memblokir port SMTP); pakai Resend jika begitu.
+Gmail wajib memakai **App Password** (aktifkan 2FA dulu).
 
-**Resend:**
+**Resend (fallback / alternatif):**
 
 ```text
 MAIL_PROVIDER=resend
 RESEND_API_KEY=re_xxxxxxxx
-RESEND_FROM=Expense Tracker <onboarding@resend.dev>
+RESEND_FROM=Expense Tracker <expense_tracker@frmnjn.my.id>
 ```
 
 Jika limit Resend tercapai (respons `429`), notifier melewatkan pengiriman (tidak dikirim, tidak retry).
+
+Catatan: untuk pengembangan lokal, `docker-compose.yml` tetap menyertakan service `notifier` sendiri.
 
 ### Frontend
 
@@ -167,9 +178,10 @@ Build & deploy hanya dari PC lokal (butuh RAM ~7GB untuk build native).
 frontend/   # React (Vite)
 backend/    # Spring Boot
   src/main/resources/db/migration/   # Flyway migration
-notifier/   # Go microservice notifikasi email (SMTP)
+notifier/   # Go microservice notifikasi email (SMTP, fallback Resend)
 scripts/    # backup, restore, seed
-docker-compose.yml       # lokal (dengan mysql service)
-docker-compose.prod.yml  # produksi (MySQL VPS)
+docker-compose.yml       # lokal (dengan mysql + notifier service)
+docker-compose.prod.yml  # produksi (MySQL VPS, backend native)
+docker-compose.stb.yml   # notifier di STB Armbian (WireGuard 10.8.0.4)
 uploads/                 # foto invoice (bind mount)
 ```

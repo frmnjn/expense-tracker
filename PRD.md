@@ -170,9 +170,9 @@ Pemicu (realtime, tanpa scheduler):
 * **Top-up** dibuat → konfirmasi.
 * **Budget** dibuat → konfirmasi.
 
-Konfigurasi (env): `NOTIFIER_URL`, `NOTIFY_EMAILS`, dan untuk notifier `MAIL_PROVIDER` (`smtp`/`resend`) + kredensial provider. Notifier mendukung dua jalur pengiriman:
-* **SMTP (Gmail)** — `SMTP_HOST/PORT/USER/APP_PASSWORD/FROM`.
-* **Resend** — `RESEND_API_KEY`/`RESEND_FROM`; dipakai bila SMTP keluar diblokir oleh penyedia hosting (mis. Linode). Jika limit Resend tercapai (respons `429`), email **dilewati** (tidak dikirim, tidak retry).
+Konfigurasi (env): di sisi backend `NOTIFIER_URL`, `NOTIFY_EMAILS`; di sisi notifier `MAIL_PROVIDER` (`smtp`/`resend`) + kredensial provider. Notifier mendukung dua jalur pengiriman:
+* **SMTP (Gmail)** — `SMTP_HOST/PORT/USER/APP_PASSWORD/FROM`. Di produksi, notifier berjalan di **STB Armbian** (menyala 24/7) dan diakses backend via **WireGuard** (`10.8.0.4:8081`), karena SMTP keluar dari VPS (Linode) diblokir.
+* **Resend** — `RESEND_API_KEY`/`RESEND_FROM`, dipakai sebagai **fallback** (`RESEND_FALLBACK=true`) bila SMTP gagal. Jika limit Resend tercapai (respons `429`), email **dilewati** (tidak dikirim, tidak retry).
 
 Email dikirim sebagai **HTML** (inline-style, aksen `#863bff`), dengan nominal terformat Rupiah (mis. `Rp35.000`), body menampilkan sisa saldo budget, dan bahasa **Inggris**. Subjek singkat dengan emoji subtil per jenis notifikasi. Pengiriman dijalankan **async** (thread pool) sehingga tidak memperlambat request.
 
