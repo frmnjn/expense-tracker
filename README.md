@@ -158,17 +158,19 @@ Semua endpoint `POST` menerima header `Idempotency-Key` opsional (uuid) untuk me
 
 ---
 
-## Build & Deploy Native (produksi)
+## Build & Deploy (produksi)
 
 Build & deploy hanya dari PC lokal (butuh RAM ~7GB untuk build native).
 
 ```bash
 ./build-native.sh       # build image native lokal (~6 menit)
-./deploy-native.sh      # export -> scp -> VPS git pull -> docker load -> up -d -> prune dangling images
+./deploy-native.sh      # deploy penuh: export native image -> scp -> VPS git pull -> up -d -> prune
+./deploy-vps.sh         # deploy ringan ke VPS (rebuild frontend + restart) bila backend Java tak berubah
+./deploy-stb.sh         # deploy notifier ke STB (git pull + rebuild via docker-compose.stb.yml)
 ```
 
 * Regenerasi native config saat menambah endpoint/model: `./backend/generate-native-config.sh`
-* `deploy-native.sh` mengasumsikan SSH key `root@expense.frmnjn.my.id` sudah terdaftar.
+* `deploy-native.sh` / `deploy-vps.sh` mengasumsikan SSH key `root@expense.frmnjn.my.id` terdaftar; `deploy-stb.sh` mengasumsikan SSH key `root@10.8.0.4` (WireGuard) terdaftar.
 
 ---
 
