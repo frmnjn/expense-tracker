@@ -26,7 +26,7 @@ public class InvoiceService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(InvoiceService.class);
 
-    private static final Set<String> ALLOWED_EXTENSIONS = Set.of("jpg", "jpeg", "png", "webp", "gif");
+    private static final Set<String> ALLOWED_EXTENSIONS = Set.of("jpg", "jpeg", "png");
 
     private final InvoiceRepository invoiceRepository;
 
@@ -71,14 +71,14 @@ public class InvoiceService {
         }
         String ext = extensionOf(file.getOriginalFilename());
         if (!ALLOWED_EXTENSIONS.contains(ext)) {
-            throw new ValidationException("Only jpg, png, webp, gif are allowed");
+            throw new ValidationException("Only jpg and png are allowed");
         }
         String invoiceId = UUID.randomUUID().toString();
-        String filename = invoiceId + "." + ext;
+        String filename = invoiceId + ".jpg";
         try {
             Path target = Path.of(uploadDir).resolve(filename).normalize();
             Files.createDirectories(target.getParent());
-            file.transferTo(target);
+            ImageProcessor.compressAndSave(file, target);
         } catch (IOException e) {
             throw new IllegalStateException("Failed to save photo", e);
         }
