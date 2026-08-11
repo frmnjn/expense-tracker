@@ -56,11 +56,33 @@ docker run --rm \
     "${GRAALVM_IMAGE}" -c \
     "microdnf -y install maven >/dev/null 2>&1 && cd /src && mvn -q -DskipTests package"
 
+echo "==> [2b/5] Generate PNG valid untuk tracing (2000x1500, memicu resize+encode JPEG)"
+python3 - "${OUTPUT_DIR}/trace.png" <<'PY'
+import struct, sys, zlib
+w, h = 2000, 1500
+raw = bytearray()
+for y in range(h):
+    raw.append(0)
+    row = (bytes((y * 3 % 256, y * 7 % 256, y * 11 % 256)) * w)
+    raw.extend(row)
+def chunk(typ, data):
+    c = struct.pack(">I", len(data)) + typ + data
+    return c + struct.pack(">I", zlib.crc32(typ + data) & 0xffffffff)
+png = b"\x89PNG\r\n\x1a\n"
+png += chunk(b"IHDR", struct.pack(">IIBBBBB", w, h, 8, 2, 0, 0, 0))
+png += chunk(b"IDAT", zlib.compress(bytes(raw), 6))
+png += chunk(b"IEND", b"")
+with open(sys.argv[1], "wb") as f:
+    f.write(png)
+print("generated", sys.argv[1], f"{w}x{h}")
+PY
+
 echo "==> [3/5] Jalankan jar dengan tracing agent & hit endpoint"
 docker run --rm \
     -v "${PROJECT_ROOT}/backend:/app:ro" \
     -v "${PROJECT_ROOT}/backend/src/main/resources/db/migration:/migrations:ro" \
     -v "${OUTPUT_DIR}:/config" \
+    -e "UPLOAD_DIR=/tmp/uploads" \
     -e "DB_URL=${DB_URL}" \
     -e "DB_USER=${DB_USER}" \
     -e "DB_PASSWORD=${DB_PASSWORD}" \
@@ -100,10 +122,12 @@ docker run --rm \
             -d '{"budget":"Household","amount":1}' >/dev/null
         ID=$(curl -s "http://localhost:8080/expenses?period=${PERIOD}" | sed -n "s/.*\"id\":\"\([^\"]*\)\".*/\1/p" | head -n1)
         if [ -n "$ID" ]; then
-            printf '\x89PNG\r\n\x1a\n' > /tmp/p.png
             curl -s -X POST "http://localhost:8080/expenses/${ID}/photo" \
-                -F "file=@/tmp/p.png;type=image/png" >/dev/null
+                -F "file=@/config/trace.png;type=image/png" >/dev/null
             curl -s "http://localhost:8080/expenses/${ID}/photo" >/dev/null
+            curl -s "http://localhost:8080/invoices?date=2026-01-01%2009:00" >/dev/null
+            INV_ID=$(curl -s "http://localhost:8080/invoices?date=2026-01-01%2009:00" | sed -n "s/.*\"id\":\"\([^\"]*\)\".*/\1/p" | head -n1)
+            [ -n "$INV_ID" ] && curl -s "http://localhost:8080/invoices/${INV_ID}/photo" >/dev/null
             curl -s -X PUT "http://localhost:8080/expenses/${ID}" \
                 -H "Content-Type: application/json" \
                 -d "{\"dateTime\":\"2026-01-01 09:00\",\"name\":\"native-config-gen\",\"budget\":\"Household\",\"amount\":2,\"description\":\"edit\"}" >/dev/null

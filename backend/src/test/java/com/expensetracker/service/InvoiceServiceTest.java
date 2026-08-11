@@ -11,6 +11,16 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.multipart.MultipartFile;
 
+import javax.imageio.IIOImage;
+import javax.imageio.ImageIO;
+import javax.imageio.ImageWriter;
+import javax.imageio.metadata.IIOMetadata;
+import javax.imageio.metadata.IIOMetadataNode;
+import javax.imageio.stream.ImageOutputStream;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDate;
@@ -18,6 +28,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
@@ -65,12 +76,172 @@ class InvoiceServiceTest {
     }
 
     @Test
-    void createInvoice_validFile_shouldInsertInvoice() {
+    void createInvoice_validFile_shouldInsertInvoice() throws Exception {
         MultipartFile file = org.mockito.Mockito.mock(MultipartFile.class);
         when(file.isEmpty()).thenReturn(false);
         when(file.getOriginalFilename()).thenReturn("invoice.jpg");
+        when(file.getInputStream()).thenReturn(new ByteArrayInputStream(imageBytes(800, 600)));
         String id = invoiceService.createInvoice("2026-JUL-AUG", LocalDate.of(2026, 7, 25), file);
-        verify(invoiceRepository).insert(eq(id), eq("2026-JUL-AUG"), eq(LocalDate.of(2026, 7, 25)), anyString());
+        verify(invoiceRepository).insert(eq(id), eq("2026-JUL-AUG"), eq(LocalDate.of(2026, 7, 25)), eq(id + ".jpg"));
+        Files.deleteIfExists(Path.of("/tmp", id + ".jpg"));
+    }
+
+    @Test
+    void createInvoice_invalidImage_shouldReject() throws Exception {
+        MultipartFile file = org.mockito.Mockito.mock(MultipartFile.class);
+        when(file.isEmpty()).thenReturn(false);
+        when(file.getOriginalFilename()).thenReturn("invoice.jpg");
+        when(file.getInputStream()).thenReturn(new ByteArrayInputStream(new byte[]{1, 2, 3}));
+        ValidationException ex = assertThrows(ValidationException.class,
+                () -> invoiceService.createInvoice("2026-JUL-AUG", LocalDate.of(2026, 7, 25), file));
+        assertEquals("Invalid image", ex.getMessage());
+    }
+
+    @Test
+    void createInvoice_largeImage_shouldResizeToMax1600() throws Exception {
+        MultipartFile file = org.mockito.Mockito.mock(MultipartFile.class);
+        when(file.isEmpty()).thenReturn(false);
+        when(file.getOriginalFilename()).thenReturn("invoice.png");
+        when(file.getInputStream()).thenReturn(new ByteArrayInputStream(imageBytes(3000, 2000)));
+        String id = invoiceService.createInvoice("2026-JUL-AUG", LocalDate.of(2026, 7, 25), file);
+        try {
+            BufferedImage saved = ImageIO.read(Path.of("/tmp", id + ".jpg").toFile());
+            assertNotNull(saved);
+            assertEquals(1600, saved.getWidth());
+            assertEquals(1067, saved.getHeight());
+        } finally {
+            Files.deleteIfExists(Path.of("/tmp", id + ".jpg"));
+        }
+    }
+
+    private static byte[] imageBytes(int width, int height) throws IOException {
+        BufferedImage image = new BufferedImage(width, height, BufferedImage.TYPE_INT_RGB);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        ImageIO.write(image, "png", out);
+        return out.toByteArray();
+    }
+
+    @Test
+    void createInvoice_jpeg_shouldStripOriginalMetadataAndWriteOwn() throws Exception {
+        MultipartFile file = org.mockito.Mockito.mock(MultipartFile.class);
+        when(file.isEmpty()).thenReturn(false);
+        when(file.getOriginalFilename()).thenReturn("invoice.jpg");
+        when(file.getSize()).thenReturn(1234L);
+        when(file.getInputStream()).thenReturn(new ByteArrayInputStream(jpegWithApp1Marker()));
+
+        String id = invoiceService.createInvoice("2026-JUL-AUG", LocalDate.of(2026, 7, 25), file);
+        try {
+            IIOMetadata meta = readMetadata(Path.of("/tmp", id + ".jpg"));
+
+            byte[] marker = findMarkerData(meta, 225);
+            assertNotNull(marker, "EXIF baru harus ada");
+            String exif = new String(marker, java.nio.charset.StandardCharsets.ISO_8859_1);
+            assertTrue(exif.startsWith("Exif\0\0"), "EXIF harus ditulis ulang, bukan disalin dari source");
+            assertTrue(exif.contains("ExpenseTracker"), "Software tag harus berisi ExpenseTracker");
+            assertTrue(exif.contains("Compressed by ExpenseTracker"),
+                    "UserComment (0x9286) harus berisi info kompresi");
+            assertTrue(exif.contains("C\0o\0m\0p\0r\0e\0s\0s\0e\0d\0 \0b\0y\0"),
+                    "XPComment (0x9C9C) UTF-16LE harus ada agar tampil di kolom Comments Windows Details");
+            assertFalse(exif.contains("ASLI-CAMERA-123456"), "metadata asli harus dibuang");
+
+            byte[] comment = findComment(meta);
+            assertNotNull(comment, "comment marker harus ada");
+            String commentText = new String(comment, java.nio.charset.StandardCharsets.UTF_8);
+            assertTrue(commentText.contains("Compressed by ExpenseTracker"));
+            assertTrue(commentText.contains("OriginalSize: 100x80"));
+            assertTrue(commentText.contains("OriginalBytes: 1234"));
+            assertTrue(commentText.contains("OriginalFile: invoice.jpg"));
+            assertTrue(commentText.contains("Quality: 0.75"));
+        } finally {
+            Files.deleteIfExists(Path.of("/tmp", id + ".jpg"));
+        }
+    }
+
+    private static byte[] jpegWithApp1Marker() throws IOException {
+        BufferedImage image = new BufferedImage(100, 80, BufferedImage.TYPE_INT_RGB);
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        ImageWriter writer = ImageIO.getImageWritersByFormatName("jpg").next();
+        try (ImageOutputStream ios = ImageIO.createImageOutputStream(out)) {
+            writer.setOutput(ios);
+            IIOMetadata metadata = writer.getDefaultImageMetadata(new javax.imageio.ImageTypeSpecifier(image), null);
+            IIOMetadataNode root = (IIOMetadataNode) metadata.getAsTree("javax_imageio_jpeg_image_1.0");
+            IIOMetadataNode markerSequence = (IIOMetadataNode) root.getElementsByTagName("markerSequence").item(0);
+            IIOMetadataNode app1 = new IIOMetadataNode("unknown");
+            app1.setAttribute("MarkerTag", "225");
+            app1.setUserObject("ASLI-CAMERA-123456".getBytes());
+            if (markerSequence.getFirstChild() != null) {
+                markerSequence.insertBefore(app1, markerSequence.getFirstChild());
+            } else {
+                markerSequence.appendChild(app1);
+            }
+            metadata.setFromTree("javax_imageio_jpeg_image_1.0", root);
+            writer.write(null, new IIOImage(image, null, metadata), null);
+        } finally {
+            writer.dispose();
+        }
+        return out.toByteArray();
+    }
+
+    private static IIOMetadata readMetadata(Path path) throws IOException {
+        try (javax.imageio.stream.ImageInputStream in =
+                     ImageIO.createImageInputStream(path.toFile())) {
+            var reader = ImageIO.getImageReaders(in).next();
+            reader.setInput(in);
+            try {
+                return reader.getImageMetadata(0);
+            } finally {
+                reader.dispose();
+            }
+        }
+    }
+
+    private static byte[] findMarkerData(IIOMetadata metadata, int markerTag) {
+        return findMarkerData(metadata.getAsTree(metadata.getNativeMetadataFormatName()), markerTag);
+    }
+
+    private static byte[] findComment(IIOMetadata metadata) {
+        return findComment(metadata.getAsTree(metadata.getNativeMetadataFormatName()));
+    }
+
+    private static byte[] findComment(org.w3c.dom.Node node) {
+        if ("com".equals(node.getNodeName())) {
+            Object userObject = ((IIOMetadataNode) node).getUserObject();
+            if (userObject instanceof byte[] bytes) {
+                return bytes;
+            }
+        }
+        var children = node.getChildNodes();
+        for (int i = 0; i < children.getLength(); i++) {
+            if (children.item(i).getNodeType() == org.w3c.dom.Node.ELEMENT_NODE) {
+                byte[] found = findComment(children.item(i));
+                if (found != null) {
+                    return found;
+                }
+            }
+        }
+        return null;
+    }
+
+    private static byte[] findMarkerData(org.w3c.dom.Node node, int markerTag) {
+        if ("unknown".equals(node.getNodeName())) {
+            var markerAttr = node.getAttributes().getNamedItem("MarkerTag");
+            if (markerAttr != null && markerAttr.getNodeValue().equals(String.valueOf(markerTag))) {
+                Object userObject = ((IIOMetadataNode) node).getUserObject();
+                if (userObject instanceof byte[] bytes) {
+                    return bytes;
+                }
+            }
+        }
+        var children = node.getChildNodes();
+        for (int i = 0; i < children.getLength(); i++) {
+            if (children.item(i).getNodeType() == org.w3c.dom.Node.ELEMENT_NODE) {
+                byte[] found = findMarkerData(children.item(i), markerTag);
+                if (found != null) {
+                    return found;
+                }
+            }
+        }
+        return null;
     }
 
     @Test
@@ -89,7 +260,7 @@ class InvoiceServiceTest {
         when(file.getOriginalFilename()).thenReturn("invoice.exe");
         ValidationException ex = assertThrows(ValidationException.class,
                 () -> invoiceService.createInvoice("2026-JUL-AUG", LocalDate.of(2026, 7, 25), file));
-        assertEquals("Only jpg, png, webp, gif are allowed", ex.getMessage());
+        assertEquals("Only jpg and png are allowed", ex.getMessage());
     }
 
     @Test
