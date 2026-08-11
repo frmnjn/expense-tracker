@@ -253,6 +253,12 @@
           ]
         },
         {
+          "name": "getInvoicePhoto",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        },
+        {
           "name": "getInvoices",
           "parameterTypes": [
             "java.lang.String"
@@ -618,7 +624,13 @@
       ]
     },
     {
-      "type": "com.expensetracker.model.InvoiceResponse"
+      "type": "com.expensetracker.model.InvoiceResponse",
+      "methods": [
+        {
+          "name": "id",
+          "parameterTypes": []
+        }
+      ]
     },
     {
       "type": "com.expensetracker.model.InvoiceResponse[]"
@@ -1009,6 +1021,78 @@
         {
           "name": "<init>",
           "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.imageio.plugins.jpeg.JPEGImageReader",
+      "jniAccessible": true,
+      "methods": [
+        {
+          "name": "acceptPixels",
+          "parameterTypes": [
+            "int",
+            "boolean"
+          ]
+        },
+        {
+          "name": "passComplete",
+          "parameterTypes": []
+        },
+        {
+          "name": "passStarted",
+          "parameterTypes": [
+            "int"
+          ]
+        },
+        {
+          "name": "pushBack",
+          "parameterTypes": [
+            "int"
+          ]
+        },
+        {
+          "name": "readInputData",
+          "parameterTypes": [
+            "byte[]",
+            "int",
+            "int"
+          ]
+        },
+        {
+          "name": "setImageData",
+          "parameterTypes": [
+            "int",
+            "int",
+            "int",
+            "int",
+            "int",
+            "byte[]"
+          ]
+        },
+        {
+          "name": "skipInputBytes",
+          "parameterTypes": [
+            "long"
+          ]
+        },
+        {
+          "name": "skipPastImage",
+          "parameterTypes": [
+            "int"
+          ]
+        },
+        {
+          "name": "warningOccurred",
+          "parameterTypes": [
+            "int"
+          ]
+        },
+        {
+          "name": "warningWithMessage",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
         }
       ]
     },
@@ -8150,105 +8234,6 @@
           ]
         }
       }
-    },
-    {
-      "type": "com.sun.imageio.plugins.jpeg.JPEGImageReader",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "com.sun.imageio.plugins.jpeg.JPEGImageReaderSpi",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "com.sun.imageio.plugins.jpeg.JPEGImageWriterSpi",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "com.sun.imageio.plugins.png.PNGImageReader",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "com.sun.imageio.plugins.png.PNGImageReaderSpi",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "com.sun.imageio.plugins.png.PNGImageWriter",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "com.sun.imageio.plugins.png.PNGImageWriterSpi",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "javax.imageio.ImageIO",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "javax.imageio.ImageTypeSpecifier",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "javax.imageio.metadata.IIOMetadata",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
-    },
-    {
-      "type": "javax.imageio.metadata.IIOMetadataNode",
-      "methods": [
-        {
-          "name": "<init>",
-          "parameterTypes": []
-        }
-      ]
     }
   ],
   "resources": [
