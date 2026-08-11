@@ -125,6 +125,13 @@ docker run --rm \
             curl -s -X POST "http://localhost:8080/expenses/${ID}/photo" \
                 -F "file=@/config/trace.png;type=image/png" >/dev/null
             curl -s "http://localhost:8080/expenses/${ID}/photo" >/dev/null
+            # PNG upload menyimpan JPEG di /tmp/uploads/*.jpg. Upload balik file JPEG
+            # tsb agar agent mencatat JNI/reflection JPEGImageReader (JPEG decode).
+            JPG=$(ls /tmp/uploads/*.jpg 2>/dev/null | head -n1)
+            if [ -n "$JPG" ]; then
+                curl -s -X POST "http://localhost:8080/expenses/${ID}/photo" \
+                    -F "file=@${JPG};type=image/jpeg" >/dev/null
+            fi
             curl -s "http://localhost:8080/invoices?date=2026-01-01%2009:00" >/dev/null
             INV_ID=$(curl -s "http://localhost:8080/invoices?date=2026-01-01%2009:00" | sed -n "s/.*\"id\":\"\([^\"]*\)\".*/\1/p" | head -n1)
             [ -n "$INV_ID" ] && curl -s "http://localhost:8080/invoices/${INV_ID}/photo" >/dev/null
