@@ -54,11 +54,19 @@ export async function getInvoices(dateTime: string): Promise<InvoicesResponse> {
   return response.data.data ?? { invoices: [] }
 }
 
-export async function uploadPhoto(id: string, file: File): Promise<ApiResponse<void>> {
+export async function uploadPhoto(
+  id: string,
+  file: File,
+  onProgress?: (percent: number) => void,
+): Promise<ApiResponse<void>> {
   const formData = new FormData()
   formData.append('file', file)
   const response = await apiClient.post<ApiResponse<void>>(`/expenses/${id}/photo`, formData, {
     headers: { 'Idempotency-Key': newIdempotencyKey() },
+    onUploadProgress: (event) => {
+      if (!onProgress || !event.total) return
+      onProgress(Math.round((event.loaded / event.total) * 100))
+    },
   })
   return response.data
 }

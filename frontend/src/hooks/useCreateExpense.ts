@@ -1,4 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useState } from 'react'
 import { createExpense, deletePhoto, uploadPhoto } from '../services/expense'
 import type { ExpenseRequest } from '../types/expense'
 
@@ -10,12 +11,17 @@ export function useCreateExpense() {
 
 export function useUploadPhoto() {
   const queryClient = useQueryClient()
-  return useMutation({
-    mutationFn: ({ id, file }: { id: string; file: File }) => uploadPhoto(id, file),
+  const [progress, setProgress] = useState(0)
+  const mutation = useMutation({
+    mutationFn: ({ id, file }: { id: string; file: File }) => {
+      setProgress(0)
+      return uploadPhoto(id, file, (percent) => setProgress(percent))
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['expenses'] })
     },
   })
+  return { ...mutation, progress }
 }
 
 export function useDeletePhoto() {

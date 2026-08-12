@@ -5,6 +5,7 @@ import {
   Group,
   NumberInput,
   Paper,
+  Progress,
   SegmentedControl,
   Select,
   Stack,
@@ -37,6 +38,7 @@ function ExpenseForm() {
   const { data: options, isPending: optionsLoading } = useOptions()
   const createExpense = useCreateExpense()
   const uploadPhoto = useUploadPhoto()
+  const photoUploading = uploadPhoto.isPending
   const queryClient = useQueryClient()
   const submittingRef = useRef(false)
 
@@ -44,7 +46,7 @@ function ExpenseForm() {
   const displayValue = nowDisabled ? dayjs().format(DATE_TIME_SECONDS_FORMAT) : dateTime
 
   const submitDisabled =
-    name.trim() === '' || !budget || Number(amount) <= 0 || createExpense.isPending
+    name.trim() === '' || !budget || Number(amount) <= 0 || createExpense.isPending || photoUploading
 
   const resetForm = () => {
     setName('')
@@ -244,6 +246,18 @@ function ExpenseForm() {
           dateTime={dayjs(displayValue).format(DATE_TIME_FORMAT)}
         />
 
+        {photoUploading && (
+          <Paper withBorder p="sm" radius="md">
+            <Group justify="space-between" mb={4}>
+              <Text size="sm">Mengupload foto...</Text>
+              <Text size="sm" c="dimmed">
+                {uploadPhoto.progress}%
+              </Text>
+            </Group>
+            <Progress value={uploadPhoto.progress} striped animated />
+          </Paper>
+        )}
+
         <Box
           mt="md"
           style={{
@@ -254,7 +268,13 @@ function ExpenseForm() {
             backgroundColor: 'var(--mantine-color-body)',
           }}
         >
-          <Button onClick={handleSubmit} loading={createExpense.isPending} disabled={submitDisabled} fullWidth size="md">
+          <Button
+            onClick={handleSubmit}
+            loading={createExpense.isPending || photoUploading}
+            disabled={submitDisabled}
+            fullWidth
+            size="md"
+          >
             Save
           </Button>
         </Box>
