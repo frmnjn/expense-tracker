@@ -353,7 +353,7 @@ class ExpenseServiceTest {
     @Test
     void createExpense_withInvoiceInSamePeriod_shouldAttachInvoice() {
         when(budgetRepository.findIdByName("Daily")).thenReturn(1L);
-        when(invoiceService.requireInvoice("inv-1")).thenReturn(new InvoiceData("inv-1", "2026-JUL-AUG", "f.jpg"));
+        when(invoiceService.requireInvoice("inv-1")).thenReturn(new InvoiceData("inv-1", "2026-JUL-AUG", "f.jpg", "2026-07-25T09:00:00"));
         ExpenseRequest request = new ExpenseRequest("2026-08-06 14:30", "Makan Siang", "Daily", 35000L, null, "inv-1");
         assertDoesNotThrow(() -> expenseService.createExpense(request));
         verify(expenseRepository).attachInvoice(anyString(), eq("inv-1"));
@@ -362,7 +362,7 @@ class ExpenseServiceTest {
     @Test
     void createExpense_withInvoiceFromOtherPeriod_shouldReject() {
         when(budgetRepository.findIdByName("Daily")).thenReturn(1L);
-        when(invoiceService.requireInvoice("inv-9")).thenReturn(new InvoiceData("inv-9", "2026-AUG-SEP", "f.jpg"));
+        when(invoiceService.requireInvoice("inv-9")).thenReturn(new InvoiceData("inv-9", "2026-AUG-SEP", "f.jpg", "2026-08-25T09:00:00"));
         ExpenseRequest request = new ExpenseRequest("2026-08-06 14:30", "Makan Siang", "Daily", 35000L, null, "inv-9");
         ValidationException ex = assertThrows(ValidationException.class, () -> expenseService.createExpense(request));
         assertEquals("Invoice is not in the same period as the expense", ex.getMessage());
@@ -436,7 +436,7 @@ class ExpenseServiceTest {
     void updateExpense_withInvoiceInSamePeriod_shouldAttachInvoice() {
         when(expenseRepository.findById("id123")).thenReturn(expenseData());
         when(budgetRepository.findIdByName("Daily")).thenReturn(1L);
-        when(invoiceService.requireInvoice("inv-1")).thenReturn(new InvoiceData("inv-1", "2026-JUL-AUG", "f.jpg"));
+        when(invoiceService.requireInvoice("inv-1")).thenReturn(new InvoiceData("inv-1", "2026-JUL-AUG", "f.jpg", "2026-07-25T09:00:00"));
         ExpenseRequest request = new ExpenseRequest("2026-08-06 14:30", "Makan Siang", "Daily", 35000L, null, "inv-1");
         assertDoesNotThrow(() -> expenseService.updateExpense("id123", request));
         verify(expenseRepository).attachInvoice("id123", "inv-1");
@@ -446,7 +446,7 @@ class ExpenseServiceTest {
     void updateExpense_withInvoiceFromOtherPeriod_shouldReject() {
         when(expenseRepository.findById("id123")).thenReturn(expenseData());
         when(budgetRepository.findIdByName("Daily")).thenReturn(1L);
-        when(invoiceService.requireInvoice("inv-9")).thenReturn(new InvoiceData("inv-9", "2026-AUG-SEP", "f.jpg"));
+        when(invoiceService.requireInvoice("inv-9")).thenReturn(new InvoiceData("inv-9", "2026-AUG-SEP", "f.jpg", "2026-08-25T09:00:00"));
         ExpenseRequest request = new ExpenseRequest("2026-08-06 14:30", "Makan Siang", "Daily", 35000L, null, "inv-9");
         ValidationException ex = assertThrows(ValidationException.class,
                 () -> expenseService.updateExpense("id123", request));

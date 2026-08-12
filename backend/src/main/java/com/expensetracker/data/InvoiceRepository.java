@@ -25,13 +25,13 @@ public class InvoiceRepository {
 
     public List<InvoiceData> findByPeriod(String period) {
         return jdbcTemplate.query(
-                "SELECT id, period, photo_path FROM invoices WHERE period = ? AND deleted = FALSE ORDER BY id",
+                "SELECT id, period, photo_path, created_at FROM invoices WHERE period = ? AND deleted = FALSE ORDER BY created_at DESC, id",
                 this::mapRow, period);
     }
 
     public InvoiceData findById(String id) {
         List<InvoiceData> rows = jdbcTemplate.query(
-                "SELECT id, period, photo_path FROM invoices WHERE id = ? AND deleted = FALSE",
+                "SELECT id, period, photo_path, created_at FROM invoices WHERE id = ? AND deleted = FALSE",
                 this::mapRow, id);
         return rows.isEmpty() ? null : rows.get(0);
     }
@@ -57,9 +57,11 @@ public class InvoiceRepository {
     }
 
     private InvoiceData mapRow(ResultSet rs, int rowNum) throws SQLException {
+        java.sql.Timestamp createdAt = rs.getTimestamp("created_at");
         return new InvoiceData(
                 rs.getString("id"),
                 rs.getString("period"),
-                rs.getString("photo_path"));
+                rs.getString("photo_path"),
+                createdAt == null ? null : createdAt.toLocalDateTime().toString());
     }
 }

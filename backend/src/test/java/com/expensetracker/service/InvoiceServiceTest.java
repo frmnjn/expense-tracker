@@ -55,8 +55,8 @@ class InvoiceServiceTest {
     @Test
     void listByDate_shouldReturnInvoicesForThatPeriod() {
         when(invoiceRepository.findByPeriod("2026-JUL-AUG"))
-                .thenReturn(List.of(new InvoiceData("inv-1", "2026-JUL-AUG", "a.jpg"),
-                        new InvoiceData("inv-2", "2026-JUL-AUG", "b.jpg")));
+                .thenReturn(List.of(new InvoiceData("inv-1", "2026-JUL-AUG", "a.jpg", "2026-07-25T09:00:00"),
+                        new InvoiceData("inv-2", "2026-JUL-AUG", "b.jpg", "2026-07-26T09:00:00")));
         InvoicesResponse response = invoiceService.listByDate("2026-08-06 14:30");
         assertEquals(2, response.invoices().size());
         assertEquals("inv-1", response.invoices().get(0).id());
@@ -272,7 +272,7 @@ class InvoiceServiceTest {
 
     @Test
     void requireInvoice_found_shouldReturnInvoice() {
-        when(invoiceRepository.findById("inv-1")).thenReturn(new InvoiceData("inv-1", "2026-JUL-AUG", "a.jpg"));
+        when(invoiceRepository.findById("inv-1")).thenReturn(new InvoiceData("inv-1", "2026-JUL-AUG", "a.jpg", "2026-07-25T09:00:00"));
         assertEquals("2026-JUL-AUG", invoiceService.requireInvoice("inv-1").period());
     }
 

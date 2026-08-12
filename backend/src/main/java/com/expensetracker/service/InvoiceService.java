@@ -49,7 +49,7 @@ public class InvoiceService {
         }
         String period = PeriodSheetName.forDate(parsed.toLocalDate());
         List<InvoiceResponse> list = invoiceRepository.findByPeriod(period).stream()
-                .map(inv -> new InvoiceResponse(inv.id()))
+                .map(inv -> new InvoiceResponse(inv.id(), inv.createdAt()))
                 .toList();
         return new InvoicesResponse(list);
     }
