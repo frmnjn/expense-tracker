@@ -5,6 +5,21 @@ import { getInvoicePhotoUrl } from '../services/expense'
 
 export type PhotoSelection = { kind: 'new'; file: File } | { kind: 'existing'; invoiceId: string }
 
+const GRID_COLUMNS = 3
+
+function toColumnMajor<T>(items: T[], columns: number): T[] {
+  const count = items.length
+  if (count === 0) return items
+  const rows = Math.ceil(count / columns)
+  const reordered: T[] = new Array(count)
+  for (let i = 0; i < count; i++) {
+    const col = Math.floor(i / rows)
+    const row = i % rows
+    reordered[row * columns + col] = items[i]
+  }
+  return reordered
+}
+
 function PhotoInput({
   value,
   onChange,
@@ -84,7 +99,7 @@ function PhotoInput({
               <Loader />
             ) : invoices.data && invoices.data.invoices.length > 0 ? (
               <Grid gap="xs">
-                {invoices.data.invoices.map((invoice) => (
+                {toColumnMajor(invoices.data.invoices, GRID_COLUMNS).map((invoice) => (
                   <Grid.Col key={invoice.id} span={4}>
                     <Image
                       src={getInvoicePhotoUrl(invoice.id)}
