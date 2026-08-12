@@ -11,13 +11,16 @@ function toColumnMajor<T>(items: T[], columns: number): T[] {
   const count = items.length
   if (count === 0) return items
   const rows = Math.ceil(count / columns)
-  const reordered: T[] = new Array(count)
-  for (let i = 0; i < count; i++) {
-    const col = Math.floor(i / rows)
-    const row = i % rows
-    reordered[row * columns + col] = items[i]
+  const grid: (T | undefined)[][] = Array.from({ length: rows }, () =>
+    new Array<T | undefined>(columns).fill(undefined),
+  )
+  let idx = 0
+  for (let col = 0; col < columns && idx < count; col++) {
+    for (let row = 0; row < rows && idx < count; row++) {
+      grid[row][col] = items[idx++]
+    }
   }
-  return reordered
+  return grid.flat().filter((item): item is T => item !== undefined)
 }
 
 function PhotoInput({
