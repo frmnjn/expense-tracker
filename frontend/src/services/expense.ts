@@ -2,10 +2,12 @@ import apiClient from './api'
 import { newIdempotencyKey } from '../utils/idempotency'
 import type {
   ApiResponse,
+  BatchExpenseRequest,
   BudgetCreateRequest,
   BudgetUpdateRequest,
   ExpenseRequest,
   ExpensesResponse,
+  InvoiceDetail,
   InvoicesResponse,
   OptionsResponse,
   PeriodsResponse,
@@ -47,11 +49,46 @@ export function getInvoicePhotoUrl(id: string): string {
   return `${apiClient.defaults.baseURL}/invoices/${encodeURIComponent(id)}/photo`
 }
 
-export async function getInvoices(dateTime: string): Promise<InvoicesResponse> {
+export async function getInvoices(dateTime: string, scanOnly = false): Promise<InvoicesResponse> {
   const response = await apiClient.get<ApiResponse<InvoicesResponse>>('/invoices', {
-    params: { date: dateTime },
+    params: { date: dateTime, ...(scanOnly ? { scan: 'true' } : {}) },
   })
   return response.data.data ?? { invoices: [] }
+}
+
+export async function uploadInvoice(
+  file: File,
+  dateTime: string,
+  onProgress?: (percent: number) => void,
+): Promise<{ invoiceId: string }> {
+  const formData = new FormData()
+  formData.append('file', file)
+  formData.append('date', dateTime)
+  const response = await apiClient.post<ApiResponse<{ invoiceId: string }>>('/invoices', formData, {
+    headers: { 'Idempotency-Key': newIdempotencyKey() },
+    onUploadProgress: (event) => {
+      if (!onProgress || !event.total) return
+      onProgress(Math.round((event.loaded / event.total) * 100))
+    },
+  })
+  return response.data.data ?? { invoiceId: '' }
+}
+
+export async function getInvoiceDetail(id: string): Promise<InvoiceDetail> {
+  const response = await apiClient.get<ApiResponse<InvoiceDetail>>(`/invoices/${encodeURIComponent(id)}`)
+  return response.data.data ?? { id, type: 'image', status: 'ERROR' }
+}
+
+export async function retryInvoiceAnalysis(id: string): Promise<ApiResponse<void>> {
+  const response = await apiClient.post<ApiResponse<void>>(`/invoices/${encodeURIComponent(id)}/retry`)
+  return response.data
+}
+
+export async function createExpensesBatch(request: BatchExpenseRequest): Promise<{ count: number }> {
+  const response = await apiClient.post<ApiResponse<{ count: number }>>('/expenses/batch', request, {
+    headers: { 'Idempotency-Key': newIdempotencyKey() },
+  })
+  return response.data.data ?? { count: 0 }
 }
 
 export async function uploadPhoto(

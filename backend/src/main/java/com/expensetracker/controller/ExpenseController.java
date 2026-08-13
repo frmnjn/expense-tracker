@@ -1,6 +1,7 @@
 package com.expensetracker.controller;
 
 import com.expensetracker.model.ApiResponse;
+import com.expensetracker.model.BatchExpenseRequest;
 import com.expensetracker.model.BudgetCreateRequest;
 import com.expensetracker.model.BudgetUpdateRequest;
 import com.expensetracker.model.ExpenseRequest;
@@ -229,8 +230,30 @@ public class ExpenseController {
         }
     }
 
-    @PostMapping(value = "/expenses/{id}/photo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<ApiResponse> uploadPhoto(@PathVariable String id,
+    @PostMapping("/expenses/batch")
+    public ResponseEntity<ApiResponse> createExpenseBatch(@RequestBody BatchExpenseRequest request,
+                                                          @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
+        Optional<ApiResponse> cached = idempotencyService.find(idempotencyKey);
+        if (cached.isPresent()) {
+            return ResponseEntity.ok(cached.get());
+        }
+        try {
+            int count = expenseService.createExpenseBatch(request);
+            ApiResponse response = ApiResponse.ok(Map.of("count", count));
+            idempotencyService.save(idempotencyKey, response);
+            return ResponseEntity.ok(response);
+        } catch (ValidationException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            LOGGER.error("internal error creating expenses batch", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Internal server error"));
+        }
+    }
+
+    @PostMapping(value = "/expenses/{id}/photo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)    public ResponseEntity<ApiResponse> uploadPhoto(@PathVariable String id,
                                                    @RequestParam("file") MultipartFile file,
                                                    @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
         Optional<ApiResponse> cached = idempotencyService.find(idempotencyKey);
@@ -274,6 +297,7 @@ public class ExpenseController {
 
     private static MediaType mediaTypeFor(String filename) {
         String lower = filename.toLowerCase();
+        if (lower.endsWith(".pdf")) return MediaType.APPLICATION_PDF;
         if (lower.endsWith(".png")) return MediaType.IMAGE_PNG;
         if (lower.endsWith(".gif")) return MediaType.IMAGE_GIF;
         if (lower.endsWith(".webp")) return MediaType.parseMediaType("image/webp");

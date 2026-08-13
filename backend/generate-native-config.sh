@@ -87,6 +87,8 @@ docker run --rm \
     -e "DB_USER=${DB_USER}" \
     -e "DB_PASSWORD=${DB_PASSWORD}" \
     -e "FLYWAY_LOCATIONS=filesystem:/migrations" \
+    -e "GEMINI_API_KEY=${GEMINI_API_KEY:-}" \
+    -e "AI_MODEL=${AI_MODEL:-gemini-3.5-flash-lite}" \
     --add-host=host.docker.internal:host-gateway \
     --entrypoint sh \
     "${GRAALVM_IMAGE}" -c '
@@ -139,6 +141,21 @@ docker run --rm \
                 -H "Content-Type: application/json" \
                 -d "{\"dateTime\":\"2026-01-01 09:00\",\"name\":\"native-config-gen\",\"budget\":\"Household\",\"amount\":2,\"description\":\"edit\"}" >/dev/null
             curl -s -X DELETE "http://localhost:8080/expenses/${ID}" >/dev/null
+        fi
+        # --- Alur Scan AI (endpoint baru) ---
+        curl -s -X POST http://localhost:8080/invoices \
+            -F "file=@/config/trace.png;type=image/png" \
+            -F "date=2026-01-01 09:00" >/dev/null
+        SCAN_ID=$(curl -s "http://localhost:8080/invoices?date=2026-01-01%2009:00&scan=true" \
+            | sed -n "s/.*\"id\":\"\([^\"]*\)\".*/\1/p" | head -n1)
+        if [ -n "$SCAN_ID" ]; then
+            curl -s "http://localhost:8080/invoices/${SCAN_ID}" >/dev/null
+            # beri waktu agar analisis AI async selesai (mencatat HttpClient/SSL/JsonNode)
+            sleep 15
+            curl -s -X POST "http://localhost:8080/invoices/${SCAN_ID}/retry" >/dev/null
+            curl -s -X POST "http://localhost:8080/expenses/batch" \
+                -H "Content-Type: application/json" \
+                -d "{\"dateTime\":\"2026-01-01 09:00\",\"invoiceId\":\"${SCAN_ID}\",\"groups\":[{\"name\":\"batch-trace\",\"budget\":\"Household\",\"amount\":1}]}" >/dev/null
         fi
         sleep 3
         kill $APP 2>/dev/null

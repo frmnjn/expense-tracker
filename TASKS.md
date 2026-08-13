@@ -769,3 +769,46 @@ Mengganti `spring.sql.init` (schema.sql) dengan Flyway versioned migrations agar
 
 * [ ] User set App Password Gmail (2FA) + `NOTIFY_EMAILS` (2 alamat) + `alert_threshold` per budget
 * [ ] Native config regen + build native + deploy VPS
+
+---
+
+# Phase 24 - Scan Struk dengan AI (`/scan`)
+
+Upload struk foto/PDF → AI (Gemini Flash) membaca → review & assign budget → auto-create banyak expense per budget. Async dengan state machine status invoice.
+
+## Backend
+
+* [x] Dukungan PDF pada invoice (`ALLOWED_EXTENSIONS` + pdf, simpan mentah, serve `application/pdf`)
+* [x] `POST /invoices` (multipart file + date) → buat invoice `scan_flow`, status `ANALYZING`, trigger analisis async
+* [x] `InvoiceAnalysisService`: panggil Gemini via JDK HttpClient (async, thread pool), parse JSON, simpan `analysis_json`
+* [x] `GET /invoices/{id}` detail (id, type, status, errorMessage, analysis)
+* [x] `POST /invoices/{id}/retry` (reset `ANALYZING` + jalankan ulang)
+* [x] Startup recovery (`ApplicationRunner`): invoice stuck `ANALYZING` dianalisis ulang
+* [x] Validasi hasil: bukan struk (tanpa item nominal positif) → status `ERROR`
+* [x] `POST /expenses/batch` (transaksional): insert semua, attach invoice, adjust saldo agregat per budget, 1 email ringkasan, mark `SUBMITTED`
+* [x] Flyway `V10__invoice_ai.sql` (status, analysis_json, error_message), `V11__invoice_scan_flow.sql` (scan_flow)
+* [x] Flyway `V12__expenses_created_at.sql` & `V13` (DATETIME(6)): pengurutan riwayat deterministik (`date_time DESC, created_at ASC`)
+* [x] Flyway `V14__wider_description.sql`: `description` expense/top_up → TEXT
+* [x] `ExpenseResponse.photoType` (image/pdf); `GET /invoices?scan=true` filter alur scan
+* [x] Env `GEMINI_API_KEY`, `AI_MODEL`, `AI_TIMEOUT`
+* [x] `@RegisterReflectionForBinding` model baru (AiAnalysis*, BatchExpense*, InvoiceDetail)
+* [x] Unit test: batch create, PDF storage, createInvoiceForAi, listByDate scan/type, description limit
+* [x] Regenerasi native config (endpoint & model baru + Gemini call)
+
+## Frontend
+
+* [x] Halaman `/scan` (route + nav link di semua halaman): upload foto/PDF, list status + polling
+* [x] Filter status + sort (terbaru/terlama) + pagination di `/scan`
+* [x] `ReviewModal`: edit item (nama/nominal/budget), tambah/hapus item, diskon negatif, group per budget, warning total, submit batch
+* [x] Hooks/services: `useScanInvoices`, `useInvoiceDetail`, `useUploadInvoice`, `useRetryAnalysis`, `useCreateExpenseBatch`
+* [x] Upload auto-refresh list (invalidate query) + indikator "Menunggu AI…"
+* [x] Render PDF (badge + link) di grid scan, modal review, & Riwayat (view + edit)
+* [x] Pagination di `/riwayat` (15/halaman, auto-reset saat filter/sort/periode berubah)
+* [x] `/riwayat` auto-pilih periode terbaru saat dibuka
+* [x] Deskripsi scan di-truncate; field deskripsi `maxLength` 10000
+
+## Infra / Docs
+
+* [x] `scripts/clean_data.sh` (bersihkan expense/invoice/topup/idempotency + upload, tabel budget dipertahankan)
+* [x] Update PRD.md, README.md, TASKS.md
+* [x] Native build + uji lokal: upload → analisis → TO_REVIEW → batch → SUBMITTED

@@ -175,6 +175,13 @@
           ]
         },
         {
+          "name": "createExpenseBatch",
+          "parameterTypes": [
+            "com.expensetracker.model.BatchExpenseRequest",
+            "java.lang.String"
+          ]
+        },
+        {
           "name": "deleteBudget",
           "parameterTypes": [
             "java.lang.String"
@@ -249,7 +256,23 @@
         {
           "name": "<init>",
           "parameterTypes": [
-            "com.expensetracker.service.InvoiceService"
+            "com.expensetracker.service.InvoiceService",
+            "com.expensetracker.service.InvoiceAnalysisService",
+            "com.expensetracker.service.IdempotencyService"
+          ]
+        },
+        {
+          "name": "createInvoice",
+          "parameterTypes": [
+            "org.springframework.web.multipart.MultipartFile",
+            "java.lang.String",
+            "java.lang.String"
+          ]
+        },
+        {
+          "name": "getInvoice",
+          "parameterTypes": [
+            "java.lang.String"
           ]
         },
         {
@@ -260,6 +283,13 @@
         },
         {
           "name": "getInvoices",
+          "parameterTypes": [
+            "java.lang.String",
+            "boolean"
+          ]
+        },
+        {
+          "name": "retryAnalysis",
           "parameterTypes": [
             "java.lang.String"
           ]
@@ -443,7 +473,31 @@
           ]
         },
         {
+          "name": "findAnalysis",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        },
+        {
+          "name": "findById",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        },
+        {
           "name": "findByPeriod",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        },
+        {
+          "name": "findByPeriodScanOnly",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        },
+        {
+          "name": "findByStatus",
           "parameterTypes": [
             "java.lang.String"
           ]
@@ -460,6 +514,26 @@
             "java.lang.String",
             "java.lang.String",
             "java.time.LocalDate",
+            "java.lang.String"
+          ]
+        },
+        {
+          "name": "setScanFlow",
+          "parameterTypes": [
+            "java.lang.String"
+          ]
+        },
+        {
+          "name": "updateError",
+          "parameterTypes": [
+            "java.lang.String",
+            "java.lang.String"
+          ]
+        },
+        {
+          "name": "updateStatus",
+          "parameterTypes": [
+            "java.lang.String",
             "java.lang.String"
           ]
         }
@@ -503,6 +577,22 @@
       ]
     },
     {
+      "type": "com.expensetracker.model.AiAnalysisResponse",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.String",
+            "java.lang.Long",
+            "java.util.List"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "com.expensetracker.model.AiInvoiceItem"
+    },
+    {
       "type": "com.expensetracker.model.ApiResponse",
       "methods": [
         {
@@ -516,6 +606,33 @@
         {
           "name": "success",
           "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.expensetracker.model.BatchExpenseItem",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.String",
+            "java.lang.String",
+            "java.lang.Long",
+            "java.lang.String"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "com.expensetracker.model.BatchExpenseRequest",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.String",
+            "java.lang.String",
+            "java.util.List"
+          ]
         }
       ]
     },
@@ -608,6 +725,10 @@
         {
           "name": "name",
           "parameterTypes": []
+        },
+        {
+          "name": "photoType",
+          "parameterTypes": []
         }
       ]
     },
@@ -624,10 +745,47 @@
       ]
     },
     {
+      "type": "com.expensetracker.model.InvoiceDetailResponse",
+      "methods": [
+        {
+          "name": "analysis",
+          "parameterTypes": []
+        },
+        {
+          "name": "errorMessage",
+          "parameterTypes": []
+        },
+        {
+          "name": "id",
+          "parameterTypes": []
+        },
+        {
+          "name": "status",
+          "parameterTypes": []
+        },
+        {
+          "name": "type",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
       "type": "com.expensetracker.model.InvoiceResponse",
       "methods": [
         {
+          "name": "createdAt",
+          "parameterTypes": []
+        },
+        {
           "name": "id",
+          "parameterTypes": []
+        },
+        {
+          "name": "status",
+          "parameterTypes": []
+        },
+        {
+          "name": "type",
           "parameterTypes": []
         }
       ]
@@ -751,6 +909,12 @@
           ]
         },
         {
+          "name": "createExpenseBatch",
+          "parameterTypes": [
+            "com.expensetracker.model.BatchExpenseRequest"
+          ]
+        },
+        {
           "name": "deleteBudget",
           "parameterTypes": [
             "java.lang.String"
@@ -831,6 +995,31 @@
       ]
     },
     {
+      "type": "com.expensetracker.service.InvoiceAnalysisService",
+      "fields": [
+        {
+          "name": "uploadDir"
+        }
+      ],
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "com.expensetracker.data.InvoiceRepository",
+            "com.expensetracker.data.BudgetRepository",
+            "tools.jackson.databind.ObjectMapper",
+            "java.lang.String",
+            "java.lang.String",
+            "long"
+          ]
+        },
+        {
+          "name": "shutdown",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
       "type": "com.expensetracker.service.InvoiceService",
       "fields": [
         {
@@ -841,7 +1030,8 @@
         {
           "name": "<init>",
           "parameterTypes": [
-            "com.expensetracker.data.InvoiceRepository"
+            "com.expensetracker.data.InvoiceRepository",
+            "tools.jackson.databind.ObjectMapper"
           ]
         }
       ]
@@ -1008,6 +1198,26 @@
     },
     {
       "type": "com.sun.crypto.provider.GaloisCounterMode$AESGCM",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "com.sun.crypto.provider.HKDFKeyDerivation$HKDFSHA384",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "javax.crypto.KDFParameters"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "com.sun.crypto.provider.HmacCore$HmacSHA384",
       "methods": [
         {
           "name": "<init>",
@@ -1744,6 +1954,18 @@
       "type": "java.security.KeyStoreSpi"
     },
     {
+      "type": "java.security.interfaces.ECPrivateKey"
+    },
+    {
+      "type": "java.security.interfaces.ECPublicKey"
+    },
+    {
+      "type": "java.security.interfaces.RSAPrivateKey"
+    },
+    {
+      "type": "java.security.interfaces.RSAPublicKey"
+    },
+    {
       "type": "java.sql.Date"
     },
     {
@@ -1923,10 +2145,16 @@
       "type": "java.util.ImmutableCollections$AbstractImmutableMap"
     },
     {
+      "type": "java.util.ImmutableCollections$List12"
+    },
+    {
       "type": "java.util.ImmutableCollections$ListN"
     },
     {
       "type": "java.util.ImmutableCollections$Map1"
+    },
+    {
+      "type": "java.util.ImmutableCollections$MapN"
     },
     {
       "type": "java.util.List"
@@ -3834,6 +4062,9 @@
       "type": "org.springframework.boot.ApplicationProperties"
     },
     {
+      "type": "org.springframework.boot.ApplicationRunner"
+    },
+    {
       "type": "org.springframework.boot.ClearCachesApplicationListener",
       "methods": [
         {
@@ -3841,6 +4072,9 @@
           "parameterTypes": []
         }
       ]
+    },
+    {
+      "type": "org.springframework.boot.Runner"
     },
     {
       "type": "org.springframework.boot.SpringBootConfiguration"
@@ -7783,6 +8017,24 @@
       ]
     },
     {
+      "type": "sun.security.provider.JavaKeyStore$DualFormatJKS",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.provider.JavaKeyStore$JKS",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
       "type": "sun.security.provider.NativePRNG",
       "methods": [
         {
@@ -7848,6 +8100,15 @@
       ]
     },
     {
+      "type": "sun.security.provider.certpath.PKIXCertPathValidator",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
       "type": "sun.security.rsa.PSSParameters",
       "methods": [
         {
@@ -7876,6 +8137,15 @@
     },
     {
       "type": "sun.security.rsa.RSASignature$SHA224withRSA",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": []
+        }
+      ]
+    },
+    {
+      "type": "sun.security.rsa.RSASignature$SHA256withRSA",
       "methods": [
         {
           "name": "<init>",
@@ -8008,6 +8278,18 @@
     },
     {
       "type": "sun.security.x509.PrivateKeyUsageExtension",
+      "methods": [
+        {
+          "name": "<init>",
+          "parameterTypes": [
+            "java.lang.Boolean",
+            "java.lang.Object"
+          ]
+        }
+      ]
+    },
+    {
+      "type": "sun.security.x509.SubjectAlternativeNameExtension",
       "methods": [
         {
           "name": "<init>",
@@ -8394,6 +8676,9 @@
       "glob": "com/expensetracker/service/IdempotencyService.class"
     },
     {
+      "glob": "com/expensetracker/service/InvoiceAnalysisService.class"
+    },
+    {
       "glob": "com/expensetracker/service/InvoiceService.class"
     },
     {
@@ -8746,6 +9031,12 @@
     },
     {
       "glob": "org/springframework/beans/factory/InitializingBean.class"
+    },
+    {
+      "glob": "org/springframework/boot/ApplicationRunner.class"
+    },
+    {
+      "glob": "org/springframework/boot/Runner.class"
     },
     {
       "glob": "org/springframework/boot/autoconfigure/AutoConfiguration.class"
@@ -9317,6 +9608,18 @@
     {
       "module": "java.base",
       "glob": "java/util/currency.data"
+    },
+    {
+      "module": "java.base",
+      "glob": "jdk/internal/icu/impl/data/icudt76b/nfkc.nrm"
+    },
+    {
+      "module": "java.base",
+      "glob": "jdk/internal/icu/impl/data/icudt76b/uprops.icu"
+    },
+    {
+      "module": "java.base",
+      "glob": "sun/net/idn/uidna.spp"
     },
     {
       "module": "java.desktop",

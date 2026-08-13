@@ -2,6 +2,7 @@ import { useRef, useState } from 'react'
 import { Button, Grid, Group, Image, Loader, Modal, Stack, Text } from '@mantine/core'
 import { useInvoices } from '../hooks/useInvoices'
 import { getInvoicePhotoUrl } from '../services/expense'
+import { InvoiceThumb } from './InvoiceThumb'
 
 export type PhotoSelection = { kind: 'new'; file: File } | { kind: 'existing'; invoiceId: string }
 
@@ -66,7 +67,7 @@ function PhotoInput({
       <input
         ref={galleryRef}
         type="file"
-        accept="image/*"
+        accept="image/*,application/pdf"
         style={{ display: 'none' }}
         onChange={(e) => pick(e.target.files?.[0] ?? null)}
       />
@@ -86,13 +87,9 @@ function PhotoInput({
               <Grid gap="xs">
                 {invoices.data.invoices.map((invoice) => (
                   <Grid.Col key={invoice.id} span={4}>
-                    <Image
-                      src={getInvoicePhotoUrl(invoice.id)}
-                      alt="Invoice"
-                      fit="cover"
-                      h={100}
-                      radius="md"
-                      style={{ cursor: 'pointer' }}
+                    <InvoiceThumb
+                      type={invoice.type}
+                      url={getInvoicePhotoUrl(invoice.id)}
                       onClick={() => pickExisting(invoice.id)}
                     />
                   </Grid.Col>

@@ -5,6 +5,8 @@ import com.expensetracker.data.ExpenseData;
 import com.expensetracker.data.ExpenseRepository;
 import com.expensetracker.data.InvoiceData;
 import com.expensetracker.data.TopUpRepository;
+import com.expensetracker.model.BatchExpenseItem;
+import com.expensetracker.model.BatchExpenseRequest;
 import com.expensetracker.model.BudgetCreateRequest;
 import com.expensetracker.model.BudgetSummary;
 import com.expensetracker.model.BudgetUpdateRequest;
@@ -35,6 +37,8 @@ import java.util.UUID;
 
 @Service
 public class ExpenseService {
+
+    private static final int MAX_DESCRIPTION_LENGTH = 10000;
 
     private final BudgetRepository budgetRepository;
     private final ExpenseRepository expenseRepository;
@@ -152,6 +156,90 @@ public class ExpenseService {
         }
     }
 
+    /**
+     * Membuat banyak expense (hasil split struk) dalam satu transaksi. Semua
+     * memakai dateTime yang sama; saldo budget di-adjust per-budget secara
+     * agregat; invoice ditandai SUBMITTED setelah berhasil.
+     */
+    @Transactional
+    public int createExpenseBatch(BatchExpenseRequest request) {
+        if (request.dateTime() == null || request.dateTime().isBlank()) {
+            throw new ValidationException("DateTime is required");
+        }
+        LocalDateTime dateTime;
+        try {
+            dateTime = LocalDateTime.parse(request.dateTime(), PeriodSheetName.FORMATTER);
+        } catch (DateTimeParseException e) {
+            throw new ValidationException("DateTime must be in yyyy-MM-dd HH:mm format");
+        }
+        if (request.groups() == null || request.groups().isEmpty()) {
+            throw new ValidationException("At least one expense is required");
+        }
+        String period = PeriodSheetName.forDate(dateTime.toLocalDate());
+        LocalDate periodStart = PeriodSheetName.periodStart(dateTime.toLocalDate());
+
+        if (request.invoiceId() != null && !request.invoiceId().isBlank()) {
+            InvoiceData invoice = invoiceService.requireInvoice(request.invoiceId());
+            if (!invoice.period().equals(period)) {
+                throw new ValidationException("Invoice is not in the same period as the expense");
+            }
+        }
+
+        Map<String, Long> totalByBudget = new LinkedHashMap<>();
+        for (BatchExpenseItem item : request.groups()) {
+            validateItem(item);
+            requireBudgetId(item.budget());
+            totalByBudget.merge(item.budget(), item.amount(), Long::sum);
+        }
+
+        for (BatchExpenseItem item : request.groups()) {
+            Long budgetId = requireBudgetId(item.budget());
+            String id = UUID.randomUUID().toString();
+            expenseRepository.insert(id, period, periodStart, dateTime, budgetId, item.name(),
+                    item.amount(), item.description());
+            if (request.invoiceId() != null && !request.invoiceId().isBlank()) {
+                expenseRepository.attachInvoice(id, request.invoiceId());
+            }
+        }
+
+        for (Map.Entry<String, Long> entry : totalByBudget.entrySet()) {
+            budgetRepository.adjustBalance(entry.getKey(), -entry.getValue());
+        }
+
+        if (request.invoiceId() != null && !request.invoiceId().isBlank()) {
+            invoiceService.markSubmitted(request.invoiceId());
+        }
+
+        long total = totalByBudget.values().stream().mapToLong(Long::longValue).sum();
+        notificationService.sendBatchCreated(total, request.groups().size(),
+                dateTime.format(PeriodSheetName.FORMATTER), totalByBudget);
+        for (String budget : totalByBudget.keySet()) {
+            checkBudgetAlert(budget);
+        }
+        return request.groups().size();
+    }
+
+    private void validateItem(BatchExpenseItem item) {
+        if (item.name() == null || item.name().isBlank()) {
+            throw new ValidationException("Name is required");
+        }
+        if (item.name().length() > 255) {
+            throw new ValidationException("Name must be at most 255 characters");
+        }
+        if (item.budget() == null || item.budget().isBlank()) {
+            throw new ValidationException("Budget is required");
+        }
+        if (item.amount() == null) {
+            throw new ValidationException("Amount is required");
+        }
+        if (item.amount() <= 0) {
+            throw new ValidationException("Amount must be greater than 0");
+        }
+        if (item.description() != null && item.description().length() > MAX_DESCRIPTION_LENGTH) {
+            throw new ValidationException("Description must be at most " + MAX_DESCRIPTION_LENGTH + " characters");
+        }
+    }
+
     private void attachInvoiceToExpense(String expenseId, String invoiceId, String period) {
         InvoiceData invoice = invoiceService.requireInvoice(invoiceId);
         if (!invoice.period().equals(period)) {
@@ -229,8 +317,8 @@ public class ExpenseService {
         if (request.amount() <= 0) {
             throw new ValidationException("Amount must be greater than 0");
         }
-        if (request.description() != null && request.description().length() > 255) {
-            throw new ValidationException("Description must be at most 255 characters");
+        if (request.description() != null && request.description().length() > MAX_DESCRIPTION_LENGTH) {
+            throw new ValidationException("Description must be at most " + MAX_DESCRIPTION_LENGTH + " characters");
         }
         String dateTime = request.dateTime();
         if (dateTime == null || dateTime.isBlank()) {
@@ -254,8 +342,7 @@ public class ExpenseService {
     }
 
     @Transactional
-    public void updateExpense(String id, ExpenseRequest request) {
-        validate(request);
+    public void updateExpense(String id, ExpenseRequest request) {        validate(request);
         ExpenseData current = requireExpense(id);
         LocalDateTime dateTime = LocalDateTime.parse(request.dateTime(), PeriodSheetName.FORMATTER);
         Long newBudgetId = requireBudgetId(request.budget());
@@ -343,7 +430,8 @@ public class ExpenseService {
                 expense.budgetName(),
                 expense.amount(),
                 expense.description(),
-                expense.hasPhoto());
+                expense.hasPhoto(),
+                expense.photoType());
     }
 
     private void validate(ExpenseRequest request) {
@@ -370,8 +458,8 @@ public class ExpenseService {
         if (request.amount() <= 0) {
             throw new ValidationException("Amount must be greater than 0");
         }
-        if (request.description() != null && request.description().length() > 255) {
-            throw new ValidationException("Description must be at most 255 characters");
+        if (request.description() != null && request.description().length() > MAX_DESCRIPTION_LENGTH) {
+            throw new ValidationException("Description must be at most " + MAX_DESCRIPTION_LENGTH + " characters");
         }
     }
 }

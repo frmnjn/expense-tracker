@@ -1,6 +1,10 @@
 package com.expensetracker;
 
 import com.expensetracker.model.ApiResponse;
+import com.expensetracker.model.AiAnalysisResponse;
+import com.expensetracker.model.AiInvoiceItem;
+import com.expensetracker.model.BatchExpenseItem;
+import com.expensetracker.model.BatchExpenseRequest;
 import com.expensetracker.model.BudgetCreateRequest;
 import com.expensetracker.model.BudgetOption;
 import com.expensetracker.model.BudgetUpdateRequest;
@@ -8,6 +12,7 @@ import com.expensetracker.model.BudgetSummary;
 import com.expensetracker.model.ExpenseRequest;
 import com.expensetracker.model.ExpenseResponse;
 import com.expensetracker.model.ExpensesResponse;
+import com.expensetracker.model.InvoiceDetailResponse;
 import com.expensetracker.model.InvoiceResponse;
 import com.expensetracker.model.InvoicesResponse;
 import com.expensetracker.model.OptionsResponse;
@@ -25,6 +30,12 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 @SpringBootApplication
 @RegisterReflectionForBinding({
         ApiResponse.class,
+        AiAnalysisResponse.class,
+        AiInvoiceItem.class,
+        AiInvoiceItem[].class,
+        BatchExpenseItem.class,
+        BatchExpenseItem[].class,
+        BatchExpenseRequest.class,
         BudgetCreateRequest.class,
         BudgetOption.class,
         BudgetUpdateRequest.class,
@@ -33,6 +44,7 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
         ExpenseResponse.class,
         ExpenseResponse[].class,
         ExpensesResponse.class,
+        InvoiceDetailResponse.class,
         InvoiceResponse.class,
         InvoiceResponse[].class,
         InvoicesResponse.class,

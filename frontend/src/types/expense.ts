@@ -37,6 +37,7 @@ export interface Expense {
   amount: number
   description?: string
   hasPhoto: boolean
+  photoType?: 'image' | 'pdf' | string
 }
 
 export interface PeriodsResponse {
@@ -91,10 +92,46 @@ export interface TrendResponse {
 
 export interface Invoice {
   id: string
+  createdAt: string
+  status: 'ANALYZING' | 'TO_REVIEW' | 'SUBMITTED' | 'ERROR' | string
+  type: 'image' | 'pdf'
 }
 
 export interface InvoicesResponse {
   invoices: Invoice[]
+}
+
+export interface AiInvoiceItem {
+  name: string
+  amount: number
+  suggestedBudget?: string
+}
+
+export interface AiAnalysis {
+  storeName?: string
+  total?: number
+  items: AiInvoiceItem[]
+}
+
+export interface InvoiceDetail {
+  id: string
+  type: 'image' | 'pdf'
+  status: string
+  errorMessage?: string
+  analysis?: AiAnalysis
+}
+
+export interface BatchExpenseItem {
+  name: string
+  budget: string
+  amount: number
+  description?: string
+}
+
+export interface BatchExpenseRequest {
+  dateTime: string
+  invoiceId?: string
+  groups: BatchExpenseItem[]
 }
 
 export interface ApiResponse<T> {

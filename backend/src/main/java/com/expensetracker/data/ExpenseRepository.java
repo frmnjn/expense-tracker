@@ -15,8 +15,9 @@ public class ExpenseRepository {
 
     private static final String SELECT_COLS =
             "SELECT e.id, e.period, e.date_time, e.name, b.name AS budget_name, e.amount, e.description, e.deleted, "
-                    + "e.invoice_id "
-                    + "FROM expenses e JOIN budgets b ON b.id = e.budget_id ";
+                    + "e.invoice_id, inv.photo_path AS inv_photo_path "
+                    + "FROM expenses e JOIN budgets b ON b.id = e.budget_id "
+                    + "LEFT JOIN invoices inv ON inv.id = e.invoice_id ";
 
     private final JdbcTemplate jdbcTemplate;
 
@@ -34,7 +35,8 @@ public class ExpenseRepository {
 
     public List<ExpenseData> getExpenses(String period) {
         return jdbcTemplate.query(
-                SELECT_COLS + "WHERE e.period = ? AND e.deleted = FALSE ORDER BY e.date_time DESC",
+                SELECT_COLS + "WHERE e.period = ? AND e.deleted = FALSE "
+                        + "ORDER BY e.date_time DESC, e.created_at ASC, e.id",
                 this::mapRow,
                 period);
     }
@@ -91,6 +93,12 @@ public class ExpenseRepository {
     }
 
     private ExpenseData mapRow(ResultSet rs, int rowNum) throws SQLException {
+        String invoiceId = rs.getString("invoice_id");
+        String photoPath = rs.getString("inv_photo_path");
+        String photoType = null;
+        if (photoPath != null) {
+            photoType = photoPath.toLowerCase().endsWith(".pdf") ? "pdf" : "image";
+        }
         return new ExpenseData(
                 rs.getString("id"),
                 rs.getString("period"),
@@ -101,7 +109,8 @@ public class ExpenseRepository {
                 rs.getLong("amount"),
                 rs.getString("description"),
                 rs.getBoolean("deleted"),
-                rs.getString("invoice_id") != null && !rs.getString("invoice_id").isBlank(),
-                rs.getString("invoice_id"));
+                invoiceId != null && !invoiceId.isBlank(),
+                invoiceId,
+                photoType);
     }
 }
