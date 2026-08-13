@@ -5,5 +5,6 @@ public record InvoiceData(
         String period,
         String photoPath,
         String createdAt,
-        String status) {
+        String status,
+        String originalName) {
 }

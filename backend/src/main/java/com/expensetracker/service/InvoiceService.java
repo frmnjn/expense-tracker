@@ -82,6 +82,7 @@ public class InvoiceService {
                 typeOf(invoice),
                 analysis == null ? invoice.status() : analysis.status(),
                 analysis == null ? null : analysis.errorMessage(),
+                invoice.originalName(),
                 parsed);
     }
 
@@ -122,6 +123,7 @@ public class InvoiceService {
         }
         String invoiceId = UUID.randomUUID().toString();
         String filename = "pdf".equals(ext) ? invoiceId + ".pdf" : invoiceId + ".jpg";
+        String originalName = file.getOriginalFilename();
         try {
             Path target = Path.of(uploadDir).resolve(filename).normalize();
             Files.createDirectories(target.getParent());
@@ -135,7 +137,7 @@ public class InvoiceService {
         } catch (IOException e) {
             throw new IllegalStateException("Failed to save photo", e);
         }
-        invoiceRepository.insert(invoiceId, period, periodStart, filename);
+        invoiceRepository.insert(invoiceId, period, periodStart, filename, originalName);
         return invoiceId;
     }
 
@@ -187,7 +189,8 @@ public class InvoiceService {
     }
 
     private InvoiceResponse toResponse(InvoiceData invoice) {
-        return new InvoiceResponse(invoice.id(), invoice.createdAt(), invoice.status(), typeOf(invoice));
+        return new InvoiceResponse(invoice.id(), invoice.createdAt(), invoice.status(), typeOf(invoice),
+                invoice.originalName());
     }
 
     private static String extensionOf(String filename) {

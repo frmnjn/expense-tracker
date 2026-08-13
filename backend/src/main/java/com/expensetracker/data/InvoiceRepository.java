@@ -18,21 +18,26 @@ public class InvoiceRepository {
     }
 
     public void insert(String id, String period, LocalDate periodStart, String photoPath) {
+        insert(id, period, periodStart, photoPath, null);
+    }
+
+    public void insert(String id, String period, LocalDate periodStart, String photoPath, String originalName) {
         jdbcTemplate.update(
-                "INSERT INTO invoices (id, period, period_start, photo_path, deleted) VALUES (?, ?, ?, ?, FALSE)",
-                id, period, periodStart, photoPath);
+                "INSERT INTO invoices (id, period, period_start, photo_path, original_name, deleted) "
+                        + "VALUES (?, ?, ?, ?, ?, FALSE)",
+                id, period, periodStart, photoPath, originalName);
     }
 
     public List<InvoiceData> findByPeriod(String period) {
         return jdbcTemplate.query(
-                "SELECT id, period, photo_path, created_at, status FROM invoices "
+                "SELECT id, period, photo_path, created_at, status, original_name FROM invoices "
                         + "WHERE period = ? AND deleted = FALSE ORDER BY created_at DESC, id",
                 this::mapRow, period);
     }
 
     public List<InvoiceData> findByPeriodScanOnly(String period) {
         return jdbcTemplate.query(
-                "SELECT id, period, photo_path, created_at, status FROM invoices "
+                "SELECT id, period, photo_path, created_at, status, original_name FROM invoices "
                         + "WHERE period = ? AND deleted = FALSE AND scan_flow = TRUE "
                         + "ORDER BY created_at DESC, id",
                 this::mapRow, period);
@@ -44,7 +49,7 @@ public class InvoiceRepository {
 
     public InvoiceData findById(String id) {
         List<InvoiceData> rows = jdbcTemplate.query(
-                "SELECT id, period, photo_path, created_at, status FROM invoices "
+                "SELECT id, period, photo_path, created_at, status, original_name FROM invoices "
                         + "WHERE id = ? AND deleted = FALSE",
                 this::mapRow, id);
         return rows.isEmpty() ? null : rows.get(0);
@@ -117,6 +122,7 @@ public class InvoiceRepository {
                 rs.getString("period"),
                 rs.getString("photo_path"),
                 createdAt == null ? null : createdAt.toLocalDateTime().toString(),
-                rs.getString("status"));
+                rs.getString("status"),
+                rs.getString("original_name"));
     }
 }

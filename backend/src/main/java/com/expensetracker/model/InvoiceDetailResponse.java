@@ -9,5 +9,6 @@ public record InvoiceDetailResponse(
         @JsonProperty("type") String type,
         @JsonProperty("status") String status,
         @JsonProperty("errorMessage") String errorMessage,
+        @JsonProperty("name") String name,
         @JsonProperty("analysis") AiAnalysisResponse analysis) {
 }
