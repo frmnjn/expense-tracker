@@ -316,6 +316,11 @@ function HistoryPage() {
           ) : (
             <Image src={getPhotoUrl(viewingPhoto.id)} alt="Invoice" fit="contain" />
           ))}
+        {viewingPhoto?.photoName && (
+          <Text size="xs" c="dimmed" ta="center" mt="sm" truncate>
+            {viewingPhoto.photoName}
+          </Text>
+        )}
       </Modal>
 
       <Modal opened={!!deleting} onClose={() => setDeleting(null)} title="Hapus pengeluaran" centered>
@@ -539,6 +544,11 @@ function EditExpenseModal({ expense, onClose }: { expense: Expense; onClose: () 
               Hapus Foto
             </Button>
           </Group>
+        )}
+        {expense.hasPhoto && !removePhoto && !photo && expense.photoName && (
+          <Text size="xs" c="dimmed" truncate>
+            {expense.photoName}
+          </Text>
         )}
 
         {expense.hasPhoto && removePhoto ? (

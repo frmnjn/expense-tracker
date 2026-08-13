@@ -4,7 +4,9 @@ import { useInvoices } from '../hooks/useInvoices'
 import { getInvoicePhotoUrl } from '../services/expense'
 import { InvoiceThumb } from './InvoiceThumb'
 
-export type PhotoSelection = { kind: 'new'; file: File } | { kind: 'existing'; invoiceId: string }
+export type PhotoSelection =
+  | { kind: 'new'; file: File }
+  | { kind: 'existing'; invoiceId: string; name?: string }
 
 function PhotoInput({
   value,
@@ -27,29 +29,39 @@ function PhotoInput({
     setOpened(false)
   }
 
-  const pickExisting = (invoiceId: string) => {
-    onChange({ kind: 'existing', invoiceId })
+  const pickExisting = (invoiceId: string, name?: string) => {
+    onChange({ kind: 'existing', invoiceId, name })
     setOpened(false)
   }
 
   const clear = () => onChange(null)
 
+  const fileName =
+    value?.kind === 'new' ? value.file.name : value?.kind === 'existing' ? value.name : undefined
+
   return (
     <>
       {value ? (
-        <Group align="flex-start">
-          <Image
-            src={value.kind === 'existing' ? getInvoicePhotoUrl(value.invoiceId) : URL.createObjectURL(value.file)}
-            alt="Preview invoice"
-            mah={200}
-            fit="contain"
-            radius="md"
-            style={{ flex: 1 }}
-          />
-          <Button variant="subtle" color="red" onClick={clear}>
-            Hapus
-          </Button>
-        </Group>
+        <Stack gap={4}>
+          <Group align="flex-start">
+            <Image
+              src={value.kind === 'existing' ? getInvoicePhotoUrl(value.invoiceId) : URL.createObjectURL(value.file)}
+              alt="Preview invoice"
+              mah={200}
+              fit="contain"
+              radius="md"
+              style={{ flex: 1 }}
+            />
+            <Button variant="subtle" color="red" onClick={clear}>
+              Hapus
+            </Button>
+          </Group>
+          {fileName ? (
+            <Text size="xs" c="dimmed" truncate title={fileName}>
+              {fileName}
+            </Text>
+          ) : null}
+        </Stack>
       ) : (
         <Button variant="light" fullWidth onClick={() => setOpened(true)}>
           📷 Tambah Foto
@@ -90,7 +102,7 @@ function PhotoInput({
                     <InvoiceThumb
                       type={invoice.type}
                       url={getInvoicePhotoUrl(invoice.id)}
-                      onClick={() => pickExisting(invoice.id)}
+                      onClick={() => pickExisting(invoice.id, invoice.name)}
                     />
                   </Grid.Col>
                 ))}
