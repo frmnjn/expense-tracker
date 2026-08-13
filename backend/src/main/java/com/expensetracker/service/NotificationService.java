@@ -14,6 +14,7 @@ import java.text.NumberFormat;
 import java.time.Duration;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -108,6 +109,23 @@ public class NotificationService {
                 row("Budget", name),
                 row("Alert threshold", alertThreshold > 0 ? RUPIAH.format(alertThreshold) : "Disabled"));
         send("🎉 New budget: " + name, body);
+    }
+
+    public void sendBatchCreated(long total, int count, String dateTime, Map<String, Long> byBudget) {
+        String[] breakdown = byBudget.entrySet().stream()
+                .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
+                .map(e -> row(e.getKey(), RUPIAH.format(e.getValue())))
+                .toArray(String[]::new);
+        String[] rows = new String[breakdown.length + 1];
+        rows[0] = row("Date", dateTime);
+        System.arraycopy(breakdown, 0, rows, 1, breakdown.length);
+        String body = buildEmail(
+                "Expenses recorded from scan",
+                count + " expense(s) created from a scanned invoice.",
+                total,
+                "Total",
+                rows);
+        send("📋 Expenses recorded: " + RUPIAH.format(total), body);
     }
 
     private void send(String subject, String body) {

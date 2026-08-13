@@ -25,15 +25,65 @@ public class InvoiceRepository {
 
     public List<InvoiceData> findByPeriod(String period) {
         return jdbcTemplate.query(
-                "SELECT id, period, photo_path, created_at FROM invoices WHERE period = ? AND deleted = FALSE ORDER BY created_at DESC, id",
+                "SELECT id, period, photo_path, created_at, status FROM invoices "
+                        + "WHERE period = ? AND deleted = FALSE ORDER BY created_at DESC, id",
                 this::mapRow, period);
+    }
+
+    public List<InvoiceData> findByPeriodScanOnly(String period) {
+        return jdbcTemplate.query(
+                "SELECT id, period, photo_path, created_at, status FROM invoices "
+                        + "WHERE period = ? AND deleted = FALSE AND scan_flow = TRUE "
+                        + "ORDER BY created_at DESC, id",
+                this::mapRow, period);
+    }
+
+    public void setScanFlow(String id) {
+        jdbcTemplate.update("UPDATE invoices SET scan_flow = TRUE WHERE id = ?", id);
     }
 
     public InvoiceData findById(String id) {
         List<InvoiceData> rows = jdbcTemplate.query(
-                "SELECT id, period, photo_path, created_at FROM invoices WHERE id = ? AND deleted = FALSE",
+                "SELECT id, period, photo_path, created_at, status FROM invoices "
+                        + "WHERE id = ? AND deleted = FALSE",
                 this::mapRow, id);
         return rows.isEmpty() ? null : rows.get(0);
+    }
+
+    public List<String> findByStatus(String status) {
+        return jdbcTemplate.query(
+                "SELECT id FROM invoices WHERE status = ? AND deleted = FALSE",
+                (rs, rowNum) -> rs.getString("id"),
+                status);
+    }
+
+    public InvoiceAnalysis findAnalysis(String id) {
+        List<InvoiceAnalysis> rows = jdbcTemplate.query(
+                "SELECT id, status, analysis_json, error_message FROM invoices WHERE id = ? AND deleted = FALSE",
+                (rs, rowNum) -> new InvoiceAnalysis(
+                        rs.getString("id"),
+                        rs.getString("status"),
+                        rs.getString("analysis_json"),
+                        rs.getString("error_message")),
+                id);
+        return rows.isEmpty() ? null : rows.get(0);
+    }
+
+    public void updateStatus(String id, String status) {
+        jdbcTemplate.update("UPDATE invoices SET status = ? WHERE id = ?", status, id);
+    }
+
+    public void updateAnalysis(String id, String status, String analysisJson) {
+        jdbcTemplate.update(
+                "UPDATE invoices SET status = ?, analysis_json = ?, error_message = NULL WHERE id = ?",
+                status, analysisJson, id);
+    }
+
+    public void updateError(String id, String message) {
+        String safe = message == null || message.isBlank() ? "Analysis failed" : message;
+        jdbcTemplate.update(
+                "UPDATE invoices SET status = 'ERROR', error_message = ? WHERE id = ?",
+                safe.substring(0, Math.min(safe.length(), 255)), id);
     }
 
     public String getPhotoPath(String id) {
@@ -62,6 +112,7 @@ public class InvoiceRepository {
                 rs.getString("id"),
                 rs.getString("period"),
                 rs.getString("photo_path"),
-                createdAt == null ? null : createdAt.toLocalDateTime().toString());
+                createdAt == null ? null : createdAt.toLocalDateTime().toString(),
+                rs.getString("status"));
     }
 }

@@ -10,6 +10,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 import org.springframework.web.multipart.MultipartFile;
+import tools.jackson.databind.ObjectMapper;
 
 import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
@@ -48,16 +49,16 @@ class InvoiceServiceTest {
 
     @BeforeEach
     void setUp() {
-        invoiceService = new InvoiceService(invoiceRepository);
+        invoiceService = new InvoiceService(invoiceRepository, new ObjectMapper());
         ReflectionTestUtils.setField(invoiceService, "uploadDir", "/tmp");
     }
 
     @Test
     void listByDate_shouldReturnInvoicesForThatPeriod() {
         when(invoiceRepository.findByPeriod("2026-JUL-AUG"))
-                .thenReturn(List.of(new InvoiceData("inv-1", "2026-JUL-AUG", "a.jpg", "2026-07-25T09:00:00"),
-                        new InvoiceData("inv-2", "2026-JUL-AUG", "b.jpg", "2026-07-26T09:00:00")));
-        InvoicesResponse response = invoiceService.listByDate("2026-08-06 14:30");
+                .thenReturn(List.of(new InvoiceData("inv-1", "2026-JUL-AUG", "a.jpg", "2026-07-25T09:00:00", "SUBMITTED"),
+                        new InvoiceData("inv-2", "2026-JUL-AUG", "b.jpg", "2026-07-26T09:00:00", "SUBMITTED")));
+        InvoicesResponse response = invoiceService.listByDate("2026-08-06 14:30", false);
         assertEquals(2, response.invoices().size());
         assertEquals("inv-1", response.invoices().get(0).id());
         assertEquals("inv-2", response.invoices().get(1).id());
@@ -65,13 +66,13 @@ class InvoiceServiceTest {
 
     @Test
     void listByDate_missingDate_shouldReject() {
-        ValidationException ex = assertThrows(ValidationException.class, () -> invoiceService.listByDate(""));
+        ValidationException ex = assertThrows(ValidationException.class, () -> invoiceService.listByDate("", false));
         assertEquals("Date is required", ex.getMessage());
     }
 
     @Test
     void listByDate_invalidFormat_shouldReject() {
-        ValidationException ex = assertThrows(ValidationException.class, () -> invoiceService.listByDate("06-08-2026"));
+        ValidationException ex = assertThrows(ValidationException.class, () -> invoiceService.listByDate("06-08-2026", false));
         assertEquals("Date must be in yyyy-MM-dd HH:mm format", ex.getMessage());
     }
 
@@ -112,6 +113,38 @@ class InvoiceServiceTest {
         } finally {
             Files.deleteIfExists(Path.of("/tmp", id + ".jpg"));
         }
+    }
+
+    @Test
+    void createInvoice_pdf_shouldStoreRawPdf() throws Exception {
+        MultipartFile file = org.mockito.Mockito.mock(MultipartFile.class);
+        when(file.isEmpty()).thenReturn(false);
+        when(file.getOriginalFilename()).thenReturn("invoice.pdf");
+        when(file.getInputStream()).thenReturn(new ByteArrayInputStream("%PDF-1.7 fake".getBytes()));
+        String id = invoiceService.createInvoice("2026-JUL-AUG", LocalDate.of(2026, 7, 25), file);
+        verify(invoiceRepository).insert(eq(id), eq("2026-JUL-AUG"), eq(LocalDate.of(2026, 7, 25)), eq(id + ".pdf"));
+        assertTrue(Files.readAllBytes(Path.of("/tmp", id + ".pdf")).length > 0);
+        Files.deleteIfExists(Path.of("/tmp", id + ".pdf"));
+    }
+
+    @Test
+    void createInvoiceForAi_shouldSetAnalyzingStatus() throws Exception {
+        MultipartFile file = org.mockito.Mockito.mock(MultipartFile.class);
+        when(file.isEmpty()).thenReturn(false);
+        when(file.getOriginalFilename()).thenReturn("invoice.jpg");
+        when(file.getInputStream()).thenReturn(new ByteArrayInputStream(imageBytes(200, 100)));
+        String id = invoiceService.createInvoiceForAi("2026-JUL-AUG", LocalDate.of(2026, 7, 25), file);
+        verify(invoiceRepository).updateStatus(id, "ANALYZING");
+        Files.deleteIfExists(Path.of("/tmp", id + ".jpg"));
+    }
+
+    @Test
+    void listByDate_shouldExposeStatusAndType() {
+        when(invoiceRepository.findByPeriod("2026-JUL-AUG"))
+                .thenReturn(List.of(new InvoiceData("inv-1", "2026-JUL-AUG", "a.pdf", "2026-07-25T09:00:00", "TO_REVIEW")));
+        InvoicesResponse response = invoiceService.listByDate("2026-08-06 14:30", false);
+        assertEquals("TO_REVIEW", response.invoices().get(0).status());
+        assertEquals("pdf", response.invoices().get(0).type());
     }
 
     private static byte[] imageBytes(int width, int height) throws IOException {
@@ -260,7 +293,7 @@ class InvoiceServiceTest {
         when(file.getOriginalFilename()).thenReturn("invoice.exe");
         ValidationException ex = assertThrows(ValidationException.class,
                 () -> invoiceService.createInvoice("2026-JUL-AUG", LocalDate.of(2026, 7, 25), file));
-        assertEquals("Only jpg and png are allowed", ex.getMessage());
+        assertEquals("Only jpg, png, and pdf are allowed", ex.getMessage());
     }
 
     @Test
@@ -272,7 +305,7 @@ class InvoiceServiceTest {
 
     @Test
     void requireInvoice_found_shouldReturnInvoice() {
-        when(invoiceRepository.findById("inv-1")).thenReturn(new InvoiceData("inv-1", "2026-JUL-AUG", "a.jpg", "2026-07-25T09:00:00"));
+        when(invoiceRepository.findById("inv-1")).thenReturn(new InvoiceData("inv-1", "2026-JUL-AUG", "a.jpg", "2026-07-25T09:00:00", "SUBMITTED"));
         assertEquals("2026-JUL-AUG", invoiceService.requireInvoice("inv-1").period());
     }
 

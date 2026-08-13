@@ -5,6 +5,8 @@ import com.expensetracker.data.ExpenseData;
 import com.expensetracker.data.ExpenseRepository;
 import com.expensetracker.data.InvoiceData;
 import com.expensetracker.data.TopUpRepository;
+import com.expensetracker.model.BatchExpenseItem;
+import com.expensetracker.model.BatchExpenseRequest;
 import com.expensetracker.model.BudgetCreateRequest;
 import com.expensetracker.model.BudgetUpdateRequest;
 import com.expensetracker.model.ExpenseRequest;
@@ -29,6 +31,7 @@ import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.when;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.mock;
@@ -61,7 +64,7 @@ class ExpenseServiceTest {
 
     private static ExpenseData expenseData() {
         return new ExpenseData("id123", "2026-JUL-AUG", "2026-08-06 14:30", "Makan Siang", "Daily",
-                35000L, null, false, false, null);
+                35000L, null, false, false, null, null);
     }
 
     @Test
@@ -136,9 +139,9 @@ class ExpenseServiceTest {
     @Test
     void createExpense_descriptionTooLong_shouldReject() {
         ExpenseRequest request = new ExpenseRequest(
-                "2026-08-06 14:30", "Makan Siang", "Daily", 35000L, "x".repeat(256), null);
+                "2026-08-06 14:30", "Makan Siang", "Daily", 35000L, "x".repeat(10001), null);
         ValidationException ex = assertThrows(ValidationException.class, () -> expenseService.createExpense(request));
-        assertEquals("Description must be at most 255 characters", ex.getMessage());
+        assertEquals("Description must be at most 10000 characters", ex.getMessage());
     }
 
     @Test
@@ -187,9 +190,9 @@ class ExpenseServiceTest {
     @Test
     void getSummary_shouldAggregateTotalAndByBudget() {
         when(expenseRepository.getExpenses("2026-JUL-AUG")).thenReturn(List.of(
-                new ExpenseData("1", "2026-JUL-AUG", "2026-08-01 09:00", "a", "Daily", 1000L, null, false, false, null),
-                new ExpenseData("2", "2026-JUL-AUG", "2026-08-02 09:00", "b", "Daily", 2000L, null, false, false, null),
-                new ExpenseData("3", "2026-JUL-AUG", "2026-08-03 09:00", "c", "Weekly", 5000L, null, false, false, null)));
+                new ExpenseData("1", "2026-JUL-AUG", "2026-08-01 09:00", "a", "Daily", 1000L, null, false, false, null, null),
+                new ExpenseData("2", "2026-JUL-AUG", "2026-08-02 09:00", "b", "Daily", 2000L, null, false, false, null, null),
+                new ExpenseData("3", "2026-JUL-AUG", "2026-08-03 09:00", "c", "Weekly", 5000L, null, false, false, null, null)));
         var summary = expenseService.getSummary("2026-JUL-AUG");
         assertEquals(8000L, summary.total());
         assertEquals(3, summary.count());
@@ -353,7 +356,7 @@ class ExpenseServiceTest {
     @Test
     void createExpense_withInvoiceInSamePeriod_shouldAttachInvoice() {
         when(budgetRepository.findIdByName("Daily")).thenReturn(1L);
-        when(invoiceService.requireInvoice("inv-1")).thenReturn(new InvoiceData("inv-1", "2026-JUL-AUG", "f.jpg", "2026-07-25T09:00:00"));
+        when(invoiceService.requireInvoice("inv-1")).thenReturn(new InvoiceData("inv-1", "2026-JUL-AUG", "f.jpg", "2026-07-25T09:00:00", "SUBMITTED"));
         ExpenseRequest request = new ExpenseRequest("2026-08-06 14:30", "Makan Siang", "Daily", 35000L, null, "inv-1");
         assertDoesNotThrow(() -> expenseService.createExpense(request));
         verify(expenseRepository).attachInvoice(anyString(), eq("inv-1"));
@@ -362,7 +365,7 @@ class ExpenseServiceTest {
     @Test
     void createExpense_withInvoiceFromOtherPeriod_shouldReject() {
         when(budgetRepository.findIdByName("Daily")).thenReturn(1L);
-        when(invoiceService.requireInvoice("inv-9")).thenReturn(new InvoiceData("inv-9", "2026-AUG-SEP", "f.jpg", "2026-08-25T09:00:00"));
+        when(invoiceService.requireInvoice("inv-9")).thenReturn(new InvoiceData("inv-9", "2026-AUG-SEP", "f.jpg", "2026-08-25T09:00:00", "SUBMITTED"));
         ExpenseRequest request = new ExpenseRequest("2026-08-06 14:30", "Makan Siang", "Daily", 35000L, null, "inv-9");
         ValidationException ex = assertThrows(ValidationException.class, () -> expenseService.createExpense(request));
         assertEquals("Invoice is not in the same period as the expense", ex.getMessage());
@@ -393,7 +396,7 @@ class ExpenseServiceTest {
     void getPhotoPath_withInvoice_shouldResolveViaInvoice() {
         when(expenseRepository.findById("id123")).thenReturn(
                 new ExpenseData("id123", "2026-JUL-AUG", "2026-08-06 14:30", "Makan Siang", "Daily",
-                        35000L, null, false, true, "inv-1"));
+                        35000L, null, false, true, "inv-1", null));
         when(invoiceService.getInvoicePhotoPath("inv-1")).thenReturn("/uploads/inv-1.jpg");
         assertEquals("/uploads/inv-1.jpg", expenseService.getPhotoPath("id123"));
     }
@@ -417,7 +420,7 @@ class ExpenseServiceTest {
     void detachPhoto_withInvoice_shouldCleanupIfUnused() {
         when(expenseRepository.findById("id123")).thenReturn(
                 new ExpenseData("id123", "2026-JUL-AUG", "2026-08-06 14:30", "Makan Siang", "Daily",
-                        35000L, null, false, true, "inv-1"));
+                        35000L, null, false, true, "inv-1", null));
         when(invoiceService.deleteIfUnused("inv-1")).thenReturn(true);
         assertDoesNotThrow(() -> expenseService.detachPhoto("id123"));
         verify(expenseRepository).detachPhoto("id123");
@@ -436,7 +439,7 @@ class ExpenseServiceTest {
     void updateExpense_withInvoiceInSamePeriod_shouldAttachInvoice() {
         when(expenseRepository.findById("id123")).thenReturn(expenseData());
         when(budgetRepository.findIdByName("Daily")).thenReturn(1L);
-        when(invoiceService.requireInvoice("inv-1")).thenReturn(new InvoiceData("inv-1", "2026-JUL-AUG", "f.jpg", "2026-07-25T09:00:00"));
+        when(invoiceService.requireInvoice("inv-1")).thenReturn(new InvoiceData("inv-1", "2026-JUL-AUG", "f.jpg", "2026-07-25T09:00:00", "SUBMITTED"));
         ExpenseRequest request = new ExpenseRequest("2026-08-06 14:30", "Makan Siang", "Daily", 35000L, null, "inv-1");
         assertDoesNotThrow(() -> expenseService.updateExpense("id123", request));
         verify(expenseRepository).attachInvoice("id123", "inv-1");
@@ -446,7 +449,7 @@ class ExpenseServiceTest {
     void updateExpense_withInvoiceFromOtherPeriod_shouldReject() {
         when(expenseRepository.findById("id123")).thenReturn(expenseData());
         when(budgetRepository.findIdByName("Daily")).thenReturn(1L);
-        when(invoiceService.requireInvoice("inv-9")).thenReturn(new InvoiceData("inv-9", "2026-AUG-SEP", "f.jpg", "2026-08-25T09:00:00"));
+        when(invoiceService.requireInvoice("inv-9")).thenReturn(new InvoiceData("inv-9", "2026-AUG-SEP", "f.jpg", "2026-08-25T09:00:00", "SUBMITTED"));
         ExpenseRequest request = new ExpenseRequest("2026-08-06 14:30", "Makan Siang", "Daily", 35000L, null, "inv-9");
         ValidationException ex = assertThrows(ValidationException.class,
                 () -> expenseService.updateExpense("id123", request));
@@ -474,6 +477,55 @@ class ExpenseServiceTest {
         verify(notificationService).sendExpenseCreated(eq("Makan Siang"), eq("Daily"), eq(35000L), anyString(),
                 eq(10000L));
         verify(notificationService, never()).sendBudgetAlert(anyString(), anyLong(), anyLong());
+    }
+
+    @Test
+    void createExpenseBatch_shouldInsertEachAdjustBalanceAggregatedAndMarkSubmitted() {
+        when(budgetRepository.findIdByName("Alana")).thenReturn(1L);
+        when(budgetRepository.findIdByName("Household")).thenReturn(2L);
+        when(invoiceService.requireInvoice("inv-1"))
+                .thenReturn(new InvoiceData("inv-1", "2026-JUL-AUG", "f.jpg", "2026-07-25T09:00:00", "TO_REVIEW"));
+        BatchExpenseRequest request = new BatchExpenseRequest("2026-08-06 14:30", "inv-1", List.of(
+                new BatchExpenseItem("Popok", "Alana", 50000L, "Popok MamyPoko"),
+                new BatchExpenseItem("Kopi", "Household", 15000L, null)));
+        int count = expenseService.createExpenseBatch(request);
+        assertEquals(2, count);
+        verify(expenseRepository, times(2)).insert(anyString(), eq("2026-JUL-AUG"),
+                eq(LocalDate.of(2026, 7, 25)), eq(LocalDateTime.of(2026, 8, 6, 14, 30)), anyLong(), anyString(), anyLong(), any());
+        verify(expenseRepository, times(2)).attachInvoice(anyString(), eq("inv-1"));
+        verify(budgetRepository).adjustBalance("Alana", -50000L);
+        verify(budgetRepository).adjustBalance("Household", -15000L);
+        verify(invoiceService).markSubmitted("inv-1");
+    }
+
+    @Test
+    void createExpenseBatch_invoiceOtherPeriod_shouldReject() {
+        when(invoiceService.requireInvoice("inv-9"))
+                .thenReturn(new InvoiceData("inv-9", "2026-AUG-SEP", "f.jpg", "2026-08-25T09:00:00", "TO_REVIEW"));
+        BatchExpenseRequest request = new BatchExpenseRequest("2026-08-06 14:30", "inv-9", List.of(
+                new BatchExpenseItem("Kopi", "Household", 15000L, null)));
+        ValidationException ex = assertThrows(ValidationException.class,
+                () -> expenseService.createExpenseBatch(request));
+        assertEquals("Invoice is not in the same period as the expense", ex.getMessage());
+        verify(expenseRepository, never()).insert(any(), any(), any(), any(), anyLong(), any(), anyLong(), any());
+    }
+
+    @Test
+    void createExpenseBatch_missingGroup_shouldReject() {
+        BatchExpenseRequest request = new BatchExpenseRequest("2026-08-06 14:30", null, List.of());
+        ValidationException ex = assertThrows(ValidationException.class,
+                () -> expenseService.createExpenseBatch(request));
+        assertEquals("At least one expense is required", ex.getMessage());
+    }
+
+    @Test
+    void createExpenseBatch_zeroAmount_shouldReject() {
+        BatchExpenseRequest request = new BatchExpenseRequest("2026-08-06 14:30", null, List.of(
+                new BatchExpenseItem("Kopi", "Household", 0L, null)));
+        ValidationException ex = assertThrows(ValidationException.class,
+                () -> expenseService.createExpenseBatch(request));
+        assertEquals("Amount must be greater than 0", ex.getMessage());
+        verify(expenseRepository, never()).insert(any(), any(), any(), any(), anyLong(), any(), anyLong(), any());
     }
 
     @Test

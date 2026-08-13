@@ -18,6 +18,11 @@ spring:
 upload:
   dir: ${UPLOAD_DIR:/app/uploads}
 
+ai:
+  gemini-api-key: ${GEMINI_API_KEY:}
+  model: ${AI_MODEL:gemini-3.5-flash-lite}
+  timeout: ${AI_TIMEOUT:60}
+
 notify:
   notifier-url: ${NOTIFIER_URL:}
   emails: ${NOTIFY_EMAILS:}

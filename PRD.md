@@ -53,8 +53,9 @@ Target: sederhana, mudah dijalankan dengan Docker, mudah dikembangkan.
 # Halaman
 
 * `/` — halaman Catat (form pengeluaran + foto invoice).
+* `/scan` — **Scan Struk dengan AI** (upload foto/PDF, analisis otomatis, review & assign budget, auto-create banyak expense).
 * `/dashboard` — ringkasan saldo per budget, top-up, riwayat top-up, dan 3 bulan terakhir.
-* `/riwayat` — daftar pengeluaran per periode, dengan filter/sort, edit, hapus, dan lihat foto.
+* `/riwayat` — daftar pengeluaran per periode, dengan filter/sort, pagination, edit, hapus, dan lihat foto (termasuk PDF).
 * `/catat` — alias halaman Catat.
 
 Saat aplikasi dibuka, user langsung melihat halaman Catat.
@@ -70,10 +71,10 @@ Tabel:
 | Tabel | Kolom |
 | ----- | ----- |
 | `budgets` | `id` PK, `name` UNIQUE, `balance`, `is_active`, `alert_threshold` (0 = nonaktif) |
-| `expenses` | `id` PK, `period`, `period_start`, `date_time`, `budget_id` FK→`budgets`, `name`, `amount`, `description`, `deleted`, `invoice_id` FK→`invoices` (nullable) |
-| `invoices` | `id` PK, `period`, `period_start`, `photo_path`, `deleted` |
+| `expenses` | `id` PK, `period`, `period_start`, `date_time`, `budget_id` FK→`budgets`, `name`, `amount`, `description` (TEXT), `deleted`, `invoice_id` FK→`invoices` (nullable), `created_at` (DATETIME(6), untuk pengurutan deterministik) |
+| `invoices` | `id` PK, `period`, `period_start`, `photo_path`, `deleted`, `status` (`ANALYZING`/`TO_REVIEW`/`SUBMITTED`/`ERROR`), `analysis_json`, `error_message`, `scan_flow` |
 | `idempotency_keys` | `id_key` PK, `response_json`, `created_at` |
-| `top_ups` | `id` PK, `date_time`, `budget_id` FK→`budgets`, `amount`, `description` |
+| `top_ups` | `id` PK, `date_time`, `budget_id` FK→`budgets`, `amount`, `description` (TEXT) |
 
 Migration saat ini:
 
@@ -85,10 +86,18 @@ Migration saat ini:
 * `V6__idempotency.sql` — tabel `idempotency_keys` untuk idempotensi request POST.
 * `V7__indexes.sql` — index `expenses.invoice_id`, komposit `expenses(period, deleted)` (menggantikan `idx_expenses_period`), dan `idempotency_keys.created_at`.
 * `V8__budget_alert_threshold.sql` — kolom `budgets.alert_threshold` (0 = nonaktif) untuk notifikasi "budget menipis".
+* `V9__invoices_created_at.sql` — kolom `invoices.created_at` (untuk urutan "foto periode ini").
+* `V10__invoice_ai.sql` — kolom `invoices.status`, `analysis_json`, `error_message` (state machine analisis AI).
+* `V11__invoice_scan_flow.sql` — kolom `invoices.scan_flow` (menandai invoice hasil alur `/scan`).
+* `V12__expenses_created_at.sql` — kolom `expenses.created_at` (pengurutan deterministik).
+* `V13__expenses_created_at_fractional.sql` — `created_at` jadi `DATETIME(6)` (mikrodetik, hindari tie dalam satu batch scan).
+* `V14__wider_description.sql` — `description` expense & top_up jadi `TEXT` (deskripsi auto-generate scan bisa > 255).
 
 Index yang ada: `budgets` PK(id) + UNIQUE(name); `expenses` PK(id), `budget_id` FK, `deleted`, `invoice_id`, komposit `(period, deleted)`; `invoices` PK(id) + `period`; `top_ups` PK(id) + `budget_id`; `idempotency_keys` PK(id_key) + `created_at`.
 
-Satu **invoice** adalah pemilik satu file foto dan dapat dirujuk oleh **banyak** expense (`invoice_id`). Karena itu satu foto invoice bisa dipakai untuk beberapa catatan pengeluaran (mis. satu struk untuk beberapa budget). `hasPhoto` pada respons expense berarti `invoice_id` terisi. Menghapus foto pada sebuah expense melepas referensi (`invoice_id = NULL`); invoice & file foto **baru dihapus jika tidak ada expense lain yang masih memakainya** — jika masih dipakai expense lain, invoice & file dipertahankan.
+Satu **invoice** adalah pemilik satu file foto/PDF dan dapat dirujuk oleh **banyak** expense (`invoice_id`). Karena itu satu foto invoice bisa dipakai untuk beberapa catatan pengeluaran (mis. satu struk untuk beberapa budget). `hasPhoto` pada respons expense berarti `invoice_id` terisi; `photoType` (`image`/`pdf`) diturunkan dari jenis file. Menghapus foto pada sebuah expense melepas referensi (`invoice_id = NULL`); invoice & file foto **baru dihapus jika tidak ada expense lain yang masih memakainya** — jika masih dipakai expense lain, invoice & file dipertahankan.
+
+Invoice hasil alur `/scan` ditandai `scan_flow = TRUE` dan memiliki state machine analisis AI: `ANALYZING` (upload sukses, AI berjalan async) → `TO_REVIEW` (AI selesai, menunggu konfirmasi user) → `SUBMITTED` (expense dibuat) atau `ERROR` (analisis gagal, bisa retry). Foto biasa pada form Catat berstatus langsung `SUBMITTED` (bukan alur AI).
 
 Periode (format `YYYY-MON-MON`, contoh `2026-JAN-FEB`) dihitung dari `date_time` dengan aturan cut-off tanggal 25. `period` disimpan untuk filter cepat.
 
@@ -119,6 +128,26 @@ Field:
 * Foto: tombol membuka pilihan **"Ambil Foto (Kamera)"**, **"Dari Galeri"**, atau **"Pakai Foto Periode Ini"** (memilih foto invoice yang sudah di-upload di periode yang sama, agar satu struk bisa dipakai beberapa catatan), dengan preview.
 * Submit: create expense → jika ada foto, upload foto (atau pakai `invoiceId` saat memilih foto yang sudah ada) → reset form + notifikasi sukses.
 * Idempotensi: setiap POST mengirim header `Idempotency-Key` (UUID). Backend menyimpan hasilnya selama 24 jam; request dengan key yang sama mengembalikan respons tersimpan tanpa membuat duplikat. Guard `submittingRef` di frontend juga mencegah double-submit.
+
+## Scan Struk dengan AI (`/scan`)
+
+Alur untuk belanja supermarket yang memakai banyak budget dalam satu struk, tanpa harus menghitung manual. AI (Google Gemini Flash) membaca struk gambar/PDF, lalu user tinggal review & assign budget sebelum expense dibuat otomatis.
+
+Alur:
+
+1. **Upload** struk (foto kamera/galeri, atau PDF) → invoice dibuat dengan status `ANALYZING`, AI menganalisis **async** di background.
+2. **Menunggu AI** → status berubah otomatis (polling ~3 detik) menjadi `TO_REVIEW` saat selesai, atau `ERROR` (mis. bukan struk) dengan tombol "Coba lagi".
+3. **Review** (modal): daftar item hasil AI (nama, nominal, **saran budget** dari daftar budget aktif). User mengoreksi: ganti nama/nominal, ganti/pilih budget tiap item, tambah/hapus item. Item diskon/promo dibaca sebagai nominal negatif (mengurangi total group).
+4. **Group per budget** otomatis: item di-budget yang sama dijumlah → 1 expense per budget; nama default "Belanja {toko}", deskripsi berisi daftar item. Tampil warning bila jumlah item ≠ total struk.
+5. **Buat N Pengeluaran** → `POST /expenses/batch` (satu transaksi) → semua expense dibuat, saldo tiap budget di-adjust, invoice ditandai `SUBMITTED`.
+
+Detail teknis:
+
+* List di `/scan` hanya menampilkan invoice `scan_flow = TRUE`, dengan **filter status** (Semua/Menunggu AI/Perlu Review/Selesai/Gagal), **sort** (terbaru/terlama), dan **pagination**.
+* Satu struk dipakai sebagai `invoice_id` pada **semua** expense hasil split (satu foto untuk banyak catatan).
+* Deskripsi auto-generate bisa melebihi 255 karakter; di-truncate di frontend, dan DB `description` = `TEXT`.
+* Pengurutan riwayat pakai `date_time DESC, created_at ASC` (created_at mikrodetik) agar urutan batch scan stabil & urut sesuai urutan item.
+* Konfigurasi AI: `GEMINI_API_KEY`, `AI_MODEL` (default `gemini-3.5-flash-lite`), `AI_TIMEOUT`.
 
 ## Dashboard
 
@@ -302,11 +331,45 @@ Daftar id invoice yang punya foto pada periode dari `date` (untuk fitur "Pakai F
 
 ## GET /invoices/{id}/photo
 
-Mengembalikan file foto sebuah invoice. `404` jika tidak ada.
+Mengembalikan file foto sebuah invoice. `404` jika tidak ada. Mendukung `application/pdf`.
+
+## POST /invoices
+
+Membuat invoice **alur Scan AI** dari file upload (multipart `file` + `date` `yyyy-MM-dd HH:mm`), menandai `scan_flow`, mengatur status `ANALYZING`, lalu memicu analisis AI **async**. Mengembalikan `{ "invoiceId": "..." }`.
+
+* Hanya gambar (jpg/png/webp/gif) atau **PDF**, maksimal 10MB.
+
+## GET /invoices/{id}
+
+Detail sebuah invoice: `{ id, type, status, errorMessage?, analysis? }`. Saat status `TO_REVIEW`, `analysis` berisi hasil AI `{ storeName, total, items: [{ name, amount, suggestedBudget }] }`.
+
+## POST /invoices/{id}/retry
+
+Mengulang analisis AI untuk invoice berstatus `ERROR` (reset ke `ANALYZING` + jalankan ulang).
+
+## POST /expenses/batch
+
+Membuat banyak expense hasil split struk dalam **satu transaksi** (alur `/scan`).
+
+```json
+{
+  "dateTime": "2026-08-06 14:30",
+  "invoiceId": "inv-abc123",
+  "groups": [
+    { "name": "Belanja Superindo", "budget": "Alana", "amount": 65000, "description": "Popok; Kopi" }
+  ]
+}
+```
+
+Semua group memakai `dateTime` yang sama; saldo di-adjust **agregat per budget**; invoice ditandai `SUBMITTED`; mengirim **1 email ringkasan** (bukan per expense). Respons `{ "count": N }`. Idempotensi via `Idempotency-Key`.
+
+## GET /invoices?date=...&scan=...
+
+Daftar id invoice per periode (untuk "Pakai Foto Periode Ini"). Dengan `scan=true`, hanya invoice alur `/scan` yang dikembalikan. Setiap item: `{ id, createdAt, status, type }`.
 
 ## Idempotensi
 
-Semua endpoint `POST` (`/expenses`, `/expenses/{id}/photo`, `/topups`, `/budgets`) menerima header `Idempotency-Key` opsional. Jika key diberikan, backend menyimpan respons selama **24 jam** dan mengembalikan respons tersimpan untuk key yang sama (mencegah duplikat saat retry). Baris lama dibersihkan otomatis saat penyimpanan baru.
+Semua endpoint `POST` (`/expenses`, `/expenses/batch`, `/expenses/{id}/photo`, `/topups`, `/budgets`, `/invoices`) menerima header `Idempotency-Key` opsional. Jika key diberikan, backend menyimpan respons selama **24 jam** dan mengembalikan respons tersimpan untuk key yang sama (mencegah duplikat saat retry). Baris lama dibersihkan otomatis saat penyimpanan baru.
 
 ## GET /summary?period=YYYY-MON-MON
 
@@ -374,6 +437,9 @@ DB_URL=jdbc:mysql://host.docker.internal:33060/expense_tracker?useSSL=false&allo
 DB_USER=expense_tracker_user
 DB_PASSWORD=password-kuat
 UPLOAD_DIR=/app/uploads
+GEMINI_API_KEY=AIza...            # untuk Scan Struk dengan AI
+AI_MODEL=gemini-3.5-flash-lite    # opsional, default
+AI_TIMEOUT=60                     # opsional, detik
 ```
 
 ## Frontend

@@ -136,6 +136,9 @@ function DashboardPage() {
             <Anchor href="/catat" size="sm">
               Catat Pengeluaran
             </Anchor>
+            <Anchor href="/scan" size="sm">
+              Scan
+            </Anchor>
             <Anchor href="/riwayat" size="sm">
               Riwayat
             </Anchor>

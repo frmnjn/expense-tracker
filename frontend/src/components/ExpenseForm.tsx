@@ -236,7 +236,7 @@ function ExpenseForm() {
           placeholder="Catatan tambahan"
           value={description}
           onChange={(event) => setDescription(event.currentTarget.value)}
-          maxLength={255}
+          maxLength={10000}
           size="md"
         />
 

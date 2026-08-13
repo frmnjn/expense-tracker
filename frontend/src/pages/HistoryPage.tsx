@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   ActionIcon,
   Anchor,
@@ -9,6 +9,7 @@ import {
   LoadingOverlay,
   Modal,
   NumberInput,
+  Pagination,
   Paper,
   Select,
   SimpleGrid,
@@ -42,6 +43,12 @@ function HistoryPage() {
   const { data: expensesData, isPending: expensesLoading } = useExpenses(period)
   const isMobile = useMediaQuery('(max-width: 48em)')
 
+  useEffect(() => {
+    if (!period && periodsData && periodsData.periods.length > 0) {
+      setPeriod(periodsData.periods[0])
+    }
+  }, [period, periodsData])
+
   const periods = useMemo(() => (periodsData?.periods ?? []).map((p) => ({ value: p, label: p })), [periodsData])
   const expenses = expensesData?.expenses ?? []
   const budgetOptions = useMemo(
@@ -53,6 +60,12 @@ function HistoryPage() {
   const [budgetFilter, setBudgetFilter] = useState<string | null>(null)
   const [sortBy, setSortBy] = useState<string>('waktu-desc')
   const [viewingPhoto, setViewingPhoto] = useState<Expense | null>(null)
+  const [page, setPage] = useState(1)
+  const PAGE_SIZE = 15
+
+  useEffect(() => {
+    setPage(1)
+  }, [search, budgetFilter, sortBy, period])
 
   const visibleExpenses = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -79,6 +92,10 @@ function HistoryPage() {
     }
     return sorted
   }, [expensesData, search, budgetFilter, sortBy])
+
+  const totalPages = Math.max(1, Math.ceil(visibleExpenses.length / PAGE_SIZE))
+  const safePage = Math.min(page, totalPages)
+  const pageExpenses = visibleExpenses.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
 
   const [editing, setEditing] = useState<Expense | null>(null)
   const [deleting, setDeleting] = useState<Expense | null>(null)
@@ -114,6 +131,9 @@ function HistoryPage() {
           <Group gap="md">
             <Anchor href="/dashboard" display="inline-block">
               Dashboard
+            </Anchor>
+            <Anchor href="/scan" display="inline-block">
+              Scan
             </Anchor>
             <Anchor href="/catat" display="inline-block">
               Catat Pengeluaran
@@ -176,7 +196,7 @@ function HistoryPage() {
           </Text>
         ) : isMobile ? (
           <Stack gap="sm">
-            {visibleExpenses.map((expense) => (
+            {pageExpenses.map((expense) => (
               <Paper key={expense.id} withBorder p="sm" radius="md">
                 <Group justify="space-between" mb={4} wrap="nowrap" align="flex-start">
                   <Text fw={600} style={{ wordBreak: 'break-word' }}>
@@ -232,7 +252,7 @@ function HistoryPage() {
               </Table.Tr>
             </Table.Thead>
             <Table.Tbody>
-              {visibleExpenses.map((expense) => (
+              {pageExpenses.map((expense) => (
                 <Table.Tr key={expense.id}>
                   <Table.Td>{dayjs(expense.dateTime).format(DATE_TIME_FORMAT)}</Table.Td>
                   <Table.Td>{expense.name}</Table.Td>
@@ -270,6 +290,12 @@ function HistoryPage() {
         )}
       </Paper>
 
+      {totalPages > 1 && (
+        <Group justify="center" mt="md">
+          <Pagination value={safePage} onChange={setPage} total={totalPages} />
+        </Group>
+      )}
+
       {editing && <EditExpenseModal expense={editing} onClose={() => setEditing(null)} />}
 
       <Modal
@@ -279,9 +305,17 @@ function HistoryPage() {
         size="md"
         centered
       >
-        {viewingPhoto && (
-          <Image src={getPhotoUrl(viewingPhoto.id)} alt="Invoice" fit="contain" />
-        )}
+        {viewingPhoto &&
+          (viewingPhoto.photoType === 'pdf' ? (
+            <Stack align="center" gap="sm">
+              <Text fz={48}>📄</Text>
+              <Button component="a" href={getPhotoUrl(viewingPhoto.id)} target="_blank" variant="light">
+                Buka PDF
+              </Button>
+            </Stack>
+          ) : (
+            <Image src={getPhotoUrl(viewingPhoto.id)} alt="Invoice" fit="contain" />
+          ))}
       </Modal>
 
       <Modal opened={!!deleting} onClose={() => setDeleting(null)} title="Hapus pengeluaran" centered>
@@ -481,20 +515,26 @@ function EditExpenseModal({ expense, onClose }: { expense: Expense; onClose: () 
           label="Description (opsional)"
           value={description}
           onChange={(e) => setDescription(e.currentTarget.value)}
-          maxLength={255}
+          maxLength={10000}
           size="md"
         />
 
         {expense.hasPhoto && !removePhoto && !photo && (
           <Group align="flex-start">
-            <Image
-              src={getPhotoUrl(expense.id)}
-              alt="Invoice saat ini"
-              mah={150}
-              fit="contain"
-              radius="md"
-              style={{ flex: 1 }}
-            />
+            {expense.photoType === 'pdf' ? (
+              <Button component="a" href={getPhotoUrl(expense.id)} target="_blank" variant="light" size="xs">
+                📄 Lihat PDF
+              </Button>
+            ) : (
+              <Image
+                src={getPhotoUrl(expense.id)}
+                alt="Invoice saat ini"
+                mah={150}
+                fit="contain"
+                radius="md"
+                style={{ flex: 1 }}
+              />
+            )}
             <Button variant="subtle" color="red" onClick={() => setRemovePhoto(true)}>
               Hapus Foto
             </Button>

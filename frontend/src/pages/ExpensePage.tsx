@@ -20,6 +20,9 @@ function ExpensePage() {
     >
       <Group justify="space-between" mb="xs">
         <Group gap="md">
+          <Anchor href="/scan" size="sm">
+            Scan
+          </Anchor>
           <Anchor href="/dashboard" size="sm">
             Dashboard
           </Anchor>
