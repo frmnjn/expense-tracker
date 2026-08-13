@@ -178,6 +178,11 @@ function ScanPage() {
               <Paper key={inv.id} withBorder p="xs" radius="md">
                 <Stack gap={6}>
                   <InvoiceThumb type={inv.type} url={getInvoicePhotoUrl(inv.id)} h={90} />
+                  {inv.name ? (
+                    <Text size="xs" c="dimmed" truncate title={inv.name}>
+                      {inv.name}
+                    </Text>
+                  ) : null}
                   {inv.status === 'ANALYZING' && (
                     <Group justify="space-between" wrap="nowrap">
                       <Text size="xs" c="dimmed">

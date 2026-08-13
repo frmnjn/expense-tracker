@@ -95,6 +95,7 @@ export interface Invoice {
   createdAt: string
   status: 'ANALYZING' | 'TO_REVIEW' | 'SUBMITTED' | 'ERROR' | string
   type: 'image' | 'pdf'
+  name?: string
 }
 
 export interface InvoicesResponse {
@@ -119,6 +120,7 @@ export interface InvoiceDetail {
   type: 'image' | 'pdf'
   status: string
   errorMessage?: string
+  name?: string
   analysis?: AiAnalysis
 }
 

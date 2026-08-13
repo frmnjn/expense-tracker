@@ -174,6 +174,11 @@ function ReviewModal({
                 <Text size="sm" fw={600}>
                   {storeName}
                 </Text>
+                {data?.name ? (
+                  <Text size="xs" c="dimmed" truncate title={data.name}>
+                    {data.name}
+                  </Text>
+                ) : null}
                 <Group justify="space-between">
                   <Text size="sm" c="dimmed">
                     Tanggal belanja

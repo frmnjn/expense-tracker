@@ -56,8 +56,8 @@ class InvoiceServiceTest {
     @Test
     void listByDate_shouldReturnInvoicesForThatPeriod() {
         when(invoiceRepository.findByPeriod("2026-JUL-AUG"))
-                .thenReturn(List.of(new InvoiceData("inv-1", "2026-JUL-AUG", "a.jpg", "2026-07-25T09:00:00", "SUBMITTED"),
-                        new InvoiceData("inv-2", "2026-JUL-AUG", "b.jpg", "2026-07-26T09:00:00", "SUBMITTED")));
+                .thenReturn(List.of(new InvoiceData("inv-1", "2026-JUL-AUG", "a.jpg", "2026-07-25T09:00:00", "SUBMITTED", null),
+                        new InvoiceData("inv-2", "2026-JUL-AUG", "b.jpg", "2026-07-26T09:00:00", "SUBMITTED", null)));
         InvoicesResponse response = invoiceService.listByDate("2026-08-06 14:30", false);
         assertEquals(2, response.invoices().size());
         assertEquals("inv-1", response.invoices().get(0).id());
@@ -83,7 +83,8 @@ class InvoiceServiceTest {
         when(file.getOriginalFilename()).thenReturn("invoice.jpg");
         when(file.getInputStream()).thenReturn(new ByteArrayInputStream(imageBytes(800, 600)));
         String id = invoiceService.createInvoice("2026-JUL-AUG", LocalDate.of(2026, 7, 25), file);
-        verify(invoiceRepository).insert(eq(id), eq("2026-JUL-AUG"), eq(LocalDate.of(2026, 7, 25)), eq(id + ".jpg"));
+        verify(invoiceRepository).insert(eq(id), eq("2026-JUL-AUG"), eq(LocalDate.of(2026, 7, 25)), eq(id + ".jpg"),
+                eq("invoice.jpg"));
         Files.deleteIfExists(Path.of("/tmp", id + ".jpg"));
     }
 
@@ -122,7 +123,8 @@ class InvoiceServiceTest {
         when(file.getOriginalFilename()).thenReturn("invoice.pdf");
         when(file.getInputStream()).thenReturn(new ByteArrayInputStream("%PDF-1.7 fake".getBytes()));
         String id = invoiceService.createInvoice("2026-JUL-AUG", LocalDate.of(2026, 7, 25), file);
-        verify(invoiceRepository).insert(eq(id), eq("2026-JUL-AUG"), eq(LocalDate.of(2026, 7, 25)), eq(id + ".pdf"));
+        verify(invoiceRepository).insert(eq(id), eq("2026-JUL-AUG"), eq(LocalDate.of(2026, 7, 25)), eq(id + ".pdf"),
+                eq("invoice.pdf"));
         assertTrue(Files.readAllBytes(Path.of("/tmp", id + ".pdf")).length > 0);
         Files.deleteIfExists(Path.of("/tmp", id + ".pdf"));
     }
@@ -141,7 +143,7 @@ class InvoiceServiceTest {
     @Test
     void listByDate_shouldExposeStatusAndType() {
         when(invoiceRepository.findByPeriod("2026-JUL-AUG"))
-                .thenReturn(List.of(new InvoiceData("inv-1", "2026-JUL-AUG", "a.pdf", "2026-07-25T09:00:00", "TO_REVIEW")));
+                .thenReturn(List.of(new InvoiceData("inv-1", "2026-JUL-AUG", "a.pdf", "2026-07-25T09:00:00", "TO_REVIEW", null)));
         InvoicesResponse response = invoiceService.listByDate("2026-08-06 14:30", false);
         assertEquals("TO_REVIEW", response.invoices().get(0).status());
         assertEquals("pdf", response.invoices().get(0).type());
@@ -305,7 +307,7 @@ class InvoiceServiceTest {
 
     @Test
     void requireInvoice_found_shouldReturnInvoice() {
-        when(invoiceRepository.findById("inv-1")).thenReturn(new InvoiceData("inv-1", "2026-JUL-AUG", "a.jpg", "2026-07-25T09:00:00", "SUBMITTED"));
+        when(invoiceRepository.findById("inv-1")).thenReturn(new InvoiceData("inv-1", "2026-JUL-AUG", "a.jpg", "2026-07-25T09:00:00", "SUBMITTED", null));
         assertEquals("2026-JUL-AUG", invoiceService.requireInvoice("inv-1").period());
     }
 
