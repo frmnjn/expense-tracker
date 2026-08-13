@@ -58,7 +58,7 @@ public class InvoiceAnalysisService implements ApplicationRunner {
                                   ObjectMapper objectMapper,
                                   @Value("${ai.gemini-api-key:}") String apiKey,
                                   @Value("${ai.model:gemini-3.5-flash-lite}") String model,
-                                  @Value("${ai.timeout:60}") long timeoutSeconds) {
+                                  @Value("${ai.timeout:600}") long timeoutSeconds) {
         this.invoiceRepository = invoiceRepository;
         this.budgetRepository = budgetRepository;
         this.objectMapper = objectMapper;

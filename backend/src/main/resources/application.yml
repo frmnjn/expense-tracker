@@ -21,7 +21,7 @@ upload:
 ai:
   gemini-api-key: ${GEMINI_API_KEY:}
   model: ${AI_MODEL:gemini-3.5-flash-lite}
-  timeout: ${AI_TIMEOUT:60}
+  timeout: ${AI_TIMEOUT:600}
 
 notify:
   notifier-url: ${NOTIFIER_URL:}
