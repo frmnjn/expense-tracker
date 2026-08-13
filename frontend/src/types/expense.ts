@@ -38,6 +38,7 @@ export interface Expense {
   description?: string
   hasPhoto: boolean
   photoType?: 'image' | 'pdf' | string
+  photoName?: string
 }
 
 export interface PeriodsResponse {

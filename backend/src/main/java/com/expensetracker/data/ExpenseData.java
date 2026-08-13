@@ -11,5 +11,6 @@ public record ExpenseData(
         boolean deleted,
         boolean hasPhoto,
         String invoiceId,
-        String photoType) {
+        String photoType,
+        String photoName) {
 }

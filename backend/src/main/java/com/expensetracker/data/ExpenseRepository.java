@@ -15,7 +15,7 @@ public class ExpenseRepository {
 
     private static final String SELECT_COLS =
             "SELECT e.id, e.period, e.date_time, e.name, b.name AS budget_name, e.amount, e.description, e.deleted, "
-                    + "e.invoice_id, inv.photo_path AS inv_photo_path "
+                    + "e.invoice_id, inv.photo_path AS inv_photo_path, inv.original_name AS inv_original_name "
                     + "FROM expenses e JOIN budgets b ON b.id = e.budget_id "
                     + "LEFT JOIN invoices inv ON inv.id = e.invoice_id ";
 
@@ -111,6 +111,7 @@ public class ExpenseRepository {
                 rs.getBoolean("deleted"),
                 invoiceId != null && !invoiceId.isBlank(),
                 invoiceId,
-                photoType);
+                photoType,
+                rs.getString("inv_original_name"));
     }
 }

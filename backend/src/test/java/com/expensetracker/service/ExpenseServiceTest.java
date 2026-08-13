@@ -64,7 +64,7 @@ class ExpenseServiceTest {
 
     private static ExpenseData expenseData() {
         return new ExpenseData("id123", "2026-JUL-AUG", "2026-08-06 14:30", "Makan Siang", "Daily",
-                35000L, null, false, false, null, null);
+                35000L, null, false, false, null, null, null);
     }
 
     @Test
@@ -190,9 +190,9 @@ class ExpenseServiceTest {
     @Test
     void getSummary_shouldAggregateTotalAndByBudget() {
         when(expenseRepository.getExpenses("2026-JUL-AUG")).thenReturn(List.of(
-                new ExpenseData("1", "2026-JUL-AUG", "2026-08-01 09:00", "a", "Daily", 1000L, null, false, false, null, null),
-                new ExpenseData("2", "2026-JUL-AUG", "2026-08-02 09:00", "b", "Daily", 2000L, null, false, false, null, null),
-                new ExpenseData("3", "2026-JUL-AUG", "2026-08-03 09:00", "c", "Weekly", 5000L, null, false, false, null, null)));
+                new ExpenseData("1", "2026-JUL-AUG", "2026-08-01 09:00", "a", "Daily", 1000L, null, false, false, null, null, null),
+                new ExpenseData("2", "2026-JUL-AUG", "2026-08-02 09:00", "b", "Daily", 2000L, null, false, false, null, null, null),
+                new ExpenseData("3", "2026-JUL-AUG", "2026-08-03 09:00", "c", "Weekly", 5000L, null, false, false, null, null, null)));
         var summary = expenseService.getSummary("2026-JUL-AUG");
         assertEquals(8000L, summary.total());
         assertEquals(3, summary.count());
@@ -396,7 +396,7 @@ class ExpenseServiceTest {
     void getPhotoPath_withInvoice_shouldResolveViaInvoice() {
         when(expenseRepository.findById("id123")).thenReturn(
                 new ExpenseData("id123", "2026-JUL-AUG", "2026-08-06 14:30", "Makan Siang", "Daily",
-                        35000L, null, false, true, "inv-1", null));
+                        35000L, null, false, true, "inv-1", null, null));
         when(invoiceService.getInvoicePhotoPath("inv-1")).thenReturn("/uploads/inv-1.jpg");
         assertEquals("/uploads/inv-1.jpg", expenseService.getPhotoPath("id123"));
     }
@@ -420,7 +420,7 @@ class ExpenseServiceTest {
     void detachPhoto_withInvoice_shouldCleanupIfUnused() {
         when(expenseRepository.findById("id123")).thenReturn(
                 new ExpenseData("id123", "2026-JUL-AUG", "2026-08-06 14:30", "Makan Siang", "Daily",
-                        35000L, null, false, true, "inv-1", null));
+                        35000L, null, false, true, "inv-1", null, null));
         when(invoiceService.deleteIfUnused("inv-1")).thenReturn(true);
         assertDoesNotThrow(() -> expenseService.detachPhoto("id123"));
         verify(expenseRepository).detachPhoto("id123");

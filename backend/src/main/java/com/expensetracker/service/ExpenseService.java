@@ -431,7 +431,8 @@ public class ExpenseService {
                 expense.amount(),
                 expense.description(),
                 expense.hasPhoto(),
-                expense.photoType());
+                expense.photoType(),
+                expense.photoName());
     }
 
     private void validate(ExpenseRequest request) {

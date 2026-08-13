@@ -12,5 +12,6 @@ public record ExpenseResponse(
         @JsonProperty("amount") Long amount,
         @JsonProperty("description") String description,
         @JsonProperty("hasPhoto") boolean hasPhoto,
-        @JsonProperty("photoType") String photoType) {
+        @JsonProperty("photoType") String photoType,
+        @JsonProperty("photoName") String photoName) {
 }
