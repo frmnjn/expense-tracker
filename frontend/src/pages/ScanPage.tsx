@@ -14,7 +14,6 @@ import {
   Stack,
   Text,
 } from '@mantine/core'
-import { DateTimePicker } from '@mantine/dates'
 import { useMediaQuery } from '@mantine/hooks'
 import { notifications } from '@mantine/notifications'
 import dayjs from 'dayjs'
@@ -27,17 +26,16 @@ import ColorSchemeToggle from '../components/ColorSchemeToggle'
 import InstallButton from '../components/InstallButton'
 
 const DATE_TIME_FORMAT = 'YYYY-MM-DD HH:mm'
-const DATE_TIME_SECONDS_FORMAT = 'YYYY-MM-DD HH:mm:ss'
 
 function ScanPage() {
-  const [dateTime, setDateTime] = useState<string>(dayjs().format(DATE_TIME_SECONDS_FORMAT))
   const [reviewId, setReviewId] = useState<string | null>(null)
   const cameraRef = useRef<HTMLInputElement>(null)
   const galleryRef = useRef<HTMLInputElement>(null)
   const isMobile = useMediaQuery('(max-width: 48em)')
 
-  const displayDate = dayjs(dateTime).format(DATE_TIME_FORMAT)
-  const { data, isPending } = useScanInvoices(displayDate)
+  // Tanggal belanja diambil otomatis dari struk oleh AI (fallback ke waktu sistem).
+  const nowDate = dayjs().format(DATE_TIME_FORMAT)
+  const { data, isPending } = useScanInvoices(nowDate)
   const upload = useUploadInvoice()
   const retry = useRetryAnalysis()
   const invoices = data?.invoices ?? []
@@ -49,7 +47,7 @@ function ScanPage() {
 
   useEffect(() => {
     setPage(1)
-  }, [statusFilter, sortBy, displayDate])
+  }, [statusFilter, sortBy, nowDate])
 
   const visible = useMemo(() => {
     let list = data?.invoices ?? []
@@ -71,7 +69,7 @@ function ScanPage() {
   const pick = (file: File | null) => {
     if (!file) return
     upload.mutate(
-      { file, dateTime: displayDate },
+      { file, dateTime: nowDate },
       {
         onError: (error) =>
           notifications.show({ title: 'Gagal upload', message: getErrorMessage(error), color: 'red' }),
@@ -109,15 +107,9 @@ function ScanPage() {
       <TitleRow />
 
       <Stack>
-        <DateTimePicker
-          label="Tanggal belanja"
-          placeholder="Pilih waktu"
-          value={dateTime}
-          onChange={(v) => setDateTime(v ?? dayjs().format(DATE_TIME_SECONDS_FORMAT))}
-          valueFormat={DATE_TIME_FORMAT}
-          dropdownType="modal"
-          size="md"
-        />
+        <Text size="sm" c="dimmed">
+          Tanggal belanja diambil otomatis dari struk. Jika tidak terbaca, dipakai waktu saat ini.
+        </Text>
 
         <Group grow={isMobile}>
           <Button fullWidth onClick={() => cameraRef.current?.click()} disabled={upload.isPending}>
@@ -246,7 +238,6 @@ function ScanPage() {
       {reviewId && (
         <ReviewModal
           invoiceId={reviewId}
-          dateTime={displayDate}
           onClose={() => setReviewId(null)}
           onSubmitted={() => setReviewId(null)}
         />

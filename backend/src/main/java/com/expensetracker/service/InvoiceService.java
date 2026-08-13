@@ -51,7 +51,7 @@ public class InvoiceService {
         }
         LocalDateTime parsed;
         try {
-            parsed = LocalDateTime.parse(dateTime, PeriodSheetName.FORMATTER);
+            parsed = PeriodSheetName.parseLenient(dateTime);
         } catch (DateTimeParseException e) {
             throw new ValidationException("Date must be in yyyy-MM-dd HH:mm format");
         }

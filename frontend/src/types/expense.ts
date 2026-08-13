@@ -110,6 +110,7 @@ export interface AiInvoiceItem {
 export interface AiAnalysis {
   storeName?: string
   total?: number
+  dateTime?: string
   items: AiInvoiceItem[]
 }
 

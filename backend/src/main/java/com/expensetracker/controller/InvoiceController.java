@@ -84,7 +84,7 @@ public class InvoiceController {
             return ResponseEntity.ok(cached.get());
         }
         try {
-            LocalDateTime dateTime = LocalDateTime.parse(date, PeriodSheetName.FORMATTER);
+            LocalDateTime dateTime = PeriodSheetName.parseLenient(date);
             String period = PeriodSheetName.forDate(dateTime.toLocalDate());
             LocalDate periodStart = PeriodSheetName.periodStart(dateTime.toLocalDate());
             String invoiceId = invoiceService.createInvoiceForAi(period, periodStart, file);

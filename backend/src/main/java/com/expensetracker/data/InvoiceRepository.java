@@ -73,6 +73,10 @@ public class InvoiceRepository {
         jdbcTemplate.update("UPDATE invoices SET status = ? WHERE id = ?", status, id);
     }
 
+    public void updatePeriod(String id, String period, LocalDate periodStart) {
+        jdbcTemplate.update("UPDATE invoices SET period = ?, period_start = ? WHERE id = ?", period, periodStart, id);
+    }
+
     public void updateAnalysis(String id, String status, String analysisJson) {
         jdbcTemplate.update(
                 "UPDATE invoices SET status = ?, analysis_json = ?, error_message = NULL WHERE id = ?",
