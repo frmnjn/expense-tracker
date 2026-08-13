@@ -125,7 +125,7 @@ public class ExpenseService {
     @Transactional
     public String createExpense(ExpenseRequest request) {
         validate(request);
-        LocalDateTime dateTime = LocalDateTime.parse(request.dateTime(), PeriodSheetName.FORMATTER);
+        LocalDateTime dateTime = PeriodSheetName.parseLenient(request.dateTime());
         Long budgetId = requireBudgetId(request.budget());
         String id = UUID.randomUUID().toString();
         String period = PeriodSheetName.forDate(dateTime.toLocalDate());
@@ -168,7 +168,7 @@ public class ExpenseService {
         }
         LocalDateTime dateTime;
         try {
-            dateTime = LocalDateTime.parse(request.dateTime(), PeriodSheetName.FORMATTER);
+            dateTime = PeriodSheetName.parseLenient(request.dateTime());
         } catch (DateTimeParseException e) {
             throw new ValidationException("DateTime must be in yyyy-MM-dd HH:mm format");
         }
@@ -325,7 +325,7 @@ public class ExpenseService {
             dateTime = LocalDateTime.now().format(PeriodSheetName.FORMATTER);
         } else {
             try {
-                LocalDateTime.parse(dateTime, PeriodSheetName.FORMATTER);
+                PeriodSheetName.parseLenient(dateTime);
             } catch (DateTimeParseException e) {
                 throw new ValidationException("DateTime must be in yyyy-MM-dd HH:mm format");
             }
@@ -333,7 +333,7 @@ public class ExpenseService {
         Long budgetId = requireBudgetId(request.budget());
         topUpRepository.insert(
                 UUID.randomUUID().toString(),
-                LocalDateTime.parse(dateTime, PeriodSheetName.FORMATTER),
+                PeriodSheetName.parseLenient(dateTime),
                 budgetId,
                 request.amount(),
                 request.description());
@@ -344,7 +344,7 @@ public class ExpenseService {
     @Transactional
     public void updateExpense(String id, ExpenseRequest request) {        validate(request);
         ExpenseData current = requireExpense(id);
-        LocalDateTime dateTime = LocalDateTime.parse(request.dateTime(), PeriodSheetName.FORMATTER);
+        LocalDateTime dateTime = PeriodSheetName.parseLenient(request.dateTime());
         Long newBudgetId = requireBudgetId(request.budget());
 
         if (!current.budgetName().equals(request.budget())) {
@@ -390,7 +390,7 @@ public class ExpenseService {
         ExpenseData expense = requireExpense(id);
         String period = expense.period();
         LocalDate periodStart = PeriodSheetName.periodStart(
-                LocalDateTime.parse(expense.dateTime(), PeriodSheetName.FORMATTER).toLocalDate());
+                PeriodSheetName.parseLenient(expense.dateTime()).toLocalDate());
         String invoiceId = invoiceService.createInvoice(period, periodStart, file);
         expenseRepository.attachInvoice(id, invoiceId);
     }
@@ -439,7 +439,7 @@ public class ExpenseService {
             throw new ValidationException("DateTime is required");
         }
         try {
-            LocalDateTime.parse(request.dateTime(), PeriodSheetName.FORMATTER);
+            PeriodSheetName.parseLenient(request.dateTime());
         } catch (DateTimeParseException e) {
             throw new ValidationException("DateTime must be in yyyy-MM-dd HH:mm format");
         }

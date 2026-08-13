@@ -13,6 +13,7 @@ import {
   TextInput,
 } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
+import dayjs from 'dayjs'
 import { useInvoiceDetail, useCreateExpenseBatch } from '../hooks/useScan'
 import { useOptions } from '../hooks/useOptions'
 import { getInvoicePhotoUrl } from '../services/expense'
@@ -40,12 +41,10 @@ function toEditItems(analysis: { items: { name: string; amount: number; suggeste
 
 function ReviewModal({
   invoiceId,
-  dateTime,
   onClose,
   onSubmitted,
 }: {
   invoiceId: string
-  dateTime: string
   onClose: () => void
   onSubmitted: () => void
 }) {
@@ -60,6 +59,20 @@ function ReviewModal({
 
   const analysis = data?.status === 'TO_REVIEW' ? data.analysis : undefined
   const storeName = analysis?.storeName?.trim() || 'Belanja'
+
+  const aiDateTime = analysis?.dateTime?.trim() || ''
+  const effectiveDateTime = useMemo(() => {
+    const now = dayjs()
+    if (aiDateTime) {
+      const full = dayjs(aiDateTime, 'YYYY-MM-DD HH:mm:ss', true)
+      if (full.isValid()) return full.format('YYYY-MM-DD HH:mm')
+      const min = dayjs(aiDateTime, 'YYYY-MM-DD HH:mm', true)
+      if (min.isValid()) return min.format('YYYY-MM-DD HH:mm')
+      const dateOnly = dayjs(aiDateTime, 'YYYY-MM-DD', true)
+      if (dateOnly.isValid()) return `${dateOnly.format('YYYY-MM-DD')} ${now.format('HH:mm')}`
+    }
+    return now.format('YYYY-MM-DD HH:mm')
+  }, [aiDateTime])
 
   useEffect(() => {
     if (analysis) {
@@ -121,7 +134,7 @@ function ReviewModal({
       }
     })
     batch.mutate(
-      { dateTime, invoiceId, groups: groupsPayload },
+      { dateTime: effectiveDateTime, invoiceId, groups: groupsPayload },
       {
         onSuccess: () => {
           notifications.show({
@@ -161,6 +174,14 @@ function ReviewModal({
                 <Text size="sm" fw={600}>
                   {storeName}
                 </Text>
+                <Group justify="space-between">
+                  <Text size="sm" c="dimmed">
+                    Tanggal belanja
+                  </Text>
+                  <Text size="sm" fw={600}>
+                    {dayjs(effectiveDateTime).format('DD MMM YYYY HH:mm')}
+                  </Text>
+                </Group>
                 <Group justify="space-between">
                   <Text size="sm" c="dimmed">
                     Total struk

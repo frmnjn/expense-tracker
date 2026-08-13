@@ -21,6 +21,7 @@ import java.net.http.HttpResponse;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
+import java.time.LocalDate;
 import java.util.Base64;
 import java.util.List;
 import java.util.Locale;
@@ -107,11 +108,30 @@ public class InvoiceAnalysisService implements ApplicationRunner {
             if (!hasPurchases(analysis)) {
                 throw new IllegalStateException("Bukan struk invoice atau struk tidak terbaca");
             }
+            applyPurchaseDate(invoiceId, analysis);
             invoiceRepository.updateAnalysis(invoiceId, InvoiceStatus.TO_REVIEW.value(),
                     objectMapper.writeValueAsString(analysis));
         } catch (Exception e) {
             LOGGER.error("invoice analysis failed for {}: {}", invoiceId, e.getMessage());
             invoiceRepository.updateError(invoiceId, e.getMessage());
+        }
+    }
+
+    /**
+     * Sesuaikan periode invoice sesuai tanggal belanja yang diekstrak AI,
+     * agar periode invoice konsisten dengan tanggal expense yang akan dibuat.
+     */
+    private void applyPurchaseDate(String invoiceId, AiAnalysisResponse analysis) {
+        String raw = analysis == null ? null : analysis.dateTime();
+        if (raw == null || raw.isBlank()) {
+            return;
+        }
+        try {
+            // pakai 10 karakter pertama sebagai YYYY-MM-DD (menoleransi format penuh jam:menit:detik)
+            LocalDate date = LocalDate.parse(raw.trim().substring(0, 10));
+            invoiceRepository.updatePeriod(invoiceId, PeriodSheetName.forDate(date), PeriodSheetName.periodStart(date));
+        } catch (Exception e) {
+            LOGGER.warn("invalid date from AI for {}: {}", invoiceId, raw);
         }
     }
 
@@ -164,6 +184,8 @@ public class InvoiceAnalysisService implements ApplicationRunner {
         return "Kamu adalah asisten pencatat keuangan. Baca struk/invoice berikut dan ekstrak item belanjanya.\n"
                 + "Berikan output HANYA JSON tanpa teks lain, dengan struktur:\n"
                 + "{\"storeName\":\"nama toko\",\"total\":<jumlah total integer>,"
+                + "\"dateTime\":\"tanggal & jam belanja dari struk: format YYYY-MM-DD HH:mm:ss bila struk "
+                + "menampilkan jam; bila hanya tanggal maka YYYY-MM-DD; string kosong jika tidak ada\","
                 + "\"items\":[{\"name\":\"nama barang\",\"amount\":<harga integer>,"
                 + "\"suggestedBudget\":\"<nama budget>\"}]}\n"
                 + "Daftar budget tersedia (pilih yang paling cocok per item; isi string kosong jika ragu):\n"
