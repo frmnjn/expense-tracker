@@ -93,8 +93,10 @@ body {
 }
 
 @media (max-width: 47.99em) {
+  /* The navbar is fixed over the viewport, so reserve enough scroll space
+     for the entire nav + comfortable safe-area breathing room. */
   .app-shell .mantine-AppShell-main {
-    padding-bottom: 88px;
+    padding-bottom: calc(76px + 48px + env(safe-area-inset-bottom, 0px)) !important;
   }
 
   .app-navbar {
@@ -102,8 +104,9 @@ body {
     bottom: 0 !important;
     left: 0 !important;
     width: 100% !important;
-    height: 76px !important;
-    padding: 8px 10px !important;
+    height: calc(76px + env(safe-area-inset-bottom, 0px)) !important;
+    min-height: 76px !important;
+    padding: 8px 10px env(safe-area-inset-bottom, 0px) !important;
     background-color: light-dark(#ffffff, #111318) !important;
     background-image: none !important;
     border-right: 0 !important;
