@@ -18,14 +18,17 @@ body {
 }
 
 .app-header {
-  background: light-dark(rgba(255, 255, 255, 0.92), rgba(15, 17, 21, 0.92));
+  background: light-dark(#ffffff, #0f1115);
   border-bottom: 1px solid var(--app-border);
-  backdrop-filter: blur(14px);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+  box-shadow: none;
 }
 
 .app-navbar {
   background: light-dark(#fff, #111318);
   border-right: 1px solid var(--app-border);
+  box-shadow: none;
 }
 
 .brand-mark {
@@ -83,7 +86,7 @@ body {
 }
 
 .mantine-Paper-root {
-  transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+  transition: border-color 150ms ease, transform 150ms ease;
 }
 
 @media (min-width: 48em) {
@@ -93,8 +96,22 @@ body {
 }
 
 @media (max-width: 47.99em) {
-  /* On mobile only the page content scrolls. The header and bottom navigation
-     stay fixed, so form controls can never disappear underneath the nav. */
+  /* Mobile layout: only the page content scrolls. Header and bottom nav are
+     fixed, solid surfaces without blur or drop shadows. */
+  .app-shell .mantine-AppShell-header,
+  .app-shell .mantine-AppShell-navbar,
+  .app-header,
+  .app-navbar {
+    box-shadow: none !important;
+    filter: none !important;
+  }
+
+  .app-header {
+    background: #0f1115 !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+
   .app-shell .mantine-AppShell-main {
     height: calc(100dvh - 64px) !important;
     min-height: 0 !important;
@@ -112,11 +129,11 @@ body {
     height: calc(76px + env(safe-area-inset-bottom, 0px)) !important;
     min-height: 76px !important;
     padding: 8px 10px env(safe-area-inset-bottom, 0px) !important;
-    background-color: light-dark(#ffffff, #111318) !important;
+    background: #111318 !important;
+    background-color: #111318 !important;
     background-image: none !important;
     border-right: 0 !important;
-    border-top: 1px solid var(--app-border) !important;
-    box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.14) !important;
+    border-top: 1px solid #252a31 !important;
     opacity: 1 !important;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
