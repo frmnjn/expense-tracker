@@ -106,7 +106,8 @@ public class InvoiceAnalysisService implements ApplicationRunner {
             String raw = callGemini(bytes, mime, prompt);
             AiAnalysisResponse analysis = objectMapper.readValue(raw, AiAnalysisResponse.class);
             if (!hasPurchases(analysis)) {
-                throw new IllegalStateException("Bukan struk invoice atau struk tidak terbaca");
+                invoiceRepository.markNotInvoice(invoiceId, "Bukan struk invoice");
+                return;
             }
             applyPurchaseDate(invoiceId, analysis);
             invoiceRepository.updateAnalysis(invoiceId, InvoiceStatus.TO_REVIEW.value(),

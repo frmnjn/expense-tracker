@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   ActionIcon, Badge, Box, Button, Container, Group, LoadingOverlay, Paper, Select,
   SimpleGrid, Stack, Text, Title,
@@ -28,6 +28,13 @@ function DashboardPage() {
   const { data: summary, isPending: summaryLoading } = useSummary(period)
   const { data: trend } = useTrend(3)
   const isMobile = useMediaQuery('(max-width: 48em)')
+
+  useEffect(() => {
+    if (!period && periodsData && periodsData.periods.length > 0) {
+      setPeriod(periodsData.periods[0])
+    }
+  }, [period, periodsData])
+
   const periods = useMemo(() => (periodsData?.periods ?? []).map((p) => ({ value: p, label: p })), [periodsData])
   const balanceOf = (name: string): number | undefined => options?.budgets.find((b) => b.name === name)?.balance
   const thresholdOf = (name: string): number | undefined => options?.budgets.find((b) => b.name === name)?.alertThreshold

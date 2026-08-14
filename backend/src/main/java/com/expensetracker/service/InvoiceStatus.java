@@ -4,7 +4,8 @@ public enum InvoiceStatus {
     ANALYZING,
     TO_REVIEW,
     SUBMITTED,
-    ERROR;
+    ERROR,
+    NOT_INVOICE;
 
     public String value() {
         return name();

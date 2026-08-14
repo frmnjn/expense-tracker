@@ -95,6 +95,14 @@ public class InvoiceRepository {
                 safe.substring(0, Math.min(safe.length(), 255)), id);
     }
 
+    /** Status terminal untuk file yang bukan struk/invoice — tidak bisa di-retry. */
+    public void markNotInvoice(String id, String message) {
+        String safe = message == null || message.isBlank() ? "Bukan struk invoice" : message;
+        jdbcTemplate.update(
+                "UPDATE invoices SET status = 'NOT_INVOICE', error_message = ? WHERE id = ?",
+                safe.substring(0, Math.min(safe.length(), 255)), id);
+    }
+
     public String getPhotoPath(String id) {
         List<String> paths = jdbcTemplate.query(
                 "SELECT photo_path FROM invoices WHERE id = ?",

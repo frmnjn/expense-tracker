@@ -94,7 +94,7 @@ export interface TrendResponse {
 export interface Invoice {
   id: string
   createdAt: string
-  status: 'ANALYZING' | 'TO_REVIEW' | 'SUBMITTED' | 'ERROR' | string
+  status: 'ANALYZING' | 'TO_REVIEW' | 'SUBMITTED' | 'ERROR' | 'NOT_INVOICE' | string
   type: 'image' | 'pdf'
   name?: string
 }
