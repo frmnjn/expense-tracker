@@ -145,6 +145,11 @@ public class InvoiceService {
         invoiceRepository.updateStatus(id, InvoiceStatus.SUBMITTED.value());
     }
 
+    /** Perbarui periode invoice agar sesuai tanggal belanja yang dipilih. */
+    public void updatePeriod(String id, LocalDate date) {
+        invoiceRepository.updatePeriod(id, PeriodSheetName.forDate(date), PeriodSheetName.periodStart(date));
+    }
+
     public void setAnalyzing(String id) {
         invoiceRepository.updateStatus(id, InvoiceStatus.ANALYZING.value());
     }

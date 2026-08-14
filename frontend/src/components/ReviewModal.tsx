@@ -13,6 +13,7 @@ import {
   TextInput,
 } from '@mantine/core'
 import { notifications } from '@mantine/notifications'
+import { DateTimePicker } from '@mantine/dates'
 import dayjs from 'dayjs'
 import { useInvoiceDetail, useCreateExpenseBatch } from '../hooks/useScan'
 import { useOptions } from '../hooks/useOptions'
@@ -60,19 +61,24 @@ function ReviewModal({
   const analysis = data?.status === 'TO_REVIEW' ? data.analysis : undefined
   const storeName = analysis?.storeName?.trim() || 'Belanja'
 
-  const aiDateTime = analysis?.dateTime?.trim() || ''
-  const effectiveDateTime = useMemo(() => {
+  const initialDateTime = useMemo(() => {
     const now = dayjs()
-    if (aiDateTime) {
-      const full = dayjs(aiDateTime, 'YYYY-MM-DD HH:mm:ss', true)
+    const ai = analysis?.dateTime?.trim() || ''
+    if (ai) {
+      const full = dayjs(ai, 'YYYY-MM-DD HH:mm:ss', true)
       if (full.isValid()) return full.format('YYYY-MM-DD HH:mm')
-      const min = dayjs(aiDateTime, 'YYYY-MM-DD HH:mm', true)
+      const min = dayjs(ai, 'YYYY-MM-DD HH:mm', true)
       if (min.isValid()) return min.format('YYYY-MM-DD HH:mm')
-      const dateOnly = dayjs(aiDateTime, 'YYYY-MM-DD', true)
+      const dateOnly = dayjs(ai, 'YYYY-MM-DD', true)
       if (dateOnly.isValid()) return `${dateOnly.format('YYYY-MM-DD')} ${now.format('HH:mm')}`
     }
     return now.format('YYYY-MM-DD HH:mm')
-  }, [aiDateTime])
+  }, [analysis])
+
+  const [dateTime, setDateTime] = useState(initialDateTime)
+  useEffect(() => {
+    setDateTime(initialDateTime)
+  }, [initialDateTime])
 
   useEffect(() => {
     if (analysis) {
@@ -134,7 +140,7 @@ function ReviewModal({
       }
     })
     batch.mutate(
-      { dateTime: effectiveDateTime, invoiceId, groups: groupsPayload },
+      { dateTime, invoiceId, groups: groupsPayload },
       {
         onSuccess: () => {
           notifications.show({
@@ -179,13 +185,18 @@ function ReviewModal({
                     {data.name}
                   </Text>
                 ) : null}
-                <Group justify="space-between">
+                <Group justify="space-between" align="center">
                   <Text size="sm" c="dimmed">
                     Tanggal belanja
                   </Text>
-                  <Text size="sm" fw={600}>
-                    {dayjs(effectiveDateTime).format('DD MMM YYYY HH:mm')}
-                  </Text>
+                  <DateTimePicker
+                    value={dateTime}
+                    onChange={(v) => setDateTime(v ? dayjs(v).format('YYYY-MM-DD HH:mm') : dayjs().format('YYYY-MM-DD HH:mm'))}
+                    valueFormat="DD MMM YYYY HH:mm"
+                    dropdownType="modal"
+                    size="xs"
+                    style={{ width: 200 }}
+                  />
                 </Group>
                 <Group justify="space-between">
                   <Text size="sm" c="dimmed">
