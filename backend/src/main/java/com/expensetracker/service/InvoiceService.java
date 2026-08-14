@@ -56,7 +56,7 @@ public class InvoiceService {
             throw new ValidationException("Date must be in yyyy-MM-dd HH:mm format");
         }
         String period = PeriodSheetName.forDate(parsed.toLocalDate());
-        List<InvoiceResponse> list = (scanOnly ? invoiceRepository.findByPeriodScanOnly(period)
+        List<InvoiceResponse> list = (scanOnly ? invoiceRepository.findAllScan()
                 : invoiceRepository.findByPeriod(period)).stream()
                 .map(this::toResponse)
                 .toList();

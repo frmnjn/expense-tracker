@@ -43,6 +43,14 @@ public class InvoiceRepository {
                 this::mapRow, period);
     }
 
+    /** Semua invoice alur scan (tanpa filter periode), terbaru dulu. */
+    public List<InvoiceData> findAllScan() {
+        return jdbcTemplate.query(
+                "SELECT id, period, photo_path, created_at, status, original_name FROM invoices "
+                        + "WHERE deleted = FALSE AND scan_flow = TRUE ORDER BY created_at DESC, id",
+                this::mapRow);
+    }
+
     public void setScanFlow(String id) {
         jdbcTemplate.update("UPDATE invoices SET scan_flow = TRUE WHERE id = ?", id);
     }
