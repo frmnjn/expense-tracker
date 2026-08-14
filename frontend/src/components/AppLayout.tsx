@@ -37,7 +37,7 @@ function AppLayout() {
 
       <AppShell.Navbar p="md" className="app-navbar">
         <Stack gap={6}>
-          <Text size="xs" fw={700} c="dimmed" tt="uppercase" px="sm" mb={4}>
+          <Text size="xs" fw={700} c="dimmed" tt="uppercase" px="sm" mb={4} visibleFrom="sm">
             Menu
           </Text>
           {navItems.map((item) => (
