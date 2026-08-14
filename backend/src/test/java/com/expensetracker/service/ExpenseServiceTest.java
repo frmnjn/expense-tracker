@@ -499,15 +499,16 @@ class ExpenseServiceTest {
     }
 
     @Test
-    void createExpenseBatch_invoiceOtherPeriod_shouldReject() {
+    void createExpenseBatch_invoiceOtherPeriod_shouldUpdateInvoicePeriod() {
+        when(budgetRepository.findIdByName("Household")).thenReturn(2L);
         when(invoiceService.requireInvoice("inv-9"))
                 .thenReturn(new InvoiceData("inv-9", "2026-AUG-SEP", "f.jpg", "2026-08-25T09:00:00", "TO_REVIEW", null));
         BatchExpenseRequest request = new BatchExpenseRequest("2026-08-06 14:30", "inv-9", List.of(
                 new BatchExpenseItem("Kopi", "Household", 15000L, null)));
-        ValidationException ex = assertThrows(ValidationException.class,
-                () -> expenseService.createExpenseBatch(request));
-        assertEquals("Invoice is not in the same period as the expense", ex.getMessage());
-        verify(expenseRepository, never()).insert(any(), any(), any(), any(), anyLong(), any(), anyLong(), any());
+        assertDoesNotThrow(() -> expenseService.createExpenseBatch(request));
+        verify(invoiceService).updatePeriod("inv-9", LocalDate.of(2026, 8, 6));
+        verify(expenseRepository).insert(anyString(), eq("2026-JUL-AUG"),
+                eq(LocalDate.of(2026, 7, 25)), eq(LocalDateTime.of(2026, 8, 6, 14, 30)), eq(2L), eq("Kopi"), eq(15000L), eq(null));
     }
 
     @Test

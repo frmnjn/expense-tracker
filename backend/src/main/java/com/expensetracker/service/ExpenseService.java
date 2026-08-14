@@ -179,10 +179,10 @@ public class ExpenseService {
         LocalDate periodStart = PeriodSheetName.periodStart(dateTime.toLocalDate());
 
         if (request.invoiceId() != null && !request.invoiceId().isBlank()) {
-            InvoiceData invoice = invoiceService.requireInvoice(request.invoiceId());
-            if (!invoice.period().equals(period)) {
-                throw new ValidationException("Invoice is not in the same period as the expense");
-            }
+            invoiceService.requireInvoice(request.invoiceId());
+            // Ikutkan periode invoice ke tanggal yang dipilih (bisa hasil edit user),
+            // agar periode invoice konsisten dengan tanggal expense.
+            invoiceService.updatePeriod(request.invoiceId(), dateTime.toLocalDate());
         }
 
         Map<String, Long> totalByBudget = new LinkedHashMap<>();
