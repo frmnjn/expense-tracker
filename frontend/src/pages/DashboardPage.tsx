@@ -1,18 +1,7 @@
 import { useMemo, useState } from 'react'
 import {
-  ActionIcon,
-  Badge,
-  Box,
-  Button,
-  Container,
-  Group,
-  LoadingOverlay,
-  Paper,
-  Select,
-  SimpleGrid,
-  Stack,
-  Text,
-  Title,
+  ActionIcon, Badge, Box, Button, Container, Group, LoadingOverlay, Paper, Select,
+  SimpleGrid, Stack, Text, Title,
 } from '@mantine/core'
 import { useMediaQuery } from '@mantine/hooks'
 import { usePeriods, useSummary, useTrend } from '../hooks/useExpenses'
@@ -39,7 +28,6 @@ function DashboardPage() {
   const { data: summary, isPending: summaryLoading } = useSummary(period)
   const { data: trend } = useTrend(3)
   const isMobile = useMediaQuery('(max-width: 48em)')
-
   const periods = useMemo(() => (periodsData?.periods ?? []).map((p) => ({ value: p, label: p })), [periodsData])
   const balanceOf = (name: string): number | undefined => options?.budgets.find((b) => b.name === name)?.balance
   const thresholdOf = (name: string): number | undefined => options?.budgets.find((b) => b.name === name)?.alertThreshold
@@ -47,13 +35,10 @@ function DashboardPage() {
   const budgetInfo = (name: string): BudgetSummary | undefined => byBudget.find((b) => b.budget === name)
   const rankOf = new Map<string, number>()
   byBudget.slice(0, 3).forEach((b, i) => rankOf.set(b.budget, i + 1))
-  const allBudgets = useMemo(() => {
-    const names = new Set<string>([
-      ...(options?.budgets ?? []).map((b) => b.name),
-      ...(summary?.byBudget ?? []).map((b) => b.budget),
-    ])
-    return Array.from(names).sort()
-  }, [options, summary])
+  const allBudgets = useMemo(() => Array.from(new Set([
+    ...(options?.budgets ?? []).map((b) => b.name),
+    ...(summary?.byBudget ?? []).map((b) => b.budget),
+  ])).sort(), [options, summary])
   const selectedTopUpBalance = selectedTopUpBudget ? balanceOf(selectedTopUpBudget) : undefined
 
   const renderBudgetCard = (name: string) => {
@@ -73,9 +58,7 @@ function DashboardPage() {
           </Text>
         </Group>
         {info && <Text size="sm" c="dimmed">{info.count} transaksi · {formatCurrency(info.amount)}</Text>}
-        {threshold !== undefined && threshold > 0 && (
-          <Text size="xs" c="orange" fw={600} mt={6}>⚠️ Ambang {formatCurrency(threshold)}</Text>
-        )}
+        {threshold !== undefined && threshold > 0 && <Text size="xs" c="orange" fw={600} mt={6}>⚠️ Ambang {formatCurrency(threshold)}</Text>}
         <Group justify="flex-end" gap={4} mt="sm">
           <ActionIcon size="sm" variant="subtle" onClick={() => setSelectedTopUpHistoryBudget(name)} aria-label="Riwayat top up">📋</ActionIcon>
           <ActionIcon size="sm" variant="light" color="green" onClick={() => setSelectedTopUpBudget(name)} aria-label="Top up">+</ActionIcon>
@@ -95,61 +78,28 @@ function DashboardPage() {
             <Title order={1} size="clamp(1.65rem, 5vw, 2.1rem)">Dashboard</Title>
             <Text c="dimmed" mt={5}>Ringkasan keuangan dan budget kamu.</Text>
           </div>
-          <Select
-            w={{ base: 150, sm: 190 }}
-            placeholder={periodsLoading ? 'Memuat...' : 'Pilih periode'}
-            data={periods}
-            value={period}
-            onChange={setPeriod}
-            searchable
-            size="sm"
-            aria-label="Periode"
-          />
+          <Select w={{ base: 150, sm: 190 }} placeholder={periodsLoading ? 'Memuat...' : 'Pilih periode'} data={periods} value={period} onChange={setPeriod} searchable size="sm" aria-label="Periode" />
         </Group>
 
         <Stack pos="relative" gap="lg">
           <LoadingOverlay visible={summaryLoading && !!period} zIndex={1000} overlayProps={{ radius: 'lg', blur: 1 }} />
           <Paper withBorder p={{ base: 'md', sm: 'lg' }} radius="xl" className="hero-card">
             <Group justify="space-between" align="center" mb="md">
-              <div>
-                <Text size="sm" c="dimmed" fw={600}>Saldo per budget</Text>
-                <Text fz="xs" c="dimmed" mt={3}>{allBudgets.length} budget aktif</Text>
-              </div>
+              <div><Text size="sm" c="dimmed" fw={600}>Saldo per budget</Text><Text fz="xs" c="dimmed" mt={3}>{allBudgets.length} budget aktif</Text></div>
               <Button size="sm" radius="md" onClick={() => setAddBudgetOpened(true)}>+ Budget</Button>
             </Group>
-            {allBudgets.length === 0 ? (
-              <Text c="dimmed" py="md">Belum ada budget. Tambahkan budget pertama kamu.</Text>
-            ) : isMobile ? (
-              <Stack gap="sm">{allBudgets.map(renderBudgetCard)}</Stack>
-            ) : (
-              <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">{allBudgets.map(renderBudgetCard)}</SimpleGrid>
-            )}
+            {allBudgets.length === 0 ? <Text c="dimmed" py="md">Belum ada budget. Tambahkan budget pertama kamu.</Text> : isMobile ? <Stack gap="sm">{allBudgets.map(renderBudgetCard)}</Stack> : <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">{allBudgets.map(renderBudgetCard)}</SimpleGrid>}
           </Paper>
 
           {trend && trend.periods.length > 0 && (
             <Paper withBorder p={{ base: 'md', sm: 'lg' }} radius="xl">
-              <Group justify="space-between" mb="lg">
-                <div>
-                  <Text fw={700}>Pengeluaran bulanan</Text>
-                  <Text size="xs" c="dimmed">3 bulan terakhir</Text>
-                </div>
-              </Group>
+              <Text fw={700}>Pengeluaran bulanan</Text>
+              <Text size="xs" c="dimmed" mb="lg">3 bulan terakhir</Text>
               <Stack gap="md">
                 {trend.periods.map((p) => {
                   const max = Math.max(...trend.periods.map((x) => x.total), 1)
                   const width = Math.max((p.total / max) * 100, p.total > 0 ? 2 : 0)
-                  return (
-                    <div key={p.period}>
-                      <Group justify="space-between" mb={5}>
-                        <Text size="sm" fw={600}>{p.period}</Text>
-                        <Text size="sm" ff="monospace">{formatCurrency(p.total)}</Text>
-                      </Group>
-                      <Box bg="blue.1" darkHidden style={{ height: 10, borderRadius: 999 }}>
-                        <Box bg="blue.6" style={{ width: `${width}%`, height: 10, borderRadius: 999, transition: 'width .3s ease' }} />
-                      </Box>
-                      <Text size="xs" c="dimmed" mt={4}>{p.count} transaksi</Text>
-                    </div>
-                  )
+                  return <div key={p.period}><Group justify="space-between" mb={5}><Text size="sm" fw={600}>{p.period}</Text><Text size="sm" ff="monospace">{formatCurrency(p.total)}</Text></Group><Box bg="var(--mantine-color-blue-light)" style={{ height: 10, borderRadius: 999 }}><Box bg="blue.6" style={{ width: `${width}%`, height: 10, borderRadius: 999, transition: 'width .3s ease' }} /></Box><Text size="xs" c="dimmed" mt={4}>{p.count} transaksi</Text></div>
                 })}
               </Stack>
             </Paper>
