@@ -109,18 +109,42 @@ public class InvoiceAnalysisService implements ApplicationRunner {
                 invoiceRepository.markNotInvoice(invoiceId, "Bukan struk invoice");
                 return;
             }
-            applyPurchaseDate(invoiceId, analysis);
+            // Bersihkan tanggal halusinasi AI sebelum disimpan & dipakai frontend,
+            // agar invoice tidak pindah periode / expense tidak dibuat di tanggal ngawur.
+            String cleanedDate = cleanDate(analysis.dateTime());
+            AiAnalysisResponse clean = new AiAnalysisResponse(
+                    analysis.storeName(), analysis.total(), cleanedDate, analysis.items());
+            applyPurchaseDate(invoiceId, clean);
             invoiceRepository.updateAnalysis(invoiceId, InvoiceStatus.TO_REVIEW.value(),
-                    objectMapper.writeValueAsString(analysis));
+                    objectMapper.writeValueAsString(clean));
         } catch (Exception e) {
             LOGGER.error("invoice analysis failed for {}: {}", invoiceId, e.getMessage());
             invoiceRepository.updateError(invoiceId, e.getMessage());
         }
     }
 
+    /** Normalisasi & validasi tanggal hasil AI; "" bila blank / tidak masuk akal (masa depan / terlalu tua). */
+    private static String cleanDate(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return "";
+        }
+        try {
+            LocalDate date = LocalDate.parse(raw.trim().substring(0, 10));
+            LocalDate today = LocalDate.now();
+            if (date.isAfter(today) || date.isBefore(today.minusYears(2))) {
+                return "";
+            }
+            return raw.trim();
+        } catch (Exception e) {
+            return "";
+        }
+    }
+
     /**
      * Sesuaikan periode invoice sesuai tanggal belanja yang diekstrak AI,
      * agar periode invoice konsisten dengan tanggal expense yang akan dibuat.
+     * Tanggal yang tidak masuk akal (masa depan / terlalu tua) ditolak agar
+     * invoice tidak pindah periode akibat tanggal halusinasi AI.
      */
     private void applyPurchaseDate(String invoiceId, AiAnalysisResponse analysis) {
         String raw = analysis == null ? null : analysis.dateTime();
@@ -130,6 +154,11 @@ public class InvoiceAnalysisService implements ApplicationRunner {
         try {
             // pakai 10 karakter pertama sebagai YYYY-MM-DD (menoleransi format penuh jam:menit:detik)
             LocalDate date = LocalDate.parse(raw.trim().substring(0, 10));
+            LocalDate today = LocalDate.now();
+            if (date.isAfter(today) || date.isBefore(today.minusYears(2))) {
+                LOGGER.warn("ignoring implausible AI date {} for invoice {}", raw, invoiceId);
+                return;
+            }
             invoiceRepository.updatePeriod(invoiceId, PeriodSheetName.forDate(date), PeriodSheetName.periodStart(date));
         } catch (Exception e) {
             LOGGER.warn("invalid date from AI for {}: {}", invoiceId, raw);
