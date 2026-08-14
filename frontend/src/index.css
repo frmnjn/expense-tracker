@@ -93,10 +93,15 @@ body {
 }
 
 @media (max-width: 47.99em) {
-  /* The navbar is fixed over the viewport, so reserve enough scroll space
-     for the entire nav + comfortable safe-area breathing room. */
+  /* On mobile only the page content scrolls. The header and bottom navigation
+     stay fixed, so form controls can never disappear underneath the nav. */
   .app-shell .mantine-AppShell-main {
-    padding-bottom: calc(76px + 48px + env(safe-area-inset-bottom, 0px)) !important;
+    height: calc(100dvh - 64px) !important;
+    min-height: 0 !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    -webkit-overflow-scrolling: touch;
+    padding-bottom: 24px !important;
   }
 
   .app-navbar {
