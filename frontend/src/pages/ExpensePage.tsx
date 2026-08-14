@@ -1,41 +1,23 @@
-import { Anchor, Container, Group } from '@mantine/core'
+import { Container, Stack, Text, Title } from '@mantine/core'
 import ExpenseForm from '../components/ExpenseForm'
-import InstallButton from '../components/InstallButton'
-import ColorSchemeToggle from '../components/ColorSchemeToggle'
 
 function ExpensePage() {
   return (
-    <Container
-      size="xs"
-      px="md"
-      py="lg"
-      styles={{
-        root: {
-          '@media (max-width: 40em)': {
-            paddingTop: 'var(--mantine-spacing-md)',
-            paddingBottom: 'calc(var(--mantine-spacing-md) + 80px)',
-          },
-        },
-      }}
-    >
-      <Group justify="space-between" mb="xs">
-        <Group gap="md">
-          <Anchor href="/scan" size="sm">
-            Scan
-          </Anchor>
-          <Anchor href="/dashboard" size="sm">
-            Dashboard
-          </Anchor>
-          <Anchor href="/riwayat" size="sm">
-            Riwayat
-          </Anchor>
-        </Group>
-        <Group gap="xs">
-          <ColorSchemeToggle />
-          <InstallButton />
-        </Group>
-      </Group>
-      <ExpenseForm />
+    <Container size="sm" px={{ base: 0, sm: 'md' }} py={{ base: 0, sm: 'md' }}>
+      <Stack gap="lg">
+        <div>
+          <Text size="sm" c="blue" fw={700} mb={4}>
+            PENGELUARAN BARU
+          </Text>
+          <Title order={1} size="clamp(1.65rem, 5vw, 2.1rem)" lh={1.15}>
+            Catat pengeluaran
+          </Title>
+          <Text c="dimmed" mt={6}>
+            Simpan transaksi dan pantau sisa budget kamu.
+          </Text>
+        </div>
+        <ExpenseForm />
+      </Stack>
     </Container>
   )
 }
