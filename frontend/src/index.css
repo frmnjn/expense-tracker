@@ -9,12 +9,16 @@ body {
   background: light-dark(#f7f8fa, #0b0d10);
 }
 
-* { box-sizing: border-box; }
+* {
+  box-sizing: border-box;
+}
 
-.app-shell { --app-border: light-dark(#e6e8ec, #252a31); }
+.app-shell {
+  --app-border: light-dark(#e6e8ec, #252a31);
+}
 
 .app-header {
-  background: light-dark(rgba(255,255,255,.92), rgba(15,17,21,.92));
+  background: light-dark(rgba(255, 255, 255, 0.92), rgba(15, 17, 21, 0.92));
   border-bottom: 1px solid var(--app-border);
   backdrop-filter: blur(14px);
 }
@@ -25,55 +29,114 @@ body {
 }
 
 .brand-mark {
-  width: 34px; height: 34px; display: grid; place-items: center;
-  border-radius: 10px; font-size: 12px; font-weight: 900;
-  letter-spacing: -.05em; color: var(--mantine-color-blue-7);
+  width: 34px;
+  height: 34px;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 900;
+  letter-spacing: -0.05em;
+  color: var(--mantine-color-blue-7);
   background: var(--mantine-color-blue-light);
 }
 
 .nav-item {
-  display: flex; align-items: center; gap: 12px; width: 100%;
-  padding: 10px 12px; border-radius: 10px;
-  color: var(--mantine-color-dimmed); font-size: 14px; font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 10px 12px;
+  border-radius: 10px;
+  color: var(--mantine-color-dimmed);
+  font-size: 14px;
+  font-weight: 600;
   transition: background-color 120ms ease, color 120ms ease;
 }
-.nav-item:hover { color: var(--mantine-color-text); background: var(--mantine-color-default-hover); }
-.nav-item.active { color: var(--mantine-color-blue-7); background: var(--mantine-color-blue-light); }
-.nav-icon { width: 22px; text-align: center; font-size: 17px; font-weight: 800; }
 
-.page-shell { width: 100%; max-width: 1040px; margin: 0 auto; }
-.page-shell > .mantine-Container-root { max-width: none; padding-top: 0; }
-.page-shell .mantine-Container-root > .mantine-Group-root:first-child .mantine-Anchor-root { display: none; }
+.nav-item:hover {
+  color: var(--mantine-color-text);
+  background: var(--mantine-color-default-hover);
+}
 
-.hero-card { background: light-dark(#fff, #111318); }
-.budget-card:hover { border-color: var(--mantine-color-blue-4); transform: translateY(-1px); }
+.nav-item.active {
+  color: var(--mantine-color-blue-7);
+  background: var(--mantine-color-blue-light);
+}
 
-.mantine-TextInput-input,
-.mantine-NumberInput-input,
-.mantine-Select-input,
-.mantine-DateTimePicker-input { border-radius: 10px; }
+.nav-icon {
+  width: 22px;
+  text-align: center;
+  font-size: 17px;
+  font-weight: 800;
+}
 
-.mantine-Paper-root { transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease; }
-.mantine-Table-table { border-collapse: separate; border-spacing: 0; }
-.mantine-Table-thead th {
-  background: var(--mantine-color-default); color: var(--mantine-color-dimmed);
-  font-size: 11px; text-transform: uppercase; letter-spacing: .04em;
+.page-shell {
+  width: 100%;
+  max-width: 1040px;
+  margin: 0 auto;
+}
+
+.page-shell > .mantine-Container-root {
+  max-width: none;
+  padding-top: 0;
+}
+
+.mantine-Paper-root {
+  transition: border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+}
+
+@media (min-width: 48em) {
+  .mantine-Paper-root[data-with-border] {
+    border-color: var(--app-border);
+  }
 }
 
 @media (max-width: 47.99em) {
-  .app-shell .mantine-AppShell-main { padding-bottom: 88px; }
+  .app-shell .mantine-AppShell-main {
+    padding-bottom: 88px;
+  }
+
   .app-navbar {
-    top: auto; bottom: 0; width: 100%; height: 68px; padding: 8px 10px;
-    border-right: 0; border-top: 1px solid var(--app-border); z-index: 200;
+    top: auto;
+    bottom: 0;
+    width: 100%;
+    height: 68px;
+    padding: 8px 10px;
+    background: light-dark(#ffffff, #111318);
+    border-right: 0;
+    border-top: 1px solid var(--app-border);
+    box-shadow: 0 -6px 18px rgba(0, 0, 0, 0.06);
+    z-index: 200;
   }
+
   .app-navbar > .mantine-Stack-root {
-    flex-direction: row; justify-content: space-around; width: 100%; gap: 4px;
+    flex-direction: row;
+    justify-content: space-around;
+    width: 100%;
+    gap: 4px;
   }
-  .app-navbar > .mantine-Stack-root > .mantine-Text-root { display: none; }
+
+  .app-navbar > .mantine-Stack-root > .mantine-Text-root {
+    display: none;
+  }
+
   .nav-item {
-    flex: 1; justify-content: center; flex-direction: column; gap: 2px;
-    padding: 5px 2px; font-size: 10px; line-height: 1.1;
+    flex: 1;
+    justify-content: center;
+    flex-direction: column;
+    gap: 2px;
+    padding: 5px 2px;
+    font-size: 10px;
+    line-height: 1.1;
   }
-  .nav-icon { font-size: 17px; height: 20px; }
-  .page-shell > .mantine-Container-root { padding-bottom: 0; }
+
+  .nav-icon {
+    font-size: 17px;
+    height: 20px;
+  }
+
+  .page-shell > .mantine-Container-root {
+    padding-bottom: 0;
+  }
 }
