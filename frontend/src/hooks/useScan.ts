@@ -8,11 +8,11 @@ import {
   uploadInvoice,
 } from '../services/expense'
 
-export function useScanInvoices(dateTime: string | null) {
+export function useScanInvoices(period: string | null) {
   return useQuery({
-    queryKey: ['scan-invoices', dateTime],
-    queryFn: () => getInvoices(dateTime ?? '', true),
-    enabled: !!dateTime,
+    queryKey: ['scan-invoices', period],
+    queryFn: () => getInvoices('', true, period ?? undefined),
+    enabled: !!period,
     refetchInterval: (query) => {
       const hasAnalyzing = query.state.data?.invoices.some((i) => i.status === 'ANALYZING')
       return hasAnalyzing ? 3000 : false

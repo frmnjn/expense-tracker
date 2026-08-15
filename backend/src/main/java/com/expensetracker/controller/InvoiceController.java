@@ -45,10 +45,11 @@ public class InvoiceController {
     }
 
     @GetMapping("/invoices")
-    public ResponseEntity<ApiResponse> getInvoices(@RequestParam("date") String date,
-                                                   @RequestParam(value = "scan", required = false, defaultValue = "false") boolean scan) {
+    public ResponseEntity<ApiResponse> getInvoices(@RequestParam(value = "date", required = false) String date,
+                                                   @RequestParam(value = "scan", required = false, defaultValue = "false") boolean scan,
+                                                   @RequestParam(value = "period", required = false) String period) {
         try {
-            return ResponseEntity.ok(ApiResponse.ok(invoiceService.listByDate(date, scan)));
+            return ResponseEntity.ok(ApiResponse.ok(invoiceService.listByDate(date, scan, period)));
         } catch (ValidationException e) {
             LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)

@@ -45,7 +45,16 @@ public class InvoiceService {
         this.objectMapper = objectMapper;
     }
 
-    public InvoicesResponse listByDate(String dateTime, boolean scanOnly) {
+    public InvoicesResponse listByDate(String dateTime, boolean scanOnly, String period) {
+        if (scanOnly) {
+            // Filter scan invoice: bila period diberikan filter per periode, bila kosong semua.
+            List<InvoiceResponse> all = (period == null || period.isBlank()
+                    ? invoiceRepository.findAllScan()
+                    : invoiceRepository.findByPeriodScanOnly(period)).stream()
+                    .map(this::toResponse)
+                    .toList();
+            return new InvoicesResponse(all);
+        }
         if (dateTime == null || dateTime.isBlank()) {
             throw new ValidationException("Date is required");
         }
@@ -55,9 +64,8 @@ public class InvoiceService {
         } catch (DateTimeParseException e) {
             throw new ValidationException("Date must be in yyyy-MM-dd HH:mm format");
         }
-        String period = PeriodSheetName.forDate(parsed.toLocalDate());
-        List<InvoiceResponse> list = (scanOnly ? invoiceRepository.findAllScan()
-                : invoiceRepository.findByPeriod(period)).stream()
+        String periodFromDate = PeriodSheetName.forDate(parsed.toLocalDate());
+        List<InvoiceResponse> list = invoiceRepository.findByPeriod(periodFromDate).stream()
                 .map(this::toResponse)
                 .toList();
         return new InvoicesResponse(list);

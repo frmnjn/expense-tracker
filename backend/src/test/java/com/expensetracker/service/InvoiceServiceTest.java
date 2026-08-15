@@ -58,7 +58,7 @@ class InvoiceServiceTest {
         when(invoiceRepository.findByPeriod("2026-JUL-AUG"))
                 .thenReturn(List.of(new InvoiceData("inv-1", "2026-JUL-AUG", "a.jpg", "2026-07-25T09:00:00", "SUBMITTED", null),
                         new InvoiceData("inv-2", "2026-JUL-AUG", "b.jpg", "2026-07-26T09:00:00", "SUBMITTED", null)));
-        InvoicesResponse response = invoiceService.listByDate("2026-08-06 14:30", false);
+        InvoicesResponse response = invoiceService.listByDate("2026-08-06 14:30", false, null);
         assertEquals(2, response.invoices().size());
         assertEquals("inv-1", response.invoices().get(0).id());
         assertEquals("inv-2", response.invoices().get(1).id());
@@ -66,13 +66,13 @@ class InvoiceServiceTest {
 
     @Test
     void listByDate_missingDate_shouldReject() {
-        ValidationException ex = assertThrows(ValidationException.class, () -> invoiceService.listByDate("", false));
+        ValidationException ex = assertThrows(ValidationException.class, () -> invoiceService.listByDate("", false, null));
         assertEquals("Date is required", ex.getMessage());
     }
 
     @Test
     void listByDate_invalidFormat_shouldReject() {
-        ValidationException ex = assertThrows(ValidationException.class, () -> invoiceService.listByDate("06-08-2026", false));
+        ValidationException ex = assertThrows(ValidationException.class, () -> invoiceService.listByDate("06-08-2026", false, null));
         assertEquals("Date must be in yyyy-MM-dd HH:mm format", ex.getMessage());
     }
 
@@ -144,7 +144,7 @@ class InvoiceServiceTest {
     void listByDate_shouldExposeStatusAndType() {
         when(invoiceRepository.findByPeriod("2026-JUL-AUG"))
                 .thenReturn(List.of(new InvoiceData("inv-1", "2026-JUL-AUG", "a.pdf", "2026-07-25T09:00:00", "TO_REVIEW", null)));
-        InvoicesResponse response = invoiceService.listByDate("2026-08-06 14:30", false);
+        InvoicesResponse response = invoiceService.listByDate("2026-08-06 14:30", false, null);
         assertEquals("TO_REVIEW", response.invoices().get(0).status());
         assertEquals("pdf", response.invoices().get(0).type());
     }

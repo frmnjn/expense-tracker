@@ -110,12 +110,12 @@ public class InvoiceAnalysisService implements ApplicationRunner {
                 invoiceRepository.markNotInvoice(invoiceId, "Bukan struk invoice");
                 return;
             }
-            // Bersihkan tanggal halusinasi AI sebelum disimpan & dipakai frontend,
-            // agar invoice tidak pindah periode / expense tidak dibuat di tanggal ngawur.
+            // Bersihkan tanggal halusinasi AI sebelum disimpan & dipakai frontend.
+            // Periode invoice TIDAK dipindah di sini — tetap di periode upload hingga submit,
+            // agar invoice selalu tampil di daftar /scan periode berjalan.
             String cleanedDate = cleanDate(analysis.dateTime());
             AiAnalysisResponse clean = new AiAnalysisResponse(
                     analysis.storeName(), analysis.total(), cleanedDate, analysis.items());
-            applyPurchaseDate(invoiceId, clean);
             invoiceRepository.updateAnalysis(invoiceId, InvoiceStatus.TO_REVIEW.value(),
                     objectMapper.writeValueAsString(clean));
         } catch (Exception e) {
