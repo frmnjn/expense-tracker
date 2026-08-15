@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   ActionIcon,
   Button,
   Container,
+  Divider,
   Group,
   Image,
   LoadingOverlay,
@@ -24,12 +25,20 @@ import { useDeleteExpense, useExpenses, usePeriods, useUpdateExpense } from '../
 import { useDeletePhoto, useUploadPhoto } from '../hooks/useCreateExpense'
 import { useOptions } from '../hooks/useOptions'
 import PhotoInput, { type PhotoSelection } from '../components/PhotoInput'
+import { TransactionCard } from '../components/TransactionCard'
 import { getPhotoUrl } from '../services/expense'
 import { formatCurrency } from '../utils/currency'
 import { getErrorMessage } from '../utils/error'
 import type { Expense } from '../types/expense'
 
 const DATE_TIME_FORMAT = 'YYYY-MM-DD HH:mm'
+
+const SORT_LABELS: Record<string, string> = {
+  'waktu-desc': 'Waktu terbaru',
+  'waktu-asc': 'Waktu terlama',
+  'nominal-desc': 'Nominal terbesar',
+  'nominal-asc': 'Nominal terkecil',
+}
 
 const balanceColor = (value: number) => (value < 0 ? 'red' : undefined)
 
@@ -59,11 +68,23 @@ function HistoryPage() {
   const [filterOpened, setFilterOpened] = useState(false)
   const [viewingPhoto, setViewingPhoto] = useState<Expense | null>(null)
   const [page, setPage] = useState(1)
-  const PAGE_SIZE = 15
+  const [pageSize, setPageSize] = useState<number>(15)
+  const pageSizeUserSetRef = useRef(false)
+
+  // Default baris/halaman ikut device (5 mobile / 15 desktop) sampai user
+  // memilih sendiri lewat selector.
+  useEffect(() => {
+    if (!pageSizeUserSetRef.current) {
+      setPageSize(isMobile ? 5 : 15)
+    }
+  }, [isMobile])
+
+  const hasActiveFilters = budgetFilter !== null || sortBy !== 'waktu-desc'
+  const activeFilterCount = (budgetFilter ? 1 : 0) + (sortBy !== 'waktu-desc' ? 1 : 0)
 
   useEffect(() => {
     setPage(1)
-  }, [search, budgetFilter, sortBy, period])
+  }, [search, budgetFilter, sortBy, period, pageSize])
 
   const visibleExpenses = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -91,9 +112,9 @@ function HistoryPage() {
     return sorted
   }, [expensesData, search, budgetFilter, sortBy])
 
-  const totalPages = Math.max(1, Math.ceil(visibleExpenses.length / PAGE_SIZE))
+  const totalPages = Math.max(1, Math.ceil(visibleExpenses.length / pageSize))
   const safePage = Math.min(page, totalPages)
-  const pageExpenses = visibleExpenses.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
+  const pageExpenses = visibleExpenses.slice((safePage - 1) * pageSize, safePage * pageSize)
 
   const [editing, setEditing] = useState<Expense | null>(null)
   const [deleting, setDeleting] = useState<Expense | null>(null)
@@ -119,7 +140,11 @@ function HistoryPage() {
     deletingBalance !== undefined && deleting ? deletingBalance + deleting.amount : undefined
 
   return (
-    <Container size="md" py="lg">
+    <Container
+      size="md"
+      py="lg"
+      pb={{ base: 'calc(96px + env(safe-area-inset-bottom, 0px))', sm: 'lg' }}
+    >
       <Stack gap="lg">
         <Group justify="space-between" align="flex-end">
           <div>
@@ -145,21 +170,70 @@ function HistoryPage() {
           />
         </Group>
 
-        {period && (
-          <Group>
-            <TextInput
-              placeholder="Cari nama..."
-              value={search}
-              onChange={(e) => setSearch(e.currentTarget.value)}
-              style={{ flex: 1 }}
-            />
-            <Button variant="light" leftSection="⚙" onClick={() => setFilterOpened(true)}>
-              Filter & Urut
-            </Button>
-          </Group>
+        {period && !(isMobile && editing) && (
+          <Stack gap="xs">
+            <Group wrap="nowrap" align="center">
+              <TextInput
+                placeholder="Cari nama pengeluaran"
+                value={search}
+                onChange={(e) => setSearch(e.currentTarget.value)}
+                leftSection="🔍"
+                rightSection={
+                  search ? (
+                    <ActionIcon variant="subtle" size="sm" onClick={() => setSearch('')} aria-label="Bersihkan pencarian">
+                      ✕
+                    </ActionIcon>
+                  ) : null
+                }
+                size="md"
+                style={{ flex: 1, minWidth: 0 }}
+              />
+              <Button
+                size="md"
+                variant={hasActiveFilters ? 'filled' : 'light'}
+                color="blue"
+                leftSection="⚙"
+                onClick={() => setFilterOpened(true)}
+                style={{ flexShrink: 0 }}
+              >
+                Filter & Urut{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
+              </Button>
+            </Group>
+
+            {hasActiveFilters && (
+              <Group gap="xs" wrap="wrap">
+                {budgetFilter && (
+                  <Button
+                    size="xs"
+                    variant="light"
+                    color="blue"
+                    rightSection={<span>✕</span>}
+                    onClick={() => setBudgetFilter(null)}
+                  >
+                    Budget: {budgetFilter}
+                  </Button>
+                )}
+                {sortBy !== 'waktu-desc' && (
+                  <Button
+                    size="xs"
+                    variant="light"
+                    color="gray"
+                    rightSection={<span>✕</span>}
+                    onClick={() => setSortBy('waktu-desc')}
+                  >
+                    {SORT_LABELS[sortBy] ?? sortBy}
+                  </Button>
+                )}
+              </Group>
+            )}
+          </Stack>
         )}
 
-        <Paper withBorder p={{ base: 'sm', sm: 'lg' }} radius="xl" pos="relative">
+        {isMobile && editing ? (
+          <EditExpenseForm expense={editing} onClose={() => setEditing(null)} inline />
+        ) : (
+          <>
+            <Paper withBorder p={{ base: 'sm', sm: 'lg' }} radius="xl" pos="relative">
           <LoadingOverlay
             visible={expensesLoading && !!period}
             zIndex={1000}
@@ -168,46 +242,30 @@ function HistoryPage() {
 
           {expenses.length === 0 ? (
             <Text c="dimmed" ta="center" py="lg">
-              {period ? 'Tidak ada pengeluaran pada periode ini.' : 'Pilih periode untuk melihat pengeluaran.'}
+              {period ? 'Belum ada pengeluaran pada periode ini.' : 'Pilih periode untuk melihat pengeluaran.'}
             </Text>
           ) : visibleExpenses.length === 0 ? (
-            <Text c="dimmed" ta="center" py="lg">
-              Tidak ada hasil yang cocok dengan filter.
-            </Text>
+            <Stack align="center" gap={4} py="xl">
+              <Text fz={28} aria-hidden>
+                🔍
+              </Text>
+              <Text c="dimmed" ta="center">
+                Tidak ada pengeluaran ditemukan.
+              </Text>
+              <Text size="sm" c="dimmed" ta="center">
+                Ubah kata kunci atau filter untuk melihat hasil lain.
+              </Text>
+            </Stack>
           ) : isMobile ? (
             <Stack gap="sm">
               {pageExpenses.map((expense) => (
-                <Paper key={expense.id} withBorder p="sm" radius="md">
-                  <Group justify="space-between" mb={4} wrap="nowrap" align="flex-start">
-                    <Text fw={600} style={{ wordBreak: 'break-word' }}>
-                      {expense.name}
-                    </Text>
-                    <Text fw={700} ff="monospace" style={{ whiteSpace: 'nowrap' }}>
-                      {formatCurrency(expense.amount)}
-                    </Text>
-                  </Group>
-                  <Group justify="space-between" mb="xs">
-                    <Text size="sm" c="dimmed">
-                      {dayjs(expense.dateTime).format(DATE_TIME_FORMAT)}
-                    </Text>
-                    <Text size="sm" c="dimmed">
-                      {expense.budget}
-                    </Text>
-                  </Group>
-                  <Group justify="flex-end" gap="xs">
-                    {expense.hasPhoto && (
-                      <ActionIcon variant="subtle" color="gray" onClick={() => setViewingPhoto(expense)} aria-label="Lihat foto">
-                        📷
-                      </ActionIcon>
-                    )}
-                    <ActionIcon variant="subtle" color="blue" disabled={!expense.id} onClick={() => setEditing(expense)} aria-label="Edit">
-                      ✎
-                    </ActionIcon>
-                    <ActionIcon variant="subtle" color="red" disabled={!expense.id} onClick={() => setDeleting(expense)} aria-label="Hapus">
-                      🗑
-                    </ActionIcon>
-                  </Group>
-                </Paper>
+                <TransactionCard
+                  key={expense.id}
+                  expense={expense}
+                  onViewPhoto={setViewingPhoto}
+                  onEdit={setEditing}
+                  onDelete={setDeleting}
+                />
               ))}
             </Stack>
           ) : (
@@ -215,7 +273,7 @@ function HistoryPage() {
               <Table.Thead>
                 <Table.Tr>
                   <Table.Th>Waktu</Table.Th>
-                  <Table.Th>Name</Table.Th>
+                  <Table.Th>Nama</Table.Th>
                   <Table.Th>Budget</Table.Th>
                   <Table.Th ta="right">Nominal</Table.Th>
                   <Table.Th ta="right">Aksi</Table.Th>
@@ -231,14 +289,14 @@ function HistoryPage() {
                     <Table.Td ta="right">
                       <Group gap="xs" justify="flex-end" wrap="nowrap">
                         {expense.hasPhoto && (
-                          <ActionIcon variant="subtle" color="gray" onClick={() => setViewingPhoto(expense)} aria-label="Lihat foto">
+                          <ActionIcon variant="light" color="gray" size="md" onClick={() => setViewingPhoto(expense)} aria-label="Lihat foto">
                             📷
                           </ActionIcon>
                         )}
-                        <ActionIcon variant="subtle" color="blue" disabled={!expense.id} onClick={() => setEditing(expense)} aria-label="Edit">
+                        <ActionIcon variant="light" color="blue" size="md" disabled={!expense.id} onClick={() => setEditing(expense)} aria-label="Edit">
                           ✎
                         </ActionIcon>
-                        <ActionIcon variant="subtle" color="red" disabled={!expense.id} onClick={() => setDeleting(expense)} aria-label="Hapus">
+                        <ActionIcon variant="light" color="red" size="md" disabled={!expense.id} onClick={() => setDeleting(expense)} aria-label="Hapus">
                           🗑
                         </ActionIcon>
                       </Group>
@@ -251,15 +309,52 @@ function HistoryPage() {
         </Paper>
 
         {totalPages > 1 && (
-          <Group justify="center">
-            <Pagination value={safePage} onChange={setPage} total={totalPages} />
+          <Group justify="center" gap="sm" wrap="wrap">
+            <Select
+              size="xs"
+              w={86}
+              aria-label="Baris per halaman"
+              value={String(pageSize)}
+              onChange={(v) => {
+                pageSizeUserSetRef.current = true
+                setPageSize(Number(v) || 15)
+              }}
+              data={[
+                { value: '5', label: '5' },
+                { value: '10', label: '10' },
+                { value: '15', label: '15' },
+                { value: '25', label: '25' },
+              ]}
+            />
+            <Pagination value={safePage} onChange={setPage} total={totalPages} size="md" radius="md" />
           </Group>
         )}
+          </>
+        )}
 
-        {editing && <EditExpenseModal expense={editing} onClose={() => setEditing(null)} />}
+        {editing && !isMobile && (
+          <Modal
+            opened
+            onClose={() => setEditing(null)}
+            title="Ubah pengeluaran"
+            centered
+            size="md"
+            zIndex={1200}
+          >
+            <EditExpenseForm expense={editing} onClose={() => setEditing(null)} />
+          </Modal>
+        )}
 
-        <Modal opened={filterOpened} onClose={() => setFilterOpened(false)} title="Filter & Urut" centered>
-          <Stack gap="md">
+        <Modal
+          opened={filterOpened}
+          onClose={() => setFilterOpened(false)}
+          title="Filter & Urut"
+          centered
+          fullScreen={isMobile}
+          size="sm"
+          zIndex={1200}
+        >
+          <Stack gap="lg">
             <Select
               label="Budget"
               placeholder="Semua budget"
@@ -269,6 +364,7 @@ function HistoryPage() {
               clearable
               searchable
               size="md"
+              comboboxProps={{ withinPortal: false }}
             />
             <Select
               label="Urutkan"
@@ -281,9 +377,12 @@ function HistoryPage() {
               value={sortBy}
               onChange={(value) => setSortBy(value ?? 'waktu-desc')}
               size="md"
+              comboboxProps={{ withinPortal: false }}
             />
             <Group justify="flex-end" mt="sm">
-              <Button onClick={() => setFilterOpened(false)}>Apply</Button>
+              <Button fullWidth={isMobile} onClick={() => setFilterOpened(false)}>
+                Apply
+              </Button>
             </Group>
           </Stack>
         </Modal>
@@ -292,8 +391,10 @@ function HistoryPage() {
           opened={!!viewingPhoto}
           onClose={() => setViewingPhoto(null)}
           title={viewingPhoto?.name ?? viewingPhoto?.photoName ?? 'Invoice'}
+          centered={!isMobile}
+          fullScreen={isMobile}
           size="md"
-          centered
+          zIndex={1200}
         >
           {viewingPhoto &&
             (viewingPhoto.photoType === 'pdf' ? (
@@ -304,18 +405,38 @@ function HistoryPage() {
                 </Button>
               </Stack>
             ) : (
-              <Image src={getPhotoUrl(viewingPhoto.id)} alt={viewingPhoto.name} fit="contain" />
+              <Stack align="center" gap="sm">
+                <Image
+                  src={getPhotoUrl(viewingPhoto.id)}
+                  alt={viewingPhoto.name}
+                  fit="contain"
+                  mah="60vh"
+                  style={{ maxWidth: '100%' }}
+                />
+                {viewingPhoto.photoName && (
+                  <Text size="xs" c="dimmed" ta="center" truncate style={{ maxWidth: '100%' }}>
+                    {viewingPhoto.photoName}
+                  </Text>
+                )}
+              </Stack>
             ))}
-          {viewingPhoto?.photoName && (
+          {viewingPhoto?.photoType === 'pdf' && viewingPhoto?.photoName && (
             <Text size="xs" c="dimmed" ta="center" mt="sm" truncate>
               {viewingPhoto.photoName}
             </Text>
           )}
         </Modal>
 
-        <Modal opened={!!deleting} onClose={() => setDeleting(null)} title="Hapus pengeluaran" centered>
+        <Modal
+          opened={!!deleting}
+          onClose={() => setDeleting(null)}
+          title="Hapus pengeluaran"
+          centered
+          size="sm"
+        >
           <Text>
-            Yakin ingin menghapus "{deleting?.name}" sebesar {deleting ? formatCurrency(deleting.amount) : ''}?
+            Yakin ingin menghapus <Text span fw={700}>"{deleting?.name}"</Text> sebesar{' '}
+            {deleting ? formatCurrency(deleting.amount) : ''}?
           </Text>
           {deleting && projectedDeleteBalance !== undefined && (
             <Paper withBorder p="sm" radius="md" mt="md" bg="var(--mantine-color-body)">
@@ -324,14 +445,19 @@ function HistoryPage() {
                   <Text size="sm" c="dimmed">
                     Saldo {deleting.budget} saat ini
                   </Text>
-                  <Text size="sm">{formatCurrency(deletingBalance ?? 0)}</Text>
+                  <Text size="sm" ff="monospace">
+                    {formatCurrency(deletingBalance ?? 0)}
+                  </Text>
                 </Group>
                 <Group justify="space-between">
                   <Text size="sm" c="dimmed">
                     Dikembalikan
                   </Text>
-                  <Text size="sm">+{formatCurrency(deleting.amount)}</Text>
+                  <Text size="sm" ff="monospace">
+                    +{formatCurrency(deleting.amount)}
+                  </Text>
                 </Group>
+                <Divider my={2} />
                 <Group justify="space-between">
                   <Text size="sm" fw={500}>
                     Saldo nanti
@@ -344,10 +470,7 @@ function HistoryPage() {
             </Paper>
           )}
           <Group justify="flex-end" mt="lg">
-            <Button variant="default" onClick={() => setDeleting(null)}>
-              Batal
-            </Button>
-            <Button color="red" loading={deleteExpense.isPending} onClick={handleDelete}>
+            <Button color="red" loading={deleteExpense.isPending} onClick={handleDelete} fullWidth={isMobile}>
               Hapus
             </Button>
           </Group>
@@ -357,7 +480,15 @@ function HistoryPage() {
   )
 }
 
-function EditExpenseModal({ expense, onClose }: { expense: Expense; onClose: () => void }) {
+function EditExpenseForm({
+  expense,
+  onClose,
+  inline = false,
+}: {
+  expense: Expense
+  onClose: () => void
+  inline?: boolean
+}) {
   const { data: options } = useOptions()
   const updateExpense = useUpdateExpense()
   const uploadPhoto = useUploadPhoto()
@@ -428,25 +559,30 @@ function EditExpenseModal({ expense, onClose }: { expense: Expense; onClose: () 
   }
 
   return (
-    <Modal opened onClose={onClose} title="Ubah pengeluaran" centered>
-      <Stack gap="sm">
-        <TextInput
-          label="Waktu"
-          value={dateTime}
-          onChange={(e) => setDateTime(e.currentTarget.value)}
+    <Stack gap="md">
+      {inline && (
+        <Group justify="space-between" align="center">
+          <Button variant="subtle" leftSection="←" onClick={onClose}>
+            Kembali
+          </Button>
+          <Title order={3}>Ubah pengeluaran</Title>
+        </Group>
+      )}
+
+      <TextInput label="Waktu" value={dateTime} onChange={(e) => setDateTime(e.currentTarget.value)} required size="md" />
+        <TextInput label="Nama" value={name} onChange={(e) => setName(e.currentTarget.value)} maxLength={255} required size="md" />
+        <Select label="Budget" data={budgetOptions} value={budget} onChange={setBudget} searchable required size="md" comboboxProps={{ withinPortal: false }} />
+        <NumberInput
+          label="Nominal"
+          value={amount}
+          onChange={setAmount}
+          min={0}
+          prefix="Rp"
+          thousandSeparator="."
+          decimalSeparator=","
           required
           size="md"
         />
-        <TextInput
-          label="Name"
-          value={name}
-          onChange={(e) => setName(e.currentTarget.value)}
-          maxLength={255}
-          required
-          size="md"
-        />
-        <Select label="Budget" data={budgetOptions} value={budget} onChange={setBudget} required size="md" />
-        <NumberInput label="Nominal" value={amount} onChange={setAmount} min={0} required size="md" />
 
         {editPreview && (
           <Paper withBorder p="sm" radius="md" bg="var(--mantine-color-body)">
@@ -502,30 +638,32 @@ function EditExpenseModal({ expense, onClose }: { expense: Expense; onClose: () 
         />
 
         {expense.hasPhoto && !removePhoto && !photo && (
-          <Group align="flex-start">
-            {expense.photoType === 'pdf' ? (
-              <Button component="a" href={getPhotoUrl(expense.id)} target="_blank" variant="light" size="xs">
-                📄 Lihat PDF
+          <Stack gap={4}>
+            <Group align="flex-start">
+              {expense.photoType === 'pdf' ? (
+                <Button component="a" href={getPhotoUrl(expense.id)} target="_blank" variant="light" size="xs">
+                  📄 Lihat PDF
+                </Button>
+              ) : (
+                <Image
+                  src={getPhotoUrl(expense.id)}
+                  alt="Invoice saat ini"
+                  mah={150}
+                  fit="contain"
+                  radius="md"
+                  style={{ flex: 1 }}
+                />
+              )}
+              <Button variant="subtle" color="red" size="sm" onClick={() => setRemovePhoto(true)}>
+                Hapus Foto
               </Button>
-            ) : (
-              <Image
-                src={getPhotoUrl(expense.id)}
-                alt="Invoice saat ini"
-                mah={150}
-                fit="contain"
-                radius="md"
-                style={{ flex: 1 }}
-              />
+            </Group>
+            {expense.photoName && (
+              <Text size="xs" c="dimmed" truncate>
+                {expense.photoName}
+              </Text>
             )}
-            <Button variant="subtle" color="red" onClick={() => setRemovePhoto(true)}>
-              Hapus Foto
-            </Button>
-          </Group>
-        )}
-        {expense.hasPhoto && !removePhoto && !photo && expense.photoName && (
-          <Text size="xs" c="dimmed" truncate>
-            {expense.photoName}
-          </Text>
+          </Stack>
         )}
 
         {expense.hasPhoto && removePhoto ? <Text size="sm" c="red">Foto akan dihapus setelah disimpan.</Text> : null}
@@ -540,15 +678,11 @@ function EditExpenseModal({ expense, onClose }: { expense: Expense; onClose: () 
         />
 
         <Group justify="flex-end" mt="md">
-          <Button variant="default" onClick={onClose}>
-            Batal
-          </Button>
           <Button onClick={handleSubmit} loading={updateExpense.isPending} disabled={submitDisabled}>
             Simpan
           </Button>
         </Group>
       </Stack>
-    </Modal>
   )
 }
 
