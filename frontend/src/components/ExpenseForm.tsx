@@ -1,7 +1,7 @@
 import { useMemo, useRef, useState } from 'react'
 import {
-  Box,
   Button,
+  Divider,
   Group,
   NumberInput,
   Paper,
@@ -128,21 +128,19 @@ function ExpenseForm() {
   const balanceColor = (value: number) => (value < 0 ? 'red' : undefined)
 
   return (
-    <Paper withBorder p="lg" radius="md" shadow="sm">
-      <Stack>
+    <Paper withBorder p={{ base: 'md', sm: 'lg' }} radius="md">
+      <Stack gap="md">
         <Title order={3}>Catat Pengeluaran</Title>
 
-        <div>
-          <SegmentedControl
-            value={mode}
-            onChange={setMode}
-            fullWidth
-            data={[
-              { value: 'now', label: 'Waktu Sekarang' },
-              { value: 'manual', label: 'Waktu Manual' },
-            ]}
-          />
-        </div>
+        <SegmentedControl
+          value={mode}
+          onChange={setMode}
+          fullWidth
+          data={[
+            { value: 'now', label: 'Waktu Sekarang' },
+            { value: 'manual', label: 'Waktu Manual' },
+          ]}
+        />
 
         <DateTimePicker
           label="Waktu"
@@ -157,7 +155,7 @@ function ExpenseForm() {
         />
 
         <TextInput
-          label="Name"
+          label="Nama"
           placeholder="Nama pengeluaran"
           value={name}
           onChange={(event) => setName(event.currentTarget.value)}
@@ -176,6 +174,7 @@ function ExpenseForm() {
           required
           disabled={optionsLoading}
           size="md"
+          maxDropdownHeight={260}
           renderOption={({ option }) => {
             const balance = balanceOf(option.value)
             return (
@@ -199,31 +198,35 @@ function ExpenseForm() {
           prefix="Rp"
           thousandSeparator="."
           decimalSeparator=","
-          suffix=",-"
           required
           size="md"
         />
 
         {showPreview && (
           <Paper withBorder p="sm" radius="md" bg="var(--mantine-color-body)">
-            <Stack gap="4">
+            <Stack gap={6}>
               <Group justify="space-between">
                 <Text size="sm" c="dimmed">
                   Sisa saldo
                 </Text>
-                <Text size="sm">{formatCurrency(selectedBalance)}</Text>
+                <Text size="sm" ff="monospace">
+                  {formatCurrency(selectedBalance ?? 0)}
+                </Text>
               </Group>
               <Group justify="space-between">
                 <Text size="sm" c="dimmed">
                   Nominal
                 </Text>
-                <Text size="sm">-{formatCurrency(amountNumber)}</Text>
+                <Text size="sm" ff="monospace">
+                  -{formatCurrency(amountNumber)}
+                </Text>
               </Group>
+              <Divider my={2} />
               <Group justify="space-between">
                 <Text size="sm" fw={500}>
                   Saldo nanti
                 </Text>
-                <Text size="sm" fw={700} c={balanceColor(projectedBalance)} ff="monospace">
+                <Text fz="lg" fw={700} c={balanceColor(projectedBalance)} ff="monospace" lh={1.2}>
                   {formatCurrency(projectedBalance)}
                 </Text>
               </Group>
@@ -258,26 +261,16 @@ function ExpenseForm() {
           </Paper>
         )}
 
-        <Box
-          mt="md"
-          style={{
-            position: 'sticky',
-            bottom: 0,
-            paddingTop: 'var(--mantine-spacing-sm)',
-            paddingBottom: 'var(--mantine-spacing-sm)',
-            backgroundColor: 'var(--mantine-color-body)',
-          }}
+        <Button
+          onClick={handleSubmit}
+          loading={createExpense.isPending || photoUploading}
+          disabled={submitDisabled}
+          fullWidth
+          size="md"
+          mt="xs"
         >
-          <Button
-            onClick={handleSubmit}
-            loading={createExpense.isPending || photoUploading}
-            disabled={submitDisabled}
-            fullWidth
-            size="md"
-          >
-            Save
-          </Button>
-        </Box>
+          Save
+        </Button>
       </Stack>
     </Paper>
   )
