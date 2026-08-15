@@ -118,6 +118,9 @@ body {
     overflow-y: auto !important;
     overflow-x: hidden !important;
     -webkit-overflow-scrolling: touch;
+    overscroll-behavior-y: contain;
+    /* Saat Android keyboard terbuka, auto-scroll browser tidak menutup field fokus di bawah header. */
+    scroll-padding-top: 80px;
     padding-bottom: 24px !important;
   }
 

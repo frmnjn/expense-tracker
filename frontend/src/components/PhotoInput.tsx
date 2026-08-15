@@ -42,26 +42,27 @@ function PhotoInput({
   return (
     <>
       {value ? (
-        <Stack gap={4}>
-          <Group align="flex-start">
-            <Image
-              src={value.kind === 'existing' ? getInvoicePhotoUrl(value.invoiceId) : URL.createObjectURL(value.file)}
-              alt="Preview invoice"
-              mah={200}
-              fit="contain"
-              radius="md"
-              style={{ flex: 1 }}
-            />
-            <Button variant="subtle" color="red" onClick={clear}>
+        <Group align="center" wrap="nowrap">
+          <Image
+            src={value.kind === 'existing' ? getInvoicePhotoUrl(value.invoiceId) : URL.createObjectURL(value.file)}
+            alt="Preview invoice"
+            mah={140}
+            maw={120}
+            fit="contain"
+            radius="md"
+            style={{ flexShrink: 0 }}
+          />
+          <Stack gap={6} style={{ flex: 1, minWidth: 0 }}>
+            {fileName ? (
+              <Text size="sm" c="dimmed" truncate title={fileName}>
+                {fileName}
+              </Text>
+            ) : null}
+            <Button variant="subtle" color="red" size="sm" onClick={clear} style={{ alignSelf: 'flex-start' }}>
               Hapus
             </Button>
-          </Group>
-          {fileName ? (
-            <Text size="xs" c="dimmed" truncate title={fileName}>
-              {fileName}
-            </Text>
-          ) : null}
-        </Stack>
+          </Stack>
+        </Group>
       ) : (
         <Button variant="light" fullWidth onClick={() => setOpened(true)}>
           📷 Tambah Foto

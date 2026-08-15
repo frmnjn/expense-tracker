@@ -3,7 +3,12 @@ import ExpenseForm from '../components/ExpenseForm'
 
 function ExpensePage() {
   return (
-    <Container size="sm" px={{ base: 0, sm: 'md' }} py={{ base: 0, sm: 'md' }}>
+    <Container
+      size="sm"
+      px={{ base: 0, sm: 'md' }}
+      py={{ base: 'md', sm: 'md' }}
+      pb={{ base: 'calc(96px + env(safe-area-inset-bottom, 0px))', sm: 'md' }}
+    >
       <Stack gap="lg">
         <div>
           <Text size="sm" c="blue" fw={700} mb={4}>
