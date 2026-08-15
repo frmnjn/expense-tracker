@@ -49,9 +49,13 @@ export function getInvoicePhotoUrl(id: string): string {
   return `${apiClient.defaults.baseURL}/invoices/${encodeURIComponent(id)}/photo`
 }
 
-export async function getInvoices(dateTime: string, scanOnly = false): Promise<InvoicesResponse> {
+export async function getInvoices(dateTime: string, scanOnly = false, period?: string): Promise<InvoicesResponse> {
   const response = await apiClient.get<ApiResponse<InvoicesResponse>>('/invoices', {
-    params: { date: dateTime, ...(scanOnly ? { scan: 'true' } : {}) },
+    params: {
+      ...(dateTime ? { date: dateTime } : {}),
+      ...(scanOnly ? { scan: 'true' } : {}),
+      ...(period ? { period } : {}),
+    },
   })
   return response.data.data ?? { invoices: [] }
 }
