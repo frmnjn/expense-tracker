@@ -19,13 +19,13 @@ import {
   Title,
 } from '@mantine/core'
 import { useMediaQuery } from '@mantine/hooks'
-import { notifications } from '@mantine/notifications'
 import dayjs from 'dayjs'
 import { useDeleteExpense, useExpenses, usePeriods, useUpdateExpense } from '../hooks/useExpenses'
 import { useDeletePhoto, useUploadPhoto } from '../hooks/useCreateExpense'
 import { useOptions } from '../hooks/useOptions'
 import PhotoInput, { type PhotoSelection } from '../components/PhotoInput'
 import { TransactionCard } from '../components/TransactionCard'
+import { useToast } from '../components/Toast'
 import { getPhotoUrl } from '../services/expense'
 import { formatCurrency } from '../utils/currency'
 import { getErrorMessage } from '../utils/error'
@@ -120,16 +120,17 @@ function HistoryPage() {
   const [deleting, setDeleting] = useState<Expense | null>(null)
 
   const deleteExpense = useDeleteExpense()
+  const toast = useToast()
 
   const handleDelete = () => {
     if (!deleting) return
     deleteExpense.mutate(deleting.id, {
       onSuccess: () => {
-        notifications.show({ title: 'Berhasil', message: 'Pengeluaran dihapus', color: 'green' })
+        toast.success('Pengeluaran dihapus', { title: 'Berhasil' })
         setDeleting(null)
       },
       onError: (error) => {
-        notifications.show({ title: 'Gagal', message: getErrorMessage(error), color: 'red' })
+        toast.error(getErrorMessage(error), { title: 'Gagal' })
       },
     })
   }
@@ -493,6 +494,7 @@ function EditExpenseForm({
   const updateExpense = useUpdateExpense()
   const uploadPhoto = useUploadPhoto()
   const deletePhoto = useDeletePhoto()
+  const toast = useToast()
 
   const [dateTime, setDateTime] = useState(expense.dateTime)
   const [name, setName] = useState(expense.name)
@@ -536,11 +538,11 @@ function EditExpenseForm({
       {
         onSuccess: () => {
           const success = () => {
-            notifications.show({ title: 'Berhasil', message: 'Pengeluaran diperbarui', color: 'green' })
+            toast.success('Pengeluaran diperbarui', { title: 'Berhasil' })
             onClose()
           }
           const photoError = (error: unknown) => {
-            notifications.show({ title: 'Tersimpan, tapi foto gagal diupload', message: getErrorMessage(error), color: 'orange' })
+            toast.warning(getErrorMessage(error), { title: 'Tersimpan, tapi foto gagal diupload' })
             onClose()
           }
           if (removePhoto) {
@@ -552,7 +554,7 @@ function EditExpenseForm({
           }
         },
         onError: (error) => {
-          notifications.show({ title: 'Gagal', message: getErrorMessage(error), color: 'red' })
+          toast.error(getErrorMessage(error), { title: 'Gagal' })
         },
       },
     )

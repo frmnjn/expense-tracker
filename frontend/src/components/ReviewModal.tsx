@@ -12,7 +12,6 @@ import {
   Text,
   TextInput,
 } from '@mantine/core'
-import { notifications } from '@mantine/notifications'
 import { DateTimePicker } from '@mantine/dates'
 import dayjs from 'dayjs'
 import { useInvoiceDetail, useCreateExpenseBatch } from '../hooks/useScan'
@@ -21,6 +20,7 @@ import { getInvoicePhotoUrl } from '../services/expense'
 import { formatCurrency } from '../utils/currency'
 import { getErrorMessage } from '../utils/error'
 import { InvoiceThumb } from './InvoiceThumb'
+import { useToast } from './Toast'
 
 interface EditItem {
   key: string
@@ -52,6 +52,7 @@ function ReviewModal({
   const { data, isPending } = useInvoiceDetail(invoiceId)
   const { data: options } = useOptions()
   const batch = useCreateExpenseBatch()
+  const toast = useToast()
   const [items, setItems] = useState<EditItem[]>([])
   const [groupNames, setGroupNames] = useState<Record<string, string>>({})
 
@@ -143,15 +144,11 @@ function ReviewModal({
       { dateTime, invoiceId, groups: groupsPayload },
       {
         onSuccess: () => {
-          notifications.show({
-            title: 'Berhasil',
-            message: `${groupsPayload.length} pengeluaran berhasil dibuat`,
-            color: 'green',
-          })
+          toast.success(`${groupsPayload.length} pengeluaran berhasil dibuat`, { title: 'Berhasil' })
           onSubmitted()
         },
         onError: (error) => {
-          notifications.show({ title: 'Gagal', message: getErrorMessage(error), color: 'red' })
+          toast.error(getErrorMessage(error), { title: 'Gagal' })
         },
       },
     )

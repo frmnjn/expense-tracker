@@ -1,8 +1,8 @@
 import { useState } from 'react'
 import { Button, Group, Modal, NumberInput, Stack, Text, TextInput } from '@mantine/core'
-import { notifications } from '@mantine/notifications'
 import { useCreateTopUp } from '../hooks/useTopUps'
 import { formatCurrency } from '../utils/currency'
+import { useToast } from '../components/Toast'
 
 function TopUpModal({
   opened,
@@ -16,6 +16,7 @@ function TopUpModal({
   onClose: () => void
 }) {
   const createTopUp = useCreateTopUp()
+  const toast = useToast()
   const [amount, setAmount] = useState<string | number>('')
   const [description, setDescription] = useState('')
 
@@ -36,14 +37,14 @@ function TopUpModal({
       },
       {
         onSuccess: () => {
-          notifications.show({ title: 'Berhasil', message: 'Saldo ditambahkan', color: 'green' })
+          toast.success('Saldo ditambahkan', { title: 'Berhasil' })
           handleClose()
         },
         onError: (error) => {
           const message =
             (error as { response?: { data?: { message?: string } } }).response?.data?.message ??
             'Terjadi kesalahan, coba lagi'
-          notifications.show({ title: 'Gagal', message, color: 'red' })
+          toast.error(message, { title: 'Gagal' })
         },
       },
     )
