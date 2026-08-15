@@ -1,5 +1,6 @@
 import apiClient from './api'
 import { newIdempotencyKey } from '../utils/idempotency'
+import { getAccessCode } from '../utils/access'
 import type {
   ApiResponse,
   BatchExpenseRequest,
@@ -41,12 +42,17 @@ export async function createExpense(request: ExpenseRequest): Promise<{ id: stri
   return response.data.data ?? { id: '' }
 }
 
+function accessSuffix(): string {
+  const code = getAccessCode()
+  return code ? `?access_code=${encodeURIComponent(code)}` : ''
+}
+
 export function getPhotoUrl(id: string): string {
-  return `${apiClient.defaults.baseURL}/expenses/${encodeURIComponent(id)}/photo`
+  return `${apiClient.defaults.baseURL}/expenses/${encodeURIComponent(id)}/photo${accessSuffix()}`
 }
 
 export function getInvoicePhotoUrl(id: string): string {
-  return `${apiClient.defaults.baseURL}/invoices/${encodeURIComponent(id)}/photo`
+  return `${apiClient.defaults.baseURL}/invoices/${encodeURIComponent(id)}/photo${accessSuffix()}`
 }
 
 export async function getInvoices(dateTime: string, scanOnly = false, period?: string): Promise<InvoicesResponse> {
