@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Group, Pagination, Select } from '@mantine/core'
+import { useMediaQuery } from '@mantine/hooks'
 
 const PAGE_SIZE_OPTIONS = [5, 10, 15, 25]
 
@@ -8,18 +9,30 @@ const PAGE_SIZE_OPTIONS = [5, 10, 15, 25]
  * Pagination reusable: membagi data menjadi halaman, menampilkan daftar lewat
  * render-prop, plus kontrol Pagination (siblings+ellipsis) & pemilih ukuran
  * halaman dalam satu baris. Warna mengikuti theme (Mantine primaryColor).
+ * Default ukuran halaman: 5 di mobile, 10 di desktop (bisa di-override via
+ * defaultPageSize).
  */
 export function AppPagination<T>({
   data,
-  defaultPageSize = 10,
+  defaultPageSize,
   children,
 }: {
   data: T[]
   defaultPageSize?: number
   children: (pageData: T[]) => ReactNode
 }) {
+  const isMobile = useMediaQuery('(max-width: 48em)')
   const [activePage, setActivePage] = useState(1)
-  const [pageSize, setPageSize] = useState(defaultPageSize)
+  const [pageSize, setPageSize] = useState<number>(defaultPageSize ?? 10)
+  const userSetRef = useRef(false)
+
+  // Default ikut device sampai user memilih sendiri lewat selector
+  // (menangani useMediaQuery yang sempat false di render pertama).
+  useEffect(() => {
+    if (!userSetRef.current && defaultPageSize === undefined) {
+      setPageSize(isMobile ? 5 : 10)
+    }
+  }, [isMobile, defaultPageSize])
 
   const totalPages = Math.max(1, Math.ceil(data.length / pageSize))
   const safePage = Math.min(activePage, totalPages)
@@ -32,7 +45,8 @@ export function AppPagination<T>({
   }, [activePage, safePage])
 
   const changePageSize = (value: string | null) => {
-    setPageSize(Number(value) || defaultPageSize)
+    userSetRef.current = true
+    setPageSize(Number(value) || (defaultPageSize ?? (isMobile ? 5 : 10)))
     setActivePage(1)
   }
 
