@@ -1,6 +1,6 @@
 import { createContext, useCallback, useContext, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
-import { Paper, Stack, Text } from '@mantine/core'
+import { ActionIcon, Group, Paper, Stack, Text } from '@mantine/core'
 
 type ToastTone = 'success' | 'error' | 'warning'
 
@@ -47,6 +47,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     }, 4000)
   }, [])
 
+  const dismiss = useCallback((id: number) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id))
+  }, [])
+
   const api: ToastApi = {
     success: (message, options) => show('success', message, options),
     error: (message, options) => show('error', message, options),
@@ -78,12 +82,24 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             radius="md"
             style={{ pointerEvents: 'auto', width: '100%', maxWidth: 360 }}
           >
-            <Stack gap={2}>
-              <Text size="sm" fw={700} c={TONE_COLOR[t.tone]}>
-                {t.title}
-              </Text>
-              <Text size="sm">{t.message}</Text>
-            </Stack>
+            <Group justify="space-between" align="flex-start" wrap="nowrap">
+              <Stack gap={2} style={{ flex: 1, minWidth: 0 }}>
+                <Text size="sm" fw={700} c={TONE_COLOR[t.tone]}>
+                  {t.title}
+                </Text>
+                <Text size="sm">{t.message}</Text>
+              </Stack>
+              <ActionIcon
+                variant="subtle"
+                color="gray"
+                size="sm"
+                aria-label="Tutup notifikasi"
+                onClick={() => dismiss(t.id)}
+                style={{ flexShrink: 0 }}
+              >
+                ✕
+              </ActionIcon>
+            </Group>
           </Paper>
         ))}
       </Stack>
