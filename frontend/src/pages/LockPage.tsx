@@ -92,8 +92,8 @@ export default function LockPage() {
                   <Button size="lg" variant="default" radius="md" onClick={() => press('0')} aria-label="Digit 0">
                     0
                   </Button>
-                  <Button size="lg" color="blue" radius="md" onClick={submit} loading={loading} disabled={pin.length < MIN_PIN}>
-                    Buka
+                  <Button size="lg" color="blue" radius="md" onClick={submit} loading={loading} disabled={pin.length < MIN_PIN} aria-label="Buka">
+                    ➜
                   </Button>
                 </SimpleGrid>
               </Box>
