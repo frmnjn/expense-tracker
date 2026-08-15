@@ -1,10 +1,11 @@
 import { useState } from 'react'
 import { Button, Group, Modal, NumberInput, Stack, TextInput } from '@mantine/core'
-import { notifications } from '@mantine/notifications'
 import { useCreateBudget } from '../hooks/useBudgets'
+import { useToast } from '../components/Toast'
 
 function AddBudgetModal({ opened, onClose }: { opened: boolean; onClose: () => void }) {
   const createBudget = useCreateBudget()
+  const toast = useToast()
   const [name, setName] = useState('')
   const [balance, setBalance] = useState<string | number>('')
   const [alertThreshold, setAlertThreshold] = useState<string | number>('')
@@ -27,14 +28,14 @@ function AddBudgetModal({ opened, onClose }: { opened: boolean; onClose: () => v
       },
       {
         onSuccess: () => {
-          notifications.show({ title: 'Berhasil', message: 'Budget ditambahkan', color: 'green' })
+          toast.success('Budget ditambahkan', { title: 'Berhasil' })
           handleClose()
         },
         onError: (error) => {
           const message =
             (error as { response?: { data?: { message?: string } } }).response?.data?.message ??
             'Terjadi kesalahan, coba lagi'
-          notifications.show({ title: 'Gagal', message, color: 'red' })
+          toast.error(message, { title: 'Gagal' })
         },
       },
     )

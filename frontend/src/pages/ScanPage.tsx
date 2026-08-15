@@ -17,7 +17,6 @@ import {
   Title,
 } from '@mantine/core'
 import { useMediaQuery } from '@mantine/hooks'
-import { notifications } from '@mantine/notifications'
 import dayjs from 'dayjs'
 import { useScanInvoices, useUploadInvoice, useRetryAnalysis } from '../hooks/useScan'
 import { usePeriods } from '../hooks/useExpenses'
@@ -25,6 +24,7 @@ import { getInvoicePhotoUrl } from '../services/expense'
 import { getErrorMessage } from '../utils/error'
 import { InvoiceThumb } from '../components/InvoiceThumb'
 import ReviewModal from '../components/ReviewModal'
+import { useToast } from '../components/Toast'
 import type { Invoice } from '../types/expense'
 
 const DATE_TIME_FORMAT = 'YYYY-MM-DD HH:mm'
@@ -58,6 +58,7 @@ function ScanPage() {
   const { data, isPending } = useScanInvoices(period)
   const upload = useUploadInvoice()
   const retry = useRetryAnalysis()
+  const toast = useToast()
   const invoices = data?.invoices ?? []
 
   const periodOptions = useMemo(() => {
@@ -96,16 +97,14 @@ function ScanPage() {
     upload.mutate(
       { file, dateTime: nowDate },
       {
-        onError: (error) =>
-          notifications.show({ title: 'Gagal upload', message: getErrorMessage(error), color: 'red' }),
+        onError: (error) => toast.error(getErrorMessage(error), { title: 'Gagal upload' }),
       },
     )
   }
 
   const handleRetry = (id: string) => {
     retry.mutate(id, {
-      onError: (error) =>
-        notifications.show({ title: 'Gagal', message: getErrorMessage(error), color: 'red' }),
+      onError: (error) => toast.error(getErrorMessage(error), { title: 'Gagal' }),
     })
   }
 

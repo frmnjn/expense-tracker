@@ -173,9 +173,4 @@ body {
   .page-shell > .mantine-Container-root {
     padding-bottom: 0;
   }
-
-  /* Toast in-app tidak tertutup bottom navigation */
-  .mantine-Notifications-root {
-    bottom: calc(92px + env(safe-area-inset-bottom, 0px)) !important;
-  }
 }

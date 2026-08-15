@@ -1,22 +1,23 @@
 import { Button, Group, Modal, Text } from '@mantine/core'
-import { notifications } from '@mantine/notifications'
 import { useDeleteBudget } from '../hooks/useBudgets'
+import { useToast } from '../components/Toast'
 
 function DeleteBudgetModal({ name, onClose }: { name: string | null; onClose: () => void }) {
   const deleteBudget = useDeleteBudget()
+  const toast = useToast()
 
   const handleDelete = () => {
     if (!name) return
     deleteBudget.mutate(name, {
       onSuccess: () => {
-        notifications.show({ title: 'Berhasil', message: 'Budget dihapus', color: 'green' })
+        toast.success('Budget dihapus', { title: 'Berhasil' })
         onClose()
       },
       onError: (error) => {
         const message =
           (error as { response?: { data?: { message?: string } } }).response?.data?.message ??
           'Terjadi kesalahan, coba lagi'
-        notifications.show({ title: 'Gagal', message, color: 'red' })
+        toast.error(message, { title: 'Gagal' })
       },
     })
   }

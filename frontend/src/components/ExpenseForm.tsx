@@ -14,7 +14,6 @@ import {
   Title,
 } from '@mantine/core'
 import { DateTimePicker } from '@mantine/dates'
-import { notifications } from '@mantine/notifications'
 import { useQueryClient } from '@tanstack/react-query'
 import dayjs from 'dayjs'
 import PhotoInput, { type PhotoSelection } from './PhotoInput'
@@ -22,6 +21,7 @@ import { useCreateExpense, useUploadPhoto } from '../hooks/useCreateExpense'
 import { useOptions } from '../hooks/useOptions'
 import { formatCurrency } from '../utils/currency'
 import { getErrorMessage } from '../utils/error'
+import { useToast } from './Toast'
 
 const DATE_TIME_FORMAT = 'YYYY-MM-DD HH:mm'
 const DATE_TIME_SECONDS_FORMAT = 'YYYY-MM-DD HH:mm:ss'
@@ -36,6 +36,7 @@ function ExpenseForm() {
   const [photo, setPhoto] = useState<PhotoSelection | null>(null)
 
   const { data: options, isPending: optionsLoading } = useOptions()
+  const toast = useToast()
   const createExpense = useCreateExpense()
   const uploadPhoto = useUploadPhoto()
   const photoUploading = uploadPhoto.isPending
@@ -78,19 +79,11 @@ function ExpenseForm() {
           }
           const showSuccess = () => {
             reset()
-            notifications.show({
-              title: 'Berhasil',
-              message: 'Pengeluaran berhasil disimpan',
-              color: 'green',
-            })
+            toast.success('Pengeluaran berhasil disimpan', { title: 'Berhasil' })
           }
           const showPhotoError = (error: unknown) => {
             reset()
-            notifications.show({
-              title: 'Tersimpan, tapi foto gagal diupload',
-              message: getErrorMessage(error),
-              color: 'orange',
-            })
+            toast.warning(getErrorMessage(error), { title: 'Tersimpan, tapi foto gagal diupload' })
           }
           if (photo && photo.kind === 'new' && result.id) {
             uploadPhoto.mutate(
@@ -103,11 +96,7 @@ function ExpenseForm() {
         },
         onError: (error) => {
           submittingRef.current = false
-          notifications.show({
-            title: 'Gagal',
-            message: getErrorMessage(error),
-            color: 'red',
-          })
+          toast.error(getErrorMessage(error), { title: 'Gagal' })
         },
       },
     )
