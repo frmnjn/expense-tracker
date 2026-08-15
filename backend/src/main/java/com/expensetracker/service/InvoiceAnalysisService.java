@@ -22,6 +22,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.Base64;
 import java.util.List;
 import java.util.Locale;
@@ -129,7 +130,7 @@ public class InvoiceAnalysisService implements ApplicationRunner {
             return "";
         }
         try {
-            LocalDate date = LocalDate.parse(raw.trim().substring(0, 10));
+            LocalDate date = parseFlexibleDate(raw.trim());
             LocalDate today = LocalDate.now();
             if (date.isAfter(today) || date.isBefore(today.minusYears(2))) {
                 return "";
@@ -137,6 +138,16 @@ public class InvoiceAnalysisService implements ApplicationRunner {
             return raw.trim();
         } catch (Exception e) {
             return "";
+        }
+    }
+
+    /** Parse tanggal yang bisa berbentuk YYYY-MM-DD maupun dd-MM-yyyy (format umum struk Indonesia). */
+    private static LocalDate parseFlexibleDate(String raw) {
+        String datePart = raw.substring(0, 10);
+        try {
+            return LocalDate.parse(datePart, DateTimeFormatter.ISO_LOCAL_DATE);
+        } catch (Exception e) {
+            return LocalDate.parse(datePart, DateTimeFormatter.ofPattern("dd-MM-yyyy"));
         }
     }
 
@@ -152,8 +163,7 @@ public class InvoiceAnalysisService implements ApplicationRunner {
             return;
         }
         try {
-            // pakai 10 karakter pertama sebagai YYYY-MM-DD (menoleransi format penuh jam:menit:detik)
-            LocalDate date = LocalDate.parse(raw.trim().substring(0, 10));
+            LocalDate date = parseFlexibleDate(raw.trim());
             LocalDate today = LocalDate.now();
             if (date.isAfter(today) || date.isBefore(today.minusYears(2))) {
                 LOGGER.warn("ignoring implausible AI date {} for invoice {}", raw, invoiceId);
@@ -214,8 +224,10 @@ public class InvoiceAnalysisService implements ApplicationRunner {
         return "Kamu adalah asisten pencatat keuangan. Baca struk/invoice berikut dan ekstrak item belanjanya.\n"
                 + "Berikan output HANYA JSON tanpa teks lain, dengan struktur:\n"
                 + "{\"storeName\":\"nama toko\",\"total\":<jumlah total integer>,"
-                + "\"dateTime\":\"tanggal & jam belanja dari struk: format YYYY-MM-DD HH:mm:ss bila struk "
-                + "menampilkan jam; bila hanya tanggal maka YYYY-MM-DD; string kosong jika tidak ada\","
+                + "\"dateTime\":\"tanggal & jam belanja dari struk. PENTING: struk Indonesia biasanya menulis tanggal "
+                + "dengan format dd-mm-yyyy (hari-bulan-tahun), contoh '14-08-2026' berarti 14 Agustus 2026, JANGAN "
+                + "terbalik menjadi tahun 2014. Konversikan ke format YYYY-MM-DD HH:mm:ss (sertakan jam:menit:detik bila "
+                + "struk menampilkannya; bila hanya tanggal pakai YYYY-MM-DD; string kosong jika tidak ada).\","
                 + "\"items\":[{\"name\":\"nama barang\",\"amount\":<harga integer>,"
                 + "\"suggestedBudget\":\"<nama budget>\"}]}\n"
                 + "Daftar budget tersedia (pilih yang paling cocok per item; isi string kosong jika ragu):\n"
