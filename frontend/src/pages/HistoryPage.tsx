@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import {
   ActionIcon,
   Button,
@@ -9,7 +9,6 @@ import {
   LoadingOverlay,
   Modal,
   NumberInput,
-  Pagination,
   Paper,
   Select,
   Stack,
@@ -25,6 +24,7 @@ import { useDeletePhoto, useUploadPhoto } from '../hooks/useCreateExpense'
 import { useOptions } from '../hooks/useOptions'
 import PhotoInput, { type PhotoSelection } from '../components/PhotoInput'
 import { TransactionCard } from '../components/TransactionCard'
+import { AppPagination } from '../components/AppPagination'
 import { useToast } from '../components/Toast'
 import { getPhotoUrl } from '../services/expense'
 import { formatCurrency } from '../utils/currency'
@@ -67,26 +67,9 @@ function HistoryPage() {
   const [sortBy, setSortBy] = useState<string>('waktu-desc')
   const [filterOpened, setFilterOpened] = useState(false)
   const [viewingPhoto, setViewingPhoto] = useState<Expense | null>(null)
-  const [page, setPage] = useState(1)
-  const [gotoValue, setGotoValue] = useState<number>(1)
-  const [pageSize, setPageSize] = useState<number>(15)
-  const pageSizeUserSetRef = useRef(false)
-
-  // Default baris/halaman ikut device (5 mobile / 15 desktop) sampai user
-  // memilih sendiri lewat selector.
-  useEffect(() => {
-    if (!pageSizeUserSetRef.current) {
-      setPageSize(isMobile ? 5 : 15)
-    }
-  }, [isMobile])
 
   const hasActiveFilters = budgetFilter !== null || sortBy !== 'waktu-desc'
   const activeFilterCount = (budgetFilter ? 1 : 0) + (sortBy !== 'waktu-desc' ? 1 : 0)
-
-  useEffect(() => {
-    setPage(1)
-    setGotoValue(1)
-  }, [search, budgetFilter, sortBy, period, pageSize])
 
   const visibleExpenses = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -113,10 +96,6 @@ function HistoryPage() {
     }
     return sorted
   }, [expensesData, search, budgetFilter, sortBy])
-
-  const totalPages = Math.max(1, Math.ceil(visibleExpenses.length / pageSize))
-  const safePage = Math.min(page, totalPages)
-  const pageExpenses = visibleExpenses.slice((safePage - 1) * pageSize, safePage * pageSize)
 
   const [editing, setEditing] = useState<Expense | null>(null)
   const [deleting, setDeleting] = useState<Expense | null>(null)
@@ -235,8 +214,12 @@ function HistoryPage() {
         {isMobile && editing ? (
           <EditExpenseForm expense={editing} onClose={() => setEditing(null)} inline />
         ) : (
-          <>
-            <Paper withBorder p={{ base: 'sm', sm: 'lg' }} radius="xl" pos="relative">
+          <AppPagination
+            data={visibleExpenses}
+            key={`${search}|${budgetFilter}|${sortBy}|${period}`}
+          >
+            {(pageExpenses) => (
+              <Paper withBorder p={{ base: 'sm', sm: 'lg' }} radius="xl" pos="relative">
           <LoadingOverlay
             visible={expensesLoading && !!period}
             zIndex={1000}
@@ -310,58 +293,8 @@ function HistoryPage() {
             </Table>
           )}
         </Paper>
-
-        {totalPages > 1 && (
-          <Group justify="center" gap="sm" wrap="wrap">
-            <Select
-              size="xs"
-              w={86}
-              aria-label="Baris per halaman"
-              value={String(pageSize)}
-              onChange={(v) => {
-                pageSizeUserSetRef.current = true
-                setPageSize(Number(v) || 15)
-              }}
-              data={[
-                { value: '5', label: '5' },
-                { value: '10', label: '10' },
-                { value: '15', label: '15' },
-                { value: '25', label: '25' },
-              ]}
-            />
-            <Pagination
-              value={safePage}
-              onChange={setPage}
-              total={totalPages}
-              size="md"
-              radius="md"
-              withEdges
-            />
-            <Group gap={4} align="center">
-              <NumberInput
-                size="xs"
-                w={70}
-                min={1}
-                max={totalPages}
-                value={gotoValue}
-                onChange={(v) => setGotoValue(Number(v) || 1)}
-                aria-label="Ke halaman"
-              />
-              <Button
-                size="xs"
-                variant="light"
-                onClick={() => {
-                  const target = Math.min(Math.max(gotoValue, 1), totalPages)
-                  setPage(target)
-                  setGotoValue(target)
-                }}
-              >
-                Go
-              </Button>
-            </Group>
-          </Group>
-        )}
-          </>
+            )}
+          </AppPagination>
         )}
 
         {editing && !isMobile && (
