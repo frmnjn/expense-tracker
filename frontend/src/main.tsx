@@ -34,7 +34,7 @@ createRoot(document.getElementById('root')!).render(
     <QueryClientProvider client={queryClient}>
       <MantineProvider colorSchemeManager={colorSchemeManager} defaultColorScheme="dark">
         <DatesProvider settings={{}}>
-          <Notifications />
+          <Notifications position="bottom-center" zIndex={1500} />
           <App />
         </DatesProvider>
       </MantineProvider>
