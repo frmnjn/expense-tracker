@@ -1,33 +1,30 @@
 import { useEffect, useMemo, useState } from 'react'
-import {
-  ActionIcon, Badge, Box, Button, Container, Group, LoadingOverlay, Paper, Select,
-  SimpleGrid, Stack, Text, Title,
-} from '@mantine/core'
-import { useMediaQuery } from '@mantine/hooks'
-import { usePeriods, useSummary, useTrend } from '../hooks/useExpenses'
+import { Container, Group, Select, SimpleGrid, Stack, Text, Title } from '@mantine/core'
+import { useExpenses, usePeriods, useSummary, useTrend } from '../hooks/useExpenses'
 import { useOptions } from '../hooks/useOptions'
 import TopUpModal from '../components/TopUpModal'
 import TopUpHistoryModal from '../components/TopUpHistoryModal'
 import AddBudgetModal from '../components/AddBudgetModal'
 import EditBudgetModal from '../components/EditBudgetModal'
 import DeleteBudgetModal from '../components/DeleteBudgetModal'
-import { formatCurrency } from '../utils/currency'
-import type { BudgetSummary } from '../types/expense'
-
-const balanceColor = (value: number) => (value < 0 ? 'red' : undefined)
+import { SpendingSummary } from '../components/dashboard/SpendingSummary'
+import { BudgetHealth } from '../components/dashboard/BudgetHealth'
+import { SpendingTrend } from '../components/dashboard/SpendingTrend'
+import { SpendingByBudget } from '../components/dashboard/SpendingByBudget'
+import { FinancialInsights } from '../components/dashboard/FinancialInsights'
+import { RecentExpenses } from '../components/dashboard/RecentExpenses'
+import { previousPeriod, parsePeriodStart, periodEnd, elapsedDays } from '../utils/period'
+import { buildInsights } from '../utils/insights'
 
 function DashboardPage() {
   const { data: periodsData, isPending: periodsLoading } = usePeriods()
-  const { data: options } = useOptions()
+  const { data: options, isPending: optionsLoading, isError: optionsError } = useOptions()
   const [period, setPeriod] = useState<string | null>(null)
   const [selectedTopUpBudget, setSelectedTopUpBudget] = useState<string | null>(null)
   const [selectedTopUpHistoryBudget, setSelectedTopUpHistoryBudget] = useState<string | null>(null)
   const [addBudgetOpened, setAddBudgetOpened] = useState(false)
   const [deleteBudgetName, setDeleteBudgetName] = useState<string | null>(null)
   const [editBudget, setEditBudget] = useState<{ name: string; balance: number | undefined; alertThreshold: number | undefined } | null>(null)
-  const { data: summary, isPending: summaryLoading } = useSummary(period)
-  const { data: trend } = useTrend(3)
-  const isMobile = useMediaQuery('(max-width: 48em)')
 
   useEffect(() => {
     if (!period && periodsData && periodsData.periods.length > 0) {
@@ -35,89 +32,156 @@ function DashboardPage() {
     }
   }, [period, periodsData])
 
-  const periods = useMemo(() => (periodsData?.periods ?? []).map((p) => ({ value: p, label: p })), [periodsData])
-  const balanceOf = (name: string): number | undefined => options?.budgets.find((b) => b.name === name)?.balance
-  const thresholdOf = (name: string): number | undefined => options?.budgets.find((b) => b.name === name)?.alertThreshold
-  const byBudget = summary?.byBudget ?? []
-  const budgetInfo = (name: string): BudgetSummary | undefined => byBudget.find((b) => b.budget === name)
-  const rankOf = new Map<string, number>()
-  byBudget.slice(0, 3).forEach((b, i) => rankOf.set(b.budget, i + 1))
-  const allBudgets = useMemo(() => Array.from(new Set([
-    ...(options?.budgets ?? []).map((b) => b.name),
-    ...(summary?.byBudget ?? []).map((b) => b.budget),
-  ])).sort(), [options, summary])
-  const selectedTopUpBalance = selectedTopUpBudget ? balanceOf(selectedTopUpBudget) : undefined
+  const prevPeriod = period ? previousPeriod(period) : null
+  const { data: summary, isPending: summaryLoading, isError: summaryError } = useSummary(period)
+  const {
+    data: prevExpensesData,
+    isPending: prevExpensesLoading,
+    isError: prevExpensesError,
+  } = useExpenses(prevPeriod)
+  const { data: trend, isPending: trendLoading, isError: trendError } = useTrend(3)
+  const {
+    data: expensesData,
+    isPending: expensesLoading,
+    isError: expensesError,
+  } = useExpenses(period)
 
-  const renderBudgetCard = (name: string) => {
-    const balance = balanceOf(name)
-    const threshold = thresholdOf(name)
-    const rank = rankOf.get(name)
-    const info = budgetInfo(name)
-    return (
-      <Paper key={name} withBorder p="md" radius="lg" className="budget-card">
-        <Group justify="space-between" align="flex-start" mb="xs" wrap="nowrap">
-          <Group gap="xs" wrap="nowrap" style={{ minWidth: 0 }}>
-            {rank && <Badge size="sm" variant="light" color="blue" circle>{rank}</Badge>}
-            <Text fw={700} truncate>{name}</Text>
-          </Group>
-          <Text fw={800} ff="monospace" fz="lg" c={balance !== undefined ? balanceColor(balance) : undefined}>
-            {balance !== undefined ? formatCurrency(balance) : '-'}
-          </Text>
-        </Group>
-        {info && <Text size="sm" c="dimmed">{info.count} transaksi · {formatCurrency(info.amount)}</Text>}
-        {threshold !== undefined && threshold > 0 && <Text size="xs" c="orange" fw={600} mt={6}>⚠️ Ambang {formatCurrency(threshold)}</Text>}
-        <Group justify="flex-end" gap={4} mt="sm">
-          <ActionIcon size="sm" variant="subtle" onClick={() => setSelectedTopUpHistoryBudget(name)} aria-label="Riwayat top up">📋</ActionIcon>
-          <ActionIcon size="sm" variant="light" color="green" onClick={() => setSelectedTopUpBudget(name)} aria-label="Top up">+</ActionIcon>
-          <ActionIcon size="sm" variant="subtle" onClick={() => setEditBudget({ name, balance, alertThreshold: threshold })} aria-label="Edit budget">✎</ActionIcon>
-          <ActionIcon size="sm" variant="subtle" color="red" onClick={() => setDeleteBudgetName(name)} aria-label="Hapus budget">🗑</ActionIcon>
-        </Group>
-      </Paper>
-    )
-  }
+  const periods = useMemo(() => (periodsData?.periods ?? []).map((p) => ({ value: p, label: p })), [periodsData])
+  const budgets = useMemo(() => options?.budgets ?? [], [options])
+  const byBudget = useMemo(() => summary?.byBudget ?? [], [summary])
+  const selectedTopUpBalance = selectedTopUpBudget
+    ? budgets.find((b) => b.name === selectedTopUpBudget)?.balance
+    : undefined
+
+  // Perbandingan date-to-date dengan periode sebelumnya (Plan A):
+  // total periode berjalan dibandingkan dengan pengeluaran periode sebelumnya
+  // hanya sampai tanggal yang sama, bukan seluruh periode.
+  const comparison = useMemo(() => {
+    if (!period || !prevPeriod) return { prevTotal: null as number | null, partial: false }
+    const days = elapsedDays(period, new Date())
+    const prevStart = parsePeriodStart(prevPeriod)
+    if (days === null || !prevStart) return { prevTotal: null, partial: false }
+    const cutoff = new Date(prevStart.getFullYear(), prevStart.getMonth(), prevStart.getDate() + days)
+    const total = (prevExpensesData?.expenses ?? [])
+      .filter((e) => new Date(e.dateTime.replace(' ', 'T')) <= cutoff)
+      .reduce((s, e) => s + e.amount, 0)
+    const end = periodEnd(period)
+    const partial = end !== null && new Date() < end
+    return { prevTotal: total > 0 ? total : null, partial }
+  }, [period, prevPeriod, prevExpensesData])
+
+  const comparisonNote = comparison.partial
+    ? 'dibanding periode sebelumnya (tanggal yang sama)'
+    : 'dibanding periode sebelumnya'
+
+  const insights = useMemo(() => {
+    if (!summary) return []
+    return buildInsights({
+      selectedTotal: summary.total,
+      prevTotal: comparison.prevTotal,
+      byBudget: summary.byBudget ?? [],
+      budgets,
+      comparisonNote,
+    })
+  }, [summary, comparison, budgets, comparisonNote])
 
   return (
-    <Container size="lg" px={{ base: 0, sm: 'md' }} py={{ base: 0, sm: 'md' }}>
-      <Stack gap="lg">
+    <Container size="lg" px={{ base: 'md', sm: 'md' }} py={{ base: 'md', sm: 'md' }} pb={{ base: 88, sm: 'md' }}>
+      <Stack gap="xl">
         <Group justify="space-between" align="flex-end">
           <div>
-            <Text size="sm" c="blue" fw={700} mb={4}>OVERVIEW</Text>
-            <Title order={1} size="clamp(1.65rem, 5vw, 2.1rem)">Dashboard</Title>
-            <Text c="dimmed" mt={5}>Ringkasan keuangan dan budget kamu.</Text>
+            <Text size="sm" c="blue" fw={700} mb={4}>
+              OVERVIEW
+            </Text>
+            <Title order={1} size="clamp(1.65rem, 5vw, 2.1rem)">
+              Dashboard
+            </Title>
+            <Text c="dimmed" mt={5}>
+              Ringkasan keuangan dan budget kamu.
+            </Text>
           </div>
-          <Select w={{ base: 150, sm: 190 }} placeholder={periodsLoading ? 'Memuat...' : 'Pilih periode'} data={periods} value={period} onChange={setPeriod} searchable size="sm" aria-label="Periode" />
+          <Select
+            w={{ base: 150, sm: 190 }}
+            placeholder={periodsLoading ? 'Memuat...' : 'Pilih periode'}
+            data={periods}
+            value={period}
+            onChange={setPeriod}
+            searchable
+            size="sm"
+            aria-label="Periode"
+          />
         </Group>
 
-        <Stack pos="relative" gap="lg">
-          <LoadingOverlay visible={summaryLoading && !!period} zIndex={1000} overlayProps={{ radius: 'lg', blur: 1 }} />
-          <Paper withBorder p={{ base: 'md', sm: 'lg' }} radius="xl" className="hero-card">
-            <Group justify="space-between" align="center" mb="md">
-              <div><Text size="sm" c="dimmed" fw={600}>Saldo per budget</Text><Text fz="xs" c="dimmed" mt={3}>{allBudgets.length} budget aktif</Text></div>
-              <Button size="sm" radius="md" onClick={() => setAddBudgetOpened(true)}>+ Budget</Button>
-            </Group>
-            {allBudgets.length === 0 ? <Text c="dimmed" py="md">Belum ada budget. Tambahkan budget pertama kamu.</Text> : isMobile ? <Stack gap="sm">{allBudgets.map(renderBudgetCard)}</Stack> : <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="sm">{allBudgets.map(renderBudgetCard)}</SimpleGrid>}
-          </Paper>
+        <SpendingSummary
+          total={summary?.total ?? 0}
+          prevTotal={comparison.prevTotal}
+          comparisonNote={comparisonNote}
+          isLoading={summaryLoading || prevExpensesLoading}
+          isError={summaryError || prevExpensesError}
+          hasPeriod={!!period}
+        />
 
-          {trend && trend.periods.length > 0 && (
-            <Paper withBorder p={{ base: 'md', sm: 'lg' }} radius="xl">
-              <Text fw={700}>Pengeluaran bulanan</Text>
-              <Text size="xs" c="dimmed" mb="lg">3 bulan terakhir</Text>
-              <Stack gap="md">
-                {trend.periods.map((p) => {
-                  const max = Math.max(...trend.periods.map((x) => x.total), 1)
-                  const width = Math.max((p.total / max) * 100, p.total > 0 ? 2 : 0)
-                  return <div key={p.period}><Group justify="space-between" mb={5}><Text size="sm" fw={600}>{p.period}</Text><Text size="sm" ff="monospace">{formatCurrency(p.total)}</Text></Group><Box bg="var(--mantine-color-blue-light)" style={{ height: 10, borderRadius: 999 }}><Box bg="blue.6" style={{ width: `${width}%`, height: 10, borderRadius: 999, transition: 'width .3s ease' }} /></Box><Text size="xs" c="dimmed" mt={4}>{p.count} transaksi</Text></div>
-                })}
-              </Stack>
-            </Paper>
-          )}
+        <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="xl">
+          <BudgetHealth
+            budgets={budgets}
+            byBudget={byBudget}
+            isLoading={optionsLoading}
+            isError={optionsError}
+            onAddBudget={() => setAddBudgetOpened(true)}
+            onTopUp={(name) => setSelectedTopUpBudget(name)}
+            onHistory={(name) => setSelectedTopUpHistoryBudget(name)}
+            onEdit={setEditBudget}
+            onDelete={(name) => setDeleteBudgetName(name)}
+          />
+          <SpendingTrend
+            periods={trend?.periods ?? []}
+            selectedPeriod={period}
+            isLoading={trendLoading}
+            isError={trendError}
+          />
+        </SimpleGrid>
 
-          <TopUpModal opened={!!selectedTopUpBudget} budget={selectedTopUpBudget ?? ''} balance={selectedTopUpBalance} onClose={() => setSelectedTopUpBudget(null)} />
-          <TopUpHistoryModal opened={!!selectedTopUpHistoryBudget} budget={selectedTopUpHistoryBudget ?? ''} onClose={() => setSelectedTopUpHistoryBudget(null)} />
-          <AddBudgetModal opened={addBudgetOpened} onClose={() => setAddBudgetOpened(false)} />
-          <EditBudgetModal budget={editBudget?.name ?? null} balance={editBudget?.balance} alertThreshold={editBudget?.alertThreshold} onClose={() => setEditBudget(null)} />
-          <DeleteBudgetModal name={deleteBudgetName} onClose={() => setDeleteBudgetName(null)} />
-        </Stack>
+        <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="xl">
+          <SpendingByBudget
+            byBudget={byBudget}
+            total={summary?.total ?? 0}
+            isLoading={summaryLoading}
+            isError={summaryError}
+          />
+          <FinancialInsights
+            insights={insights}
+            isLoading={summaryLoading}
+            isError={summaryError}
+            hasPeriod={!!period}
+          />
+        </SimpleGrid>
+
+        <RecentExpenses
+          expenses={expensesData?.expenses ?? []}
+          isLoading={expensesLoading}
+          isError={expensesError}
+          hasPeriod={!!period}
+        />
+
+        <TopUpModal
+          opened={!!selectedTopUpBudget}
+          budget={selectedTopUpBudget ?? ''}
+          balance={selectedTopUpBalance}
+          onClose={() => setSelectedTopUpBudget(null)}
+        />
+        <TopUpHistoryModal
+          opened={!!selectedTopUpHistoryBudget}
+          budget={selectedTopUpHistoryBudget ?? ''}
+          onClose={() => setSelectedTopUpHistoryBudget(null)}
+        />
+        <AddBudgetModal opened={addBudgetOpened} onClose={() => setAddBudgetOpened(false)} />
+        <EditBudgetModal
+          budget={editBudget?.name ?? null}
+          balance={editBudget?.balance}
+          alertThreshold={editBudget?.alertThreshold}
+          onClose={() => setEditBudget(null)}
+        />
+        <DeleteBudgetModal name={deleteBudgetName} onClose={() => setDeleteBudgetName(null)} />
       </Stack>
     </Container>
   )
