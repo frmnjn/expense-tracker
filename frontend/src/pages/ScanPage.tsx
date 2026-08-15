@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import {
   Badge,
   Button,
@@ -7,7 +7,6 @@ import {
   Image,
   Loader,
   Modal,
-  Pagination,
   Paper,
   Progress,
   Select,
@@ -24,6 +23,7 @@ import { getInvoicePhotoUrl } from '../services/expense'
 import { getErrorMessage } from '../utils/error'
 import { InvoiceThumb } from '../components/InvoiceThumb'
 import ReviewModal from '../components/ReviewModal'
+import { AppPagination } from '../components/AppPagination'
 import { useToast } from '../components/Toast'
 import type { Invoice } from '../types/expense'
 
@@ -68,12 +68,6 @@ function ScanPage() {
 
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [sortBy, setSortBy] = useState<string>('newest')
-  const [page, setPage] = useState(1)
-  const PAGE_SIZE = 6
-
-  useEffect(() => {
-    setPage(1)
-  }, [statusFilter, sortBy, period])
 
   const visible = useMemo(() => {
     let list = data?.invoices ?? []
@@ -87,10 +81,6 @@ function ScanPage() {
     })
     return sorted
   }, [data, statusFilter, sortBy])
-
-  const totalPages = Math.max(1, Math.ceil(visible.length / PAGE_SIZE))
-  const safePage = Math.min(page, totalPages)
-  const pageInvoices = visible.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE)
 
   const pick = (file: File | null) => {
     if (!file) return
@@ -196,13 +186,16 @@ function ScanPage() {
             <Text size="sm" c="dimmed">
               Belum ada struk di periode ini. Upload foto/PDF untuk dianalisis.
             </Text>
-          ) : pageInvoices.length === 0 ? (
-            <Text size="sm" c="dimmed">
-              Tidak ada struk yang cocok dengan filter.
-            </Text>
           ) : (
-            <SimpleGrid cols={isMobile ? 2 : 3} spacing="sm">
-              {pageInvoices.map((inv) => (
+            <AppPagination data={visible} key={`${statusFilter}|${sortBy}|${period}`}>
+              {(pageData) =>
+                pageData.length === 0 ? (
+                  <Text size="sm" c="dimmed">
+                    Tidak ada struk yang cocok dengan filter.
+                  </Text>
+                ) : (
+                  <SimpleGrid cols={isMobile ? 2 : 3} spacing="sm">
+              {pageData.map((inv) => (
                 <Paper key={inv.id} withBorder p="xs" radius="md">
                   <Stack gap={6}>
                     <InvoiceThumb
@@ -252,13 +245,10 @@ function ScanPage() {
                   </Stack>
                 </Paper>
               ))}
-            </SimpleGrid>
-          )}
-
-          {totalPages > 1 && (
-            <Group justify="center">
-              <Pagination value={safePage} onChange={setPage} total={totalPages} size="sm" />
-            </Group>
+                  </SimpleGrid>
+                )
+              }
+            </AppPagination>
           )}
         </Stack>
       </Stack>
