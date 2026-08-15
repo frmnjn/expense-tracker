@@ -68,6 +68,7 @@ function HistoryPage() {
   const [filterOpened, setFilterOpened] = useState(false)
   const [viewingPhoto, setViewingPhoto] = useState<Expense | null>(null)
   const [page, setPage] = useState(1)
+  const [gotoValue, setGotoValue] = useState<number>(1)
   const [pageSize, setPageSize] = useState<number>(15)
   const pageSizeUserSetRef = useRef(false)
 
@@ -84,6 +85,7 @@ function HistoryPage() {
 
   useEffect(() => {
     setPage(1)
+    setGotoValue(1)
   }, [search, budgetFilter, sortBy, period, pageSize])
 
   const visibleExpenses = useMemo(() => {
@@ -327,7 +329,36 @@ function HistoryPage() {
                 { value: '25', label: '25' },
               ]}
             />
-            <Pagination value={safePage} onChange={setPage} total={totalPages} size="md" radius="md" />
+            <Pagination
+              value={safePage}
+              onChange={setPage}
+              total={totalPages}
+              size="md"
+              radius="md"
+              withEdges
+            />
+            <Group gap={4} align="center">
+              <NumberInput
+                size="xs"
+                w={70}
+                min={1}
+                max={totalPages}
+                value={gotoValue}
+                onChange={(v) => setGotoValue(Number(v) || 1)}
+                aria-label="Ke halaman"
+              />
+              <Button
+                size="xs"
+                variant="light"
+                onClick={() => {
+                  const target = Math.min(Math.max(gotoValue, 1), totalPages)
+                  setPage(target)
+                  setGotoValue(target)
+                }}
+              >
+                Go
+              </Button>
+            </Group>
           </Group>
         )}
           </>
