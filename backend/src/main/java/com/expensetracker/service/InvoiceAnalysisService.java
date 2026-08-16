@@ -215,12 +215,18 @@ public class InvoiceAnalysisService implements ApplicationRunner {
 
     private String buildPrompt() {
         List<String> budgets = budgetRepository.getOptions().stream()
-                .map(o -> o.name())
+                .map(o -> {
+                    String line = "- " + o.name();
+                    if (o.description() != null && !o.description().isBlank()) {
+                        line += ": " + o.description();
+                    }
+                    return line;
+                })
                 .sorted()
                 .toList();
         String budgetList = budgets.isEmpty()
                 ? "(tidak ada budget terdaftar)"
-                : String.join("\n", budgets.stream().map(b -> "- " + b).toList());
+                : String.join("\n", budgets);
         return "Kamu adalah asisten pencatat keuangan. Baca struk/invoice berikut dan ekstrak item belanjanya.\n"
                 + "Berikan output HANYA JSON tanpa teks lain, dengan struktur:\n"
                 + "{\"storeName\":\"nama toko\",\"total\":<jumlah total integer>,"

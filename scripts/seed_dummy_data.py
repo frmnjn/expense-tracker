@@ -29,7 +29,7 @@ import uuid
 MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
 
 BUDGETS = [
-    {"id": 1, "name": "Household", "balance": 3_000_000, "alertThreshold": 500_000, "items": [
+    {"id": 1, "name": "Household", "balance": 3_000_000, "alertThreshold": 500_000, "description": "Kebutuhan rumah tangga sehari-hari", "items": [
         ("Sembako", 50_000, 350_000),
         ("Token Listrik", 100_000, 300_000),
         ("Gas LPG", 22_000, 25_000),
@@ -40,7 +40,7 @@ BUDGETS = [
         ("Daging Ayam", 25_000, 70_000),
         ("Bumbu Dapur", 5_000, 30_000),
     ]},
-    {"id": 2, "name": "Alana", "balance": 2_000_000, "alertThreshold": 300_000, "items": [
+    {"id": 2, "name": "Alana", "balance": 2_000_000, "alertThreshold": 300_000, "description": "Kebutuhan anak perempuan: skincare, popok, jajan", "items": [
         ("Popok", 40_000, 90_000),
         ("Susu Anak", 60_000, 120_000),
         ("Skincare Anak", 25_000, 80_000),
@@ -48,7 +48,7 @@ BUDGETS = [
         ("Vitamin Anak", 20_000, 60_000),
         ("Mainan", 15_000, 80_000),
     ]},
-    {"id": 3, "name": "Papa", "balance": 1_500_000, "alertThreshold": 200_000, "items": [
+    {"id": 3, "name": "Papa", "balance": 1_500_000, "alertThreshold": 200_000, "description": "Kebutuhan dan jajan papa", "items": [
         ("Kopi", 10_000, 30_000),
         ("Jajan Papa", 5_000, 25_000),
         ("Bensin", 50_000, 100_000),
@@ -56,7 +56,7 @@ BUDGETS = [
         ("Pulsa", 25_000, 50_000),
         ("Buku", 20_000, 90_000),
     ]},
-    {"id": 4, "name": "Playing", "balance": 2_000_000, "alertThreshold": 300_000, "items": [
+    {"id": 4, "name": "Playing", "balance": 2_000_000, "alertThreshold": 300_000, "description": "Jalan-jalan weekend, makan enak, jajan di mall", "items": [
         ("Makan Enak", 50_000, 250_000),
         ("Jajan Mall", 30_000, 120_000),
         ("Jalan-jalan", 20_000, 150_000),
@@ -64,7 +64,7 @@ BUDGETS = [
         ("Coffee Date", 40_000, 100_000),
         ("Parkir & Tol", 10_000, 50_000),
     ]},
-    {"id": 5, "name": "Mama", "balance": 1_500_000, "alertThreshold": 250_000, "items": [
+    {"id": 5, "name": "Mama", "balance": 1_500_000, "alertThreshold": 250_000, "description": "Kebutuhan mama: skincare, makeup, jajan", "items": [
         ("Skincare Mama", 30_000, 150_000),
         ("Makeup", 40_000, 200_000),
         ("Jajan Mama", 10_000, 40_000),
@@ -113,10 +113,11 @@ def build_sql(days: int, seed: int, reset: bool) -> str:
         ]
 
     budget_rows = ", ".join(
-        f"({b['id']}, '{esc(b['name'])}', {b['balance']}, {b['alertThreshold']}, 1)" for b in BUDGETS
+        f"({b['id']}, '{esc(b['name'])}', {b['balance']}, {b['alertThreshold']}, '{esc(b.get('description') or '')}', 1)"
+        for b in BUDGETS
     )
     parts.append(
-        "INSERT INTO budgets (id, name, balance, alert_threshold, is_active) VALUES "
+        "INSERT INTO budgets (id, name, balance, alert_threshold, description, is_active) VALUES "
         + budget_rows
         + ";"
     )
