@@ -5,6 +5,7 @@ import {
   Divider,
   Group,
   Menu,
+  Popover,
   Skeleton,
   Stack,
   Text,
@@ -97,16 +98,29 @@ export function BudgetHealth({
                       <Text fw={600} truncate>
                         {b.name}
                       </Text>
+                      {b.description && (
+                        <Popover width={280} position="bottom-start" withArrow shadow="md">
+                          <Popover.Target>
+                            <ActionIcon
+                              size="xs"
+                              variant="subtle"
+                              color="blue"
+                              aria-label={`Deskripsi ${b.name}`}
+                              style={{ flexShrink: 0 }}
+                            >
+                              i
+                            </ActionIcon>
+                          </Popover.Target>
+                          <Popover.Dropdown>
+                            <Text size="sm">{b.description}</Text>
+                          </Popover.Dropdown>
+                        </Popover>
+                      )}
                     </Group>
                     <Text size="xs" c="dimmed" truncate>
                       {formatCurrency(b.balance)} tersisa
                       {info ? ` · ${info.count} transaksi` : ''}
                     </Text>
-                    {b.description ? (
-                      <Text size="xs" c="dimmed" truncate title={b.description}>
-                        {b.description}
-                      </Text>
-                    ) : null}
                     {belowThreshold && (
                       <Text size="xs" c="orange" fw={600}>
                         di bawah ambang {formatCurrency(b.alertThreshold)}
