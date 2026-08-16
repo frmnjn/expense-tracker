@@ -108,7 +108,7 @@ export function BudgetHealth({
                               aria-label={`Deskripsi ${b.name}`}
                               style={{ flexShrink: 0 }}
                             >
-                              i
+                              ⓘ
                             </ActionIcon>
                           </Popover.Target>
                           <Popover.Dropdown>
