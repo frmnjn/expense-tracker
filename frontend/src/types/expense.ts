@@ -11,18 +11,21 @@ export interface BudgetOption {
   name: string
   balance: number
   alertThreshold: number
+  description?: string
 }
 
 export interface BudgetCreateRequest {
   name: string
   balance?: number
   alertThreshold?: number
+  description?: string
 }
 
 export interface BudgetUpdateRequest {
   name: string
   balance?: number
   alertThreshold?: number
+  description?: string
 }
 
 export interface OptionsResponse {

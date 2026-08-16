@@ -9,6 +9,7 @@ function AddBudgetModal({ opened, onClose }: { opened: boolean; onClose: () => v
   const [name, setName] = useState('')
   const [balance, setBalance] = useState<string | number>('')
   const [alertThreshold, setAlertThreshold] = useState<string | number>('')
+  const [description, setDescription] = useState('')
 
   const submitDisabled = name.trim() === '' || createBudget.isPending
 
@@ -16,6 +17,7 @@ function AddBudgetModal({ opened, onClose }: { opened: boolean; onClose: () => v
     setName('')
     setBalance('')
     setAlertThreshold('')
+    setDescription('')
     onClose()
   }
 
@@ -25,6 +27,7 @@ function AddBudgetModal({ opened, onClose }: { opened: boolean; onClose: () => v
         name: name.trim(),
         balance: balance === '' ? undefined : Number(balance),
         alertThreshold: alertThreshold === '' ? 0 : Number(alertThreshold),
+        description: description.trim() === '' ? undefined : description.trim(),
       },
       {
         onSuccess: () => {
@@ -73,6 +76,14 @@ function AddBudgetModal({ opened, onClose }: { opened: boolean; onClose: () => v
           prefix="Rp"
           thousandSeparator="."
           decimalSeparator=","
+          size="md"
+        />
+        <TextInput
+          label="Deskripsi (opsional)"
+          placeholder="Budget ini untuk apa?"
+          value={description}
+          onChange={(e) => setDescription(e.currentTarget.value)}
+          maxLength={500}
           size="md"
         />
         <Group justify="flex-end" mt="md">

@@ -72,12 +72,24 @@ public class ExpenseService {
         }
         long balance = request.balance() == null ? 0 : request.balance();
         long alertThreshold = requireAlertThreshold(request.alertThreshold());
+        String description = requireDescription(request.description());
         try {
-            budgetRepository.create(request.name().trim(), balance, alertThreshold);
+            budgetRepository.create(request.name().trim(), balance, alertThreshold, description);
         } catch (IllegalStateException e) {
             throw new ValidationException("Budget already exists");
         }
         notificationService.sendBudgetCreated(request.name().trim(), balance, alertThreshold);
+    }
+
+    private static String requireDescription(String value) {
+        if (value == null) {
+            return null;
+        }
+        String trimmed = value.trim();
+        if (trimmed.length() > 500) {
+            throw new ValidationException("Description must be at most 500 characters");
+        }
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
     private static long requireAlertThreshold(Long value) {
@@ -112,9 +124,10 @@ public class ExpenseService {
         if (alertThreshold != null && alertThreshold < 0) {
             throw new ValidationException("Alert threshold must be greater than or equal to 0");
         }
+        String description = requireDescription(request.description());
         try {
             if (!budgetRepository.update(oldName.trim(), request.name().trim(), request.balance(),
-                    alertThreshold)) {
+                    alertThreshold, description)) {
                 throw new ValidationException("Budget not found");
             }
         } catch (IllegalStateException e) {

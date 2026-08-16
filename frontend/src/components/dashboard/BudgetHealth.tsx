@@ -17,6 +17,7 @@ export interface BudgetCardData {
   name: string
   balance: number
   alertThreshold: number
+  description?: string
 }
 
 export function BudgetHealth({
@@ -37,7 +38,7 @@ export function BudgetHealth({
   onAddBudget: () => void
   onTopUp: (name: string) => void
   onHistory: (name: string) => void
-  onEdit: (budget: { name: string; balance: number | undefined; alertThreshold: number | undefined }) => void
+  onEdit: (budget: { name: string; balance: number | undefined; alertThreshold: number | undefined; description: string | undefined }) => void
   onDelete: (name: string) => void
 }) {
   const sorted = useMemo(() => {
@@ -101,6 +102,11 @@ export function BudgetHealth({
                       {formatCurrency(b.balance)} tersisa
                       {info ? ` · ${info.count} transaksi` : ''}
                     </Text>
+                    {b.description ? (
+                      <Text size="xs" c="dimmed" truncate title={b.description}>
+                        {b.description}
+                      </Text>
+                    ) : null}
                     {belowThreshold && (
                       <Text size="xs" c="orange" fw={600}>
                         di bawah ambang {formatCurrency(b.alertThreshold)}
@@ -120,7 +126,7 @@ export function BudgetHealth({
                       <Menu.Item leftSection="📋" onClick={() => onHistory(b.name)}>
                         Riwayat top-up
                       </Menu.Item>
-                      <Menu.Item leftSection="✎" onClick={() => onEdit({ name: b.name, balance: b.balance, alertThreshold: b.alertThreshold })}>
+                      <Menu.Item leftSection="✎" onClick={() => onEdit({ name: b.name, balance: b.balance, alertThreshold: b.alertThreshold, description: b.description })}>
                         Edit budget
                       </Menu.Item>
                       <Menu.Divider />
