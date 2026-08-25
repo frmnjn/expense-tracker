@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	"log/slog"
 	"net/http"
 	"net/smtp"
 	"os"
@@ -12,28 +11,75 @@ import (
 	"time"
 )
 
-var logger *slog.Logger
+type ecsLog struct {
+	Timestamp string         `json:"@timestamp"`
+	Log       ecsLogLog      `json:"log"`
+	Process   ecsLogProcess  `json:"process"`
+	Service   ecsLogService  `json:"service"`
+	Message   string         `json:"message"`
+	Ecs       ecsLogEcs      `json:"ecs,omitempty"`
+	Error     *ecsLogError   `json:"error,omitempty"`
+	Notifier  *ecsLogNotifier `json:"notifier,omitempty"`
+}
 
-func init() {
-	logger = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
-		ReplaceAttr: func(_ []string, a slog.Attr) slog.Attr {
-			switch a.Key {
-			case "time":
-				a.Key = "@timestamp"
-			case "level":
-				return slog.Attr{Key: "log", Value: slog.GroupValue(
-					slog.String("level", strings.ToUpper(a.Value.String())),
-				)}
-			case "msg":
-				a.Key = "message"
-			}
-			return a
-		},
-	})).With(
-		slog.Group("ecs", slog.String("version", "1.6.0")),
-		slog.Group("service", slog.String("name", "notifier")),
-		slog.Group("process", slog.Int("pid", os.Getpid()), slog.Group("thread", slog.String("name", "main"))),
-	)
+type ecsLogLog struct {
+	Level string `json:"level"`
+}
+
+type ecsLogProcess struct {
+	PID    int            `json:"pid"`
+	Thread ecsLogThread   `json:"thread"`
+}
+
+type ecsLogThread struct {
+	Name string `json:"name"`
+}
+
+type ecsLogService struct {
+	Name string `json:"name"`
+}
+
+type ecsLogEcs struct {
+	Version string `json:"version"`
+}
+
+type ecsLogError struct {
+	Message string `json:"message"`
+}
+
+type ecsLogNotifier struct {
+	Subject  string   `json:"subject,omitempty"`
+	To       []string `json:"to,omitempty"`
+	Provider string   `json:"provider,omitempty"`
+}
+
+var ecsBase = ecsLog{
+	Log:     ecsLogLog{},
+	Process: ecsLogProcess{PID: os.Getpid(), Thread: ecsLogThread{Name: "main"}},
+	Service: ecsLogService{Name: "notifier"},
+	Ecs:     ecsLogEcs{Version: "1.6.0"},
+}
+
+func logECS(level, message string, extra ecsLog) {
+	entry := ecsBase
+	entry.Timestamp = time.Now().UTC().Format(time.RFC3339Nano)
+	entry.Log.Level = level
+	entry.Message = message
+	entry.Error = extra.Error
+	entry.Notifier = extra.Notifier
+	json.NewEncoder(os.Stdout).Encode(entry)
+}
+
+func logInfo(message string, n *ecsLogNotifier) {
+	logECS("INFO", message, ecsLog{Notifier: n})
+}
+
+func logWarn(message, errMsg string, n *ecsLogNotifier) {
+	logECS("WARN", message, ecsLog{Error: &ecsLogError{Message: errMsg}, Notifier: n})
+}
+
+func logError(message, errMsg string, n *ecsLogNotifier) {
+	logECS("ERROR", message, ecsLog{Error: &ecsLogError{Message: errMsg}, Notifier: n})
 }
 
 type sendRequest struct {
@@ -69,27 +115,24 @@ func main() {
 
 	http.HandleFunc("/send", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
-			logger.Warn("send validation error", slog.String("error.message", "method not allowed"))
+			logWarn("send validation error", "method not allowed", nil)
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
 		var req sendRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			logger.Warn("send validation error", slog.String("error.message", err.Error()))
+			logWarn("send validation error", err.Error(), nil)
 			http.Error(w, "bad request", http.StatusBadRequest)
 			return
 		}
 		if len(req.To) == 0 || req.Subject == "" || req.Body == "" {
-			logger.Warn("send validation error", slog.String("error.message", "to, subject, body required"))
+			logWarn("send validation error", "to, subject, body required", nil)
 			http.Error(w, "to, subject, body required", http.StatusBadRequest)
 			return
 		}
 
-		logger.Info("send request",
-			slog.String("notifier.subject", req.Subject),
-			slog.Any("notifier.to", req.To),
-			slog.String("notifier.provider", provider),
-		)
+		n := &ecsLogNotifier{Subject: req.Subject, To: req.To, Provider: provider}
+		logInfo("send request", n)
 
 		var err error
 		// Urutan provider: primer = MAIL_PROVIDER; jika gagal dan RESEND_FALLBACK=true,
@@ -109,27 +152,19 @@ func main() {
 			if re, ok := err.(*resendError); ok {
 				code = re.code
 			}
-			logger.Error("send failed",
-				slog.String("error.message", err.Error()),
-				slog.String("notifier.subject", req.Subject),
-				slog.Any("notifier.to", req.To),
-				slog.String("notifier.provider", provider),
-			)
+			logError("send failed", err.Error(), n)
 			http.Error(w, err.Error(), code)
 			return
 		}
 
-		logger.Info("send success",
-			slog.String("notifier.subject", req.Subject),
-			slog.Any("notifier.to", req.To),
-			slog.String("notifier.provider", provider),
-		)
+		logInfo("send success", n)
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"success":true}`))
 	})
 
 	listen := ":" + env("PORT", "8081")
-	logger.Info("notifier started", slog.String("notifier.listen", listen), slog.String("notifier.provider", provider))
+	logInfo("notifier started", &ecsLogNotifier{Provider: provider})
+	fmt.Println("notifier listening on", listen, "provider:", provider)
 	if err := http.ListenAndServe(listen, nil); err != nil {
 		fmt.Fprintln(os.Stderr, "server error:", err)
 		os.Exit(1)
