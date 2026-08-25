@@ -15,7 +15,20 @@ import (
 var logger *slog.Logger
 
 func init() {
-	logger = slog.New(slog.NewJSONHandler(os.Stdout, nil)).With(
+	logger = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{
+		ReplaceAttr: func(_ []string, a slog.Attr) slog.Attr {
+			switch a.Key {
+			case "time":
+				a.Key = "@timestamp"
+			case "level":
+				a.Key = "log.level"
+				a.Value = slog.StringValue(strings.ToLower(a.Value.String()))
+			case "msg":
+				a.Key = "message"
+			}
+			return a
+		},
+	})).With(
 		slog.String("ecs.version", "1.6.0"),
 		slog.String("service.name", "notifier"),
 	)
