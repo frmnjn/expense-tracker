@@ -164,7 +164,6 @@ func main() {
 
 	listen := ":" + env("PORT", "8081")
 	logInfo("notifier started", &ecsLogNotifier{Provider: provider})
-	fmt.Println("notifier listening on", listen, "provider:", provider)
 	if err := http.ListenAndServe(listen, nil); err != nil {
 		fmt.Fprintln(os.Stderr, "server error:", err)
 		os.Exit(1)
