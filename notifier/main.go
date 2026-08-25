@@ -4,12 +4,22 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"log/slog"
 	"net/http"
 	"net/smtp"
 	"os"
 	"strings"
 	"time"
 )
+
+var logger *slog.Logger
+
+func init() {
+	logger = slog.New(slog.NewJSONHandler(os.Stdout, nil)).With(
+		slog.String("ecs.version", "1.6.0"),
+		slog.String("service.name", "notifier"),
+	)
+}
 
 type sendRequest struct {
 	To          []string `json:"to"`
@@ -44,18 +54,27 @@ func main() {
 
 	http.HandleFunc("/send", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodPost {
+			logger.Warn("send validation error", slog.String("error.message", "method not allowed"))
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
 		var req sendRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+			logger.Warn("send validation error", slog.String("error.message", err.Error()))
 			http.Error(w, "bad request", http.StatusBadRequest)
 			return
 		}
 		if len(req.To) == 0 || req.Subject == "" || req.Body == "" {
+			logger.Warn("send validation error", slog.String("error.message", "to, subject, body required"))
 			http.Error(w, "to, subject, body required", http.StatusBadRequest)
 			return
 		}
+
+		logger.Info("send request",
+			slog.String("notifier.subject", req.Subject),
+			slog.Any("notifier.to", req.To),
+			slog.String("notifier.provider", provider),
+		)
 
 		var err error
 		// Urutan provider: primer = MAIL_PROVIDER; jika gagal dan RESEND_FALLBACK=true,
@@ -75,15 +94,27 @@ func main() {
 			if re, ok := err.(*resendError); ok {
 				code = re.code
 			}
+			logger.Error("send failed",
+				slog.String("error.message", err.Error()),
+				slog.String("notifier.subject", req.Subject),
+				slog.Any("notifier.to", req.To),
+				slog.String("notifier.provider", provider),
+			)
 			http.Error(w, err.Error(), code)
 			return
 		}
+
+		logger.Info("send success",
+			slog.String("notifier.subject", req.Subject),
+			slog.Any("notifier.to", req.To),
+			slog.String("notifier.provider", provider),
+		)
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"success":true}`))
 	})
 
 	listen := ":" + env("PORT", "8081")
-	fmt.Println("notifier listening on", listen, "provider:", provider)
+	logger.Info("notifier started", slog.String("notifier.listen", listen), slog.String("notifier.provider", provider))
 	if err := http.ListenAndServe(listen, nil); err != nil {
 		fmt.Fprintln(os.Stderr, "server error:", err)
 		os.Exit(1)
