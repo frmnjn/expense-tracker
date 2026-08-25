@@ -21,16 +21,18 @@ func init() {
 			case "time":
 				a.Key = "@timestamp"
 			case "level":
-				a.Key = "log.level"
-				a.Value = slog.StringValue(strings.ToLower(a.Value.String()))
+				return slog.Attr{Key: "log", Value: slog.GroupValue(
+					slog.String("level", strings.ToUpper(a.Value.String())),
+				)}
 			case "msg":
 				a.Key = "message"
 			}
 			return a
 		},
 	})).With(
-		slog.String("ecs.version", "1.6.0"),
-		slog.String("service.name", "notifier"),
+		slog.Group("ecs", slog.String("version", "1.6.0")),
+		slog.Group("service", slog.String("name", "notifier")),
+		slog.Group("process", slog.Int("pid", os.Getpid()), slog.Group("thread", slog.String("name", "main"))),
 	)
 }
 
