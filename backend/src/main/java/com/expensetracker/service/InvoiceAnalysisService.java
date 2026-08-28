@@ -1,5 +1,6 @@
 package com.expensetracker.service;
 
+import com.expensetracker.config.MdcTask;
 import com.expensetracker.data.BudgetRepository;
 import com.expensetracker.data.InvoiceData;
 import com.expensetracker.data.InvoiceRepository;
@@ -72,7 +73,7 @@ public class InvoiceAnalysisService implements ApplicationRunner {
     }
 
     public void trigger(String invoiceId) {
-        executor.execute(() -> analyze(invoiceId));
+        executor.execute(MdcTask.wrap(() -> analyze(invoiceId)));
     }
 
     /** Dipanggil saat startup: analisis ulang invoice yang stuck ANALYZING. */
