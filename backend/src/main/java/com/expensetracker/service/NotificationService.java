@@ -1,5 +1,6 @@
 package com.expensetracker.service;
 
+import com.expensetracker.config.MdcTask;
 import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -136,7 +137,7 @@ public class NotificationService {
                 + ",\"subject\":" + toJsonString(subject)
                 + ",\"body\":" + toJsonString(body)
                 + ",\"contentType\":\"text/html\"}";
-        executor.execute(() -> doSend(json));
+        executor.execute(MdcTask.wrap(() -> doSend(json)));
     }
 
     private void doSend(String json) {
