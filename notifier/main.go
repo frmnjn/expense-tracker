@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"crypto/rand"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -18,6 +19,7 @@ type ecsLog struct {
 	Service   ecsLogService  `json:"service"`
 	Message   string         `json:"message"`
 	Ecs       ecsLogEcs      `json:"ecs,omitempty"`
+	Trace     *ecsLogTrace   `json:"trace,omitempty"`
 	Error     *ecsLogError   `json:"error,omitempty"`
 	Notifier  *ecsLogNotifier `json:"notifier,omitempty"`
 }
@@ -53,6 +55,10 @@ type ecsLogNotifier struct {
 	Provider string   `json:"provider,omitempty"`
 }
 
+type ecsLogTrace struct {
+	ID string `json:"id"`
+}
+
 var ecsBase = ecsLog{
 	Log:     ecsLogLog{},
 	Process: ecsLogProcess{PID: os.Getpid(), Thread: ecsLogThread{Name: "main"}},
@@ -60,26 +66,27 @@ var ecsBase = ecsLog{
 	Ecs:     ecsLogEcs{Version: "1.6.0"},
 }
 
-func logECS(level, message string, extra ecsLog) {
+func logECS(level, message, traceID string, extra ecsLog) {
 	entry := ecsBase
 	entry.Timestamp = time.Now().UTC().Format(time.RFC3339Nano)
 	entry.Log.Level = level
 	entry.Message = message
+	entry.Trace = &ecsLogTrace{ID: traceID}
 	entry.Error = extra.Error
 	entry.Notifier = extra.Notifier
 	json.NewEncoder(os.Stdout).Encode(entry)
 }
 
-func logInfo(message string, n *ecsLogNotifier) {
-	logECS("INFO", message, ecsLog{Notifier: n})
+func logInfo(message, traceID string, n *ecsLogNotifier) {
+	logECS("INFO", message, traceID, ecsLog{Notifier: n})
 }
 
-func logWarn(message, errMsg string, n *ecsLogNotifier) {
-	logECS("WARN", message, ecsLog{Error: &ecsLogError{Message: errMsg}, Notifier: n})
+func logWarn(message, traceID, errMsg string, n *ecsLogNotifier) {
+	logECS("WARN", message, traceID, ecsLog{Error: &ecsLogError{Message: errMsg}, Notifier: n})
 }
 
-func logError(message, errMsg string, n *ecsLogNotifier) {
-	logECS("ERROR", message, ecsLog{Error: &ecsLogError{Message: errMsg}, Notifier: n})
+func logError(message, traceID, errMsg string, n *ecsLogNotifier) {
+	logECS("ERROR", message, traceID, ecsLog{Error: &ecsLogError{Message: errMsg}, Notifier: n})
 }
 
 type sendRequest struct {
@@ -105,6 +112,24 @@ func env(key, def string) string {
 	return def
 }
 
+func newTraceID() string {
+	// UUID v4 dari crypto/rand (tanpa dependency).
+	b := make([]byte, 16)
+	if _, err := rand.Read(b); err != nil {
+		return ""
+	}
+	b[6] = (b[6] & 0x0f) | 0x40
+	b[8] = (b[8] & 0x3f) | 0x80
+	return fmt.Sprintf("%x-%x-%x-%x-%x", b[0:4], b[4:6], b[6:8], b[8:10], b[10:16])
+}
+
+func resolveTraceID(r *http.Request) string {
+	if id := strings.TrimSpace(r.Header.Get("X-Trace-Id")); id != "" {
+		return id
+	}
+	return newTraceID()
+}
+
 func main() {
 	provider := env("MAIL_PROVIDER", "smtp")
 
@@ -114,25 +139,27 @@ func main() {
 	})
 
 	http.HandleFunc("/send", func(w http.ResponseWriter, r *http.Request) {
+		traceID := resolveTraceID(r)
+		w.Header().Set("X-Trace-Id", traceID)
 		if r.Method != http.MethodPost {
-			logWarn("send validation error", "method not allowed", nil)
+			logWarn("send validation error", traceID, "method not allowed", nil)
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
 		var req sendRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-			logWarn("send validation error", err.Error(), nil)
+			logWarn("send validation error", traceID, err.Error(), nil)
 			http.Error(w, "bad request", http.StatusBadRequest)
 			return
 		}
 		if len(req.To) == 0 || req.Subject == "" || req.Body == "" {
-			logWarn("send validation error", "to, subject, body required", nil)
+			logWarn("send validation error", traceID, "to, subject, body required", nil)
 			http.Error(w, "to, subject, body required", http.StatusBadRequest)
 			return
 		}
 
 		n := &ecsLogNotifier{Subject: req.Subject, To: req.To, Provider: provider}
-		logInfo("send request", n)
+		logInfo("send request", traceID, n)
 
 		var err error
 		// Urutan provider: primer = MAIL_PROVIDER; jika gagal dan RESEND_FALLBACK=true,
@@ -152,18 +179,18 @@ func main() {
 			if re, ok := err.(*resendError); ok {
 				code = re.code
 			}
-			logError("send failed", err.Error(), n)
+			logError("send failed", traceID, err.Error(), n)
 			http.Error(w, err.Error(), code)
 			return
 		}
 
-		logInfo("send success", n)
+		logInfo("send success", traceID, n)
 		w.Header().Set("Content-Type", "application/json")
 		_, _ = w.Write([]byte(`{"success":true}`))
 	})
 
 	listen := ":" + env("PORT", "8081")
-	logInfo("notifier started", &ecsLogNotifier{Provider: provider})
+	logInfo("notifier started", "", &ecsLogNotifier{Provider: provider})
 	if err := http.ListenAndServe(listen, nil); err != nil {
 		fmt.Fprintln(os.Stderr, "server error:", err)
 		os.Exit(1)

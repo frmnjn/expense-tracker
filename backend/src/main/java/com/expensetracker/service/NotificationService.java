@@ -1,9 +1,11 @@
 package com.expensetracker.service;
 
 import com.expensetracker.config.MdcTask;
+import com.expensetracker.config.TraceIdFilter;
 import jakarta.annotation.PreDestroy;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -142,12 +144,16 @@ public class NotificationService {
 
     private void doSend(String json) {
         try {
-            HttpRequest request = HttpRequest.newBuilder()
+            HttpRequest.Builder builder = HttpRequest.newBuilder()
                     .uri(URI.create(notifierUrl + "/send"))
                     .timeout(Duration.ofSeconds(10))
                     .header("Content-Type", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofString(json))
-                    .build();
+                    .POST(HttpRequest.BodyPublishers.ofString(json));
+            String traceId = MDC.get(TraceIdFilter.MDC_TRACE_ID);
+            if (traceId != null && !traceId.isBlank()) {
+                builder.header(TraceIdFilter.TRACE_HEADER, traceId);
+            }
+            HttpRequest request = builder.build();
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() >= 300) {
                 LOGGER.warn("notification send failed: status={} body={}", response.statusCode(), response.body());
