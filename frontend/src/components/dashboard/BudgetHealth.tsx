@@ -5,6 +5,7 @@ import {
   Divider,
   Group,
   Menu,
+  Popover,
   Skeleton,
   Stack,
   Text,
@@ -17,6 +18,7 @@ export interface BudgetCardData {
   name: string
   balance: number
   alertThreshold: number
+  description?: string
 }
 
 export function BudgetHealth({
@@ -37,7 +39,7 @@ export function BudgetHealth({
   onAddBudget: () => void
   onTopUp: (name: string) => void
   onHistory: (name: string) => void
-  onEdit: (budget: { name: string; balance: number | undefined; alertThreshold: number | undefined }) => void
+  onEdit: (budget: { name: string; balance: number | undefined; alertThreshold: number | undefined; description: string | undefined }) => void
   onDelete: (name: string) => void
 }) {
   const sorted = useMemo(() => {
@@ -96,6 +98,24 @@ export function BudgetHealth({
                       <Text fw={600} truncate>
                         {b.name}
                       </Text>
+                      {b.description && (
+                        <Popover width={280} position="bottom-start" withArrow shadow="md">
+                          <Popover.Target>
+                            <ActionIcon
+                              size="xs"
+                              variant="subtle"
+                              color="blue"
+                              aria-label={`Deskripsi ${b.name}`}
+                              style={{ flexShrink: 0 }}
+                            >
+                              ⓘ
+                            </ActionIcon>
+                          </Popover.Target>
+                          <Popover.Dropdown>
+                            <Text size="sm">{b.description}</Text>
+                          </Popover.Dropdown>
+                        </Popover>
+                      )}
                     </Group>
                     <Text size="xs" c="dimmed" truncate>
                       {formatCurrency(b.balance)} tersisa
@@ -120,7 +140,7 @@ export function BudgetHealth({
                       <Menu.Item leftSection="📋" onClick={() => onHistory(b.name)}>
                         Riwayat top-up
                       </Menu.Item>
-                      <Menu.Item leftSection="✎" onClick={() => onEdit({ name: b.name, balance: b.balance, alertThreshold: b.alertThreshold })}>
+                      <Menu.Item leftSection="✎" onClick={() => onEdit({ name: b.name, balance: b.balance, alertThreshold: b.alertThreshold, description: b.description })}>
                         Edit budget
                       </Menu.Item>
                       <Menu.Divider />
