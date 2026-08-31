@@ -1,11 +1,13 @@
 import axios from 'axios'
 import { clearAccessCode, getAccessCode } from '../utils/access'
+import { newIdempotencyKey } from '../utils/idempotency'
 
 const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_URL ?? '/api',
 })
 
 apiClient.interceptors.request.use((config) => {
+  config.headers.set('X-Trace-Id', newIdempotencyKey())
   const code = getAccessCode()
   if (code) {
     config.headers.set('X-Access-Code', code)
