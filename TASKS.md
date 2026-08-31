@@ -1,14 +1,14 @@
-# TASKS.md
-
-# Expense Tracker v1
+# Expense Tracker Tasks
 
 Checklist implementasi berdasarkan PRD.
 
+> **Catatan historis:** Phase 1–16 memakai **Google Sheets** sebagai penyimpanan. Sejak **Phase 17** penyimpanan dimigrasi penuh ke **MySQL** (Google Sheets tidak lagi dipakai). Fase lama dipertahankan sebagai rekam jejak.
+
 ---
 
-# Phase 1 - Project Setup
+## Phase 1 - Project Setup
 
-## Repository
+### Repository
 
 * [x] Inisialisasi project
 * [x] Buat struktur folder
@@ -17,7 +17,7 @@ Checklist implementasi berdasarkan PRD.
 
 ---
 
-## Frontend
+### Frontend
 
 * [x] Inisialisasi React + Vite + TypeScript
 * [x] Install Mantine UI
@@ -29,7 +29,7 @@ Checklist implementasi berdasarkan PRD.
 
 ---
 
-## Backend
+### Backend
 
 * [x] Inisialisasi project Java Spring Boot (Maven)
 * [x] Setup Spring Boot Web
@@ -40,7 +40,7 @@ Checklist implementasi berdasarkan PRD.
 
 ---
 
-## Docker
+### Docker
 
 * [x] Dockerfile Frontend
 * [x] Dockerfile Backend
@@ -49,9 +49,9 @@ Checklist implementasi berdasarkan PRD.
 
 ---
 
-# Phase 2 - Google Sheets Integration
+## Phase 2 - Google Sheets Integration
 
-## Authentication
+### Authentication
 
 * [x] Setup Google Service Account
 * [x] Load credentials dari environment
@@ -60,22 +60,22 @@ Checklist implementasi berdasarkan PRD.
 
 ---
 
-## Repository Layer
+### Repository Layer
 
 * [x] Implement append row
 * [x] Handle error Google API
 
 ---
 
-# Phase 3 - Expense API
+## Phase 3 - Expense API
 
-## Model
+### Model
 
 * [x] ExpenseRequest (dateTime, name, budget, amount, description)
 
 ---
 
-## Validation
+### Validation
 
 * [x] Waktu wajib diisi
 * [x] Waktu format yyyy-MM-dd HH:mm
@@ -89,7 +89,7 @@ Checklist implementasi berdasarkan PRD.
 
 ---
 
-## Service
+### Service
 
 * [x] Validasi request
 * [x] Hitung nama sheet berdasarkan periode (cut off tanggal 25)
@@ -99,30 +99,30 @@ Checklist implementasi berdasarkan PRD.
 
 ---
 
-## Controller
+### Controller
 
 * [x] POST /expenses
 * [x] GET /options
 
 ---
 
-## Response
+### Response
 
 * [x] Success response
 * [x] Error response
 
 ---
 
-# Phase 4 - Frontend
+## Phase 4 - Frontend
 
-## Layout
+### Layout
 
 * [x] Halaman utama
 * [x] Responsive layout
 
 ---
 
-## Form
+### Form
 
 * [x] Input Waktu (otomatis / manual)
 * [x] Name Input
@@ -134,7 +134,7 @@ Checklist implementasi berdasarkan PRD.
 
 ---
 
-## API
+### API
 
 * [x] Axios client
 * [x] GET /options
@@ -142,7 +142,7 @@ Checklist implementasi berdasarkan PRD.
 
 ---
 
-## UX
+### UX
 
 * [x] Disable tombol saat submit
 * [x] Loading indicator
@@ -152,9 +152,9 @@ Checklist implementasi berdasarkan PRD.
 
 ---
 
-# Phase 5 - Testing
+## Phase 5 - Testing
 
-## Backend
+### Backend
 
 * [x] Unit Test Service (validasi)
 * [x] Unit Test penamaan sheet per periode
@@ -163,7 +163,7 @@ Checklist implementasi berdasarkan PRD.
 
 ---
 
-## Manual Testing
+### Manual Testing
 
 * [x] Submit data valid
 * [x] Waktu kosong
@@ -176,7 +176,7 @@ Checklist implementasi berdasarkan PRD.
 
 ---
 
-# Phase 6 - Docker Verification
+## Phase 6 - Docker Verification
 
 * [x] docker compose up --build berhasil
 * [x] Frontend dapat diakses
@@ -186,7 +186,7 @@ Checklist implementasi berdasarkan PRD.
 
 ---
 
-# Definition of Done
+## Definition of Done
 
 Project dianggap selesai apabila:
 
@@ -200,7 +200,7 @@ Project dianggap selesai apabila:
 
 ---
 
-# Phase 7 - JVM Tuning
+## Phase 7 - JVM Tuning
 
 Optimasi memory backend dengan membatasi resource JVM.
 
@@ -213,7 +213,7 @@ Hasil pengukuran (apples-to-apples, image sama):
 
 Breakdown JVM tuned: heap 38MB + metaspace 45MB + codecache 10MB + native ~55MB.
 
-## Konfigurasi JVM
+### Konfigurasi JVM
 
 * [x] Tambah flag JVM di ENTRYPOINT Dockerfile backend
 * [x] Batasi heap (-Xms, -Xmx)
@@ -222,12 +222,12 @@ Breakdown JVM tuned: heap 38MB + metaspace 45MB + codecache 10MB + native ~55MB.
 * [x] Gunakan SerialGC (-XX:+UseSerialGC)
 * [x] Nonaktifkan komponen yang tidak dipakai (headless, JMX)
 
-## Docker
+### Docker
 
 * [x] Tambah mem_limit backend di docker-compose.yml
 * [x] Tambah mem_limit backend di docker-compose.prod.yml
 
-## Verifikasi
+### Verifikasi
 
 * [x] Build ulang image backend
 * [x] Bandingkan memory usage via docker stats
@@ -237,18 +237,18 @@ Breakdown JVM tuned: heap 38MB + metaspace 45MB + codecache 10MB + native ~55MB.
 
 ---
 
-# Phase 8 - GraalVM Native Image
+## Phase 8 - GraalVM Native Image
 
 Mengubah backend menjadi native executable (~50MB total) menggantikan JVM runtime (~170MB).
 
-## Konteks & Target
+### Konteks & Target
 
 * Phase 7 (JVM tuning) hanya menghemat 27MB; bottleneck adalah class loading + metaspace yang tidak bisa dikurangi flag JVM.
 * Target: RSS backend turun dari 170MB menjadi ~50MB, startup < 1 detik.
 * Dukungan resmi: Spring Boot 4.1.0 + GraalVM 25 + Native Build Tools 1.1.1 (Java 25).
 * Distribusi ke VPS: docker save -> scp/SFTP -> docker load (tanpa registry, sudah diputuskan).
 
-## Hasil (terverifikasi)
+### Hasil (terverifikasi)
 
 | Metrik | JVM (Phase 7) | Native Image (Phase 8) | Penghematan |
 |---|---|---|---|
@@ -256,7 +256,7 @@ Mengubah backend menjadi native executable (~50MB total) menggantikan JVM runtim
 | Startup | ~2.3 s | **0.58 s** | ~4x lebih cepat |
 | Image size | ~300 MB+ | 117 MB | lebih kecil |
 
-## Risiko & Mitigasi
+### Risiko & Mitigasi
 
 | Risiko | Mitigasi |
 |---|---|
@@ -267,7 +267,7 @@ Mengubah backend menjadi native executable (~50MB total) menggantikan JVM runtim
 | Build lambat (~6 menit) & Peak RSS 6.8GB | Build lokal; RAM cukup saat eksekusi |
 | Native link glibc, butuh libz | Runtime pakai `distroless/cc-debian12` + copy `libz.so.1` dari debian bookworm-slim |
 
-## Keputusan Build
+### Keputusan Build
 
 * Build dua tahap:
   * Tahap 1: compile jar dengan `maven:3.9-eclipse-temurin-25`
@@ -277,7 +277,7 @@ Mengubah backend menjadi native executable (~50MB total) menggantikan JVM runtim
 * Tracing agent: `-agentpath:...libnative-image-agent.so=config-output-dir=<dir>` saat jalankan jar JVM di test sheet, hit /health /options POST /expenses.
 * Hasil: image `expense-tracker-backend-native:latest`.
 
-## Konfigurasi Backend
+### Konfigurasi Backend
 
 * [x] Tambah `native-maven-plugin` di pom.xml (profil native + executions)
 * [x] Tambah buildArg `-H:ConfigurationFileDirectories=${project.basedir}/native-config`
@@ -286,21 +286,21 @@ Mengubah backend menjadi native executable (~50MB total) menggantikan JVM runtim
 * [x] Buat `Dockerfile.native` multi-stage self-contained (build + runtime minimal)
 * [x] Verifikasi executable native berjalan di local (health, options, POST ke test sheet)
 
-## Docker
+### Docker
 
 * [x] `docker build -f backend/Dockerfile.native -t expense-tracker-backend-native:latest .`
 * [x] Ukur RSS native via docker stats (53.85 MiB, target tercapai)
 * [x] Update `docker-compose.prod.yml`: backend pakai image native + mem_limit 128m
 * [x] Update `docker-compose.yml` (dev) pakai image native + mem_limit 128m
 
-## Verifikasi Fungsional (test sheet, bukan produksi)
+### Verifikasi Fungsional (test sheet, bukan produksi)
 
 * [x] `/health` OK
 * [x] `/options` mengembalikan budget yang benar (uji refleksi Gson)
 * [x] POST `/expenses` berhasil ke test sheet
 * [x] Startup 0.58s
 
-## Distribusi ke VPS (terverifikasi)
+### Distribusi ke VPS (terverifikasi)
 
 * [x] `docker save expense-tracker-backend-native:latest | gzip > backend-native.tar.gz`
 * [x] `scp`/SFTP `backend-native.tar.gz` ke VPS
@@ -309,30 +309,30 @@ Mengubah backend menjadi native executable (~50MB total) menggantikan JVM runtim
 * [x] `docker compose up -d` + verifikasi health di produksi
 * [x] Bandingkan memory VPS (docker stats) vs sebelum native — **54.13 MiB** di produksi
 
-## Otomatisasi Build & Deploy
+### Otomatisasi Build & Deploy
 
 * [x] `build-native.sh` — build image native lokal (docker build Dockerfile.native)
 * [x] `deploy-native.sh` — export image, scp ke VPS, git pull, docker load, up -d
 * [x] `backend/generate-native-config.sh` — regenerate reachability-metadata via tracing agent
 
-## Rollback
+### Rollback
 
 * [x] Image JVM (`expense-tracker-backend:0.0.1-SNAPSHOT`) tetap tersimpan di VPS sebagai fallback
 * [x] Dokumentasikan cara rollback: `docker compose -f docker-compose.prod.yml down && docker compose up -d` setelah mengembalikan konfigurasi image
 
 ---
 
-# Phase 9 - Fitur Saldo Budget
+## Phase 9 - Fitur Saldo Budget
 
 Menambahkan saldo per budget. Saldo disimpan sebagai kolom B pada tab `Budget`, dikurangi otomatis saat expense tersimpan, dan diisi manual di Google Sheets (misal tiap gajian tanggal 25). Budget boleh bernilai negatif.
 
-## Docs
+### Docs
 
 * [ ] Update PRD.md (format sheet Budget, respons /options, UI dropdown dua kolom + preview saldo)
 * [ ] Update TASKS.md (checklist ini)
 * [ ] Buat docs/BALANCE.md
 
-## Backend
+### Backend
 
 * [ ] Model: `BudgetOption(name, balance)` + `OptionsResponse(List<BudgetOption>)`
 * [ ] `GoogleSheetsClient.getOptions` membaca tab Budget `A:B` (parse saldo, blank -> 0)
@@ -341,14 +341,14 @@ Menambahkan saldo per budget. Saldo disimpan sebagai kolom B pada tab `Budget`, 
 * [ ] Unit test parsing saldo & decrement
 * [ ] Regenerasi native config (`./backend/generate-native-config.sh`)
 
-## Frontend
+### Frontend
 
 * [ ] Type `OptionsResponse` -> `{ name, balance }[]`
 * [ ] Utils format rupiah + warna tanda
 * [ ] Dropdown dua kolom via renderOption
 * [ ] Kartu preview "Saldo nanti" (disable jika budget/nominal kosong)
 
-## Verifikasi
+### Verifikasi
 
 * [ ] Backend build & test lolos
 * [ ] Frontend lint & build lolos
@@ -358,16 +358,16 @@ Menambahkan saldo per budget. Saldo disimpan sebagai kolom B pada tab `Budget`, 
 
 ---
 
-# Phase 10 - Daftar, Edit & Hapus Pengeluaran
+## Phase 10 - Daftar, Edit & Hapus Pengeluaran
 
 Menampilkan daftar pengeluaran per periode, mengedit, dan menghapus (soft delete) beserta penyesuaian saldo budget.
 
-## Docs
+### Docs
 
 * [x] Update PRD.md (skema ID+Deleted, API period/expenses/put/delete, UI halaman Riwayat, out-of-scope)
 * [x] Update TASKS.md (checklist ini)
 
-## Backend
+### Backend
 
 * [x] Model: `ExpenseResponse`, `PeriodsResponse`, `ExpensesResponse`
 * [x] Kolom `ID` & `Deleted` di header sheet periode; appendExpense menulis ID unik
@@ -382,7 +382,7 @@ Menampilkan daftar pengeluaran per periode, mengedit, dan menghapus (soft delete
 * [x] Unit test delta saldo, find row, soft delete
 * [x] Regenerasi native config
 
-## Frontend
+### Frontend
 
 * [x] Types `Expense`, `PeriodsResponse`, `ExpensesResponse`
 * [x] Service: getPeriods, getExpenses, updateExpense, deleteExpense
@@ -392,7 +392,7 @@ Menampilkan daftar pengeluaran per periode, mengedit, dan menghapus (soft delete
 * [x] Link ke `/riwayat` dari halaman utama
 * [x] Refetch daftar + invalidate options setelah edit/hapus
 
-## Verifikasi
+### Verifikasi
 
 * [x] Backend build & test lolos
 * [x] Frontend lint & build lolos
@@ -402,16 +402,16 @@ Menampilkan daftar pengeluaran per periode, mengedit, dan menghapus (soft delete
 
 ---
 
-# Phase 11 - Dark Mode
+## Phase 11 - Dark Mode
 
-## Frontend
+### Frontend
 
 * [x] `MantineProvider` pakai `colorSchemeManager` (localStorage, persist) & `defaultColorScheme="dark"`
 * [x] Komponen `ColorSchemeToggle` (toggle ☀️/🌙)
 * [x] Pasang toggle di halaman form (`/` & `/catat`) dan halaman Riwayat
 * [x] Alias rute `/catat` untuk halaman form
 
-## Verifikasi
+### Verifikasi
 
 * [x] Build & lint lolos
 * [x] Toggle menyala/mati dan persist setelah reload
@@ -419,15 +419,15 @@ Menampilkan daftar pengeluaran per periode, mengedit, dan menghapus (soft delete
 
 ---
 
-# Phase 12 - Dashboard
+## Phase 12 - Dashboard
 
-## Docs
+### Docs
 
 * [x] Update PRD.md (endpoint /summary, UI Dashboard, rute `/` = dashboard)
 * [x] Update TASKS.md (checklist ini)
 * [x] Update README.md
 
-## Backend
+### Backend
 
 * [x] Model: `SummaryResponse`, `BudgetSummary`
 * [x] `ExpenseService.getSummary(period)` (total, count, pengeluaran per budget)
@@ -435,7 +435,7 @@ Menampilkan daftar pengeluaran per periode, mengedit, dan menghapus (soft delete
 * [x] Unit test agregasi summary
 * [x] Regenerasi native config (endpoint & model baru)
 
-## Frontend
+### Frontend
 
 * [x] Types `SummaryResponse`, `BudgetSummary`; service `getSummary`; hook `useSummary`
 * [x] Halaman `DashboardPage` (dropdown periode + kartu ringkasan + saldo per budget + pengeluaran terbesar)
@@ -443,7 +443,7 @@ Menampilkan daftar pengeluaran per periode, mengedit, dan menghapus (soft delete
 * [x] Build & lint lolos
 * [x] Cek di docker local (test sheet)
 
-## Verifikasi
+### Verifikasi
 
 * [x] Backend build & test lolos
 * [x] Frontend build & lint lolos
@@ -451,15 +451,15 @@ Menampilkan daftar pengeluaran per periode, mengedit, dan menghapus (soft delete
 
 ---
 
-# Phase 13 - Top-up Saldo
+## Phase 13 - Top-up Saldo
 
-## Docs
+### Docs
 
 * [x] Update PRD.md (endpoint /topups, UI tambah saldo, env GOOGLE_TOP_UP_SHEET)
 * [x] Update TASKS.md (checklist ini)
 * [x] Update README.md
 
-## Backend
+### Backend
 
 * [x] Config `google.top-up-sheet` (default `TopUp`)
 * [x] Model: `TopUpResponse`, `TopUpsResponse`, `TopUpRequest`
@@ -470,7 +470,7 @@ Menampilkan daftar pengeluaran per periode, mengedit, dan menghapus (soft delete
 * [x] Unit test createTopUp
 * [x] Regenerasi native config (endpoint & model baru)
 
-## Frontend
+### Frontend
 
 * [x] Types/service/hook: useTopUps, useCreateTopUp
 * [x] `TopUpModal` (pre-filled budget dari kartu, tanpa dropdown budget, tampil saldo saat ini)
@@ -478,22 +478,22 @@ Menampilkan daftar pengeluaran per periode, mengedit, dan menghapus (soft delete
 * [x] Build & lint lolos
 * [x] Cek di docker local
 
-## Verifikasi
+### Verifikasi
 
 * [x] POST /topups menambah saldo & tercatat di tab TopUp (test sheet)
 * [x] Build & lint lolos
 
 ---
 
-# Phase 14 - Filter & Sort di Riwayat
+## Phase 14 - Filter & Sort di Riwayat
 
-## Docs
+### Docs
 
 * [x] Update PRD.md (filter & sort di UI Riwayat)
 * [x] Update TASKS.md (checklist ini)
 * [x] Update README.md
 
-## Frontend
+### Frontend
 
 * [x] Search nama (client-side)
 * [x] Filter budget (dropdown dari /options)
@@ -505,15 +505,15 @@ Menampilkan daftar pengeluaran per periode, mengedit, dan menghapus (soft delete
 
 ---
 
-# Phase 15 - Dashboard 3 Bulan Terakhir
+## Phase 15 - Dashboard 3 Bulan Terakhir
 
-## Docs
+### Docs
 
 * [x] Update PRD.md (endpoint /trend, UI 3 bulan terakhir)
 * [x] Update TASKS.md (checklist ini)
 * [x] Update README.md
 
-## Backend
+### Backend
 
 * [x] Model: `TrendPoint`, `TrendResponse`
 * [x] `ExpenseService.getTrend(months)` (periode terakhir, urut terlama ke terbaru)
@@ -521,27 +521,27 @@ Menampilkan daftar pengeluaran per periode, mengedit, dan menghapus (soft delete
 * [x] Unit test getTrend
 * [x] Regenerasi native config (endpoint & model baru)
 
-## Frontend
+### Frontend
 
 * [x] Types/service/hook: useTrend
 * [x] Section "3 Bulan Terakhir" di Dashboard (list + bar proporsional)
 * [x] Build & lint lolos
 * [x] Cek di docker local
 
-## Verifikasi
+### Verifikasi
 
 * [x] GET /trend mengembalikan total & count per periode (test sheet)
 * [x] Build & lint lolos
 
 ---
 
-# Phase 16 - Restrukturisasi Dashboard
+## Phase 16 - Restrukturisasi Dashboard
 
-## Backend
+### Backend
 
 * [x] `BudgetSummary` tambah field `count`; `getSummary` menghitung jumlah transaksi per budget
 
-## Frontend
+### Frontend
 
 * [x] Hapus kartu stat (total, transaksi, budget negatif) & section pengeluaran terbesar & riwayat top-up flat
 * [x] Kartu budget: badge urutan terbesar (1–3), saldo, ikon `+` & `📋`, jumlah transaksi + pengeluaran periode
@@ -549,18 +549,18 @@ Menampilkan daftar pengeluaran per periode, mengedit, dan menghapus (soft delete
 * [x] Pindah "3 Bulan Terakhir" ke bawah "Saldo per Budget"
 * [x] Build & lint lolos
 
-## Verifikasi
+### Verifikasi
 
 * [x] `/summary` mengembalikan `count` per budget (test sheet)
 * [x] Cek di docker local
 
 ---
 
-# Phase 17 - Migrasi ke MySQL
+## Phase 17 - Migrasi ke MySQL
 
 Memindahkan penyimpanan dari Google Sheets ke database MySQL (berbagi instance dengan WordPress, database `expense_tracker` terpisah). API tidak berubah.
 
-## Backend
+### Backend
 
 * [x] Tambah `spring-boot-starter-jdbc` + `mysql-connector-j`; hapus dependency Google Sheets
 * [x] Hapus `GoogleSheetsClient` & config Google; full cutover
@@ -571,11 +571,11 @@ Memindahkan penyimpanan dari Google Sheets ke database MySQL (berbagi instance d
 * [x] Unit test diadaptasi (mock repository)
 * [ ] Regenerasi native config (MySQL JDBC driver refleksi)
 
-## Frontend
+### Frontend
 
 * [x] Tidak ada perubahan (API sama)
 
-## Infra
+### Infra
 
 * [x] docker-compose: backend `extra_hosts` host.docker.internal + env DB dari `.env` (produksi)
 * [x] `scripts/seed_budgets.py` (impor budget + saldo dari tab Budget)
@@ -583,7 +583,7 @@ Memindahkan penyimpanan dari Google Sheets ke database MySQL (berbagi instance d
 * [ ] Setup database & user `expense_tracker` di MySQL VPS
 * [ ] Seed tabel `budgets` (via script)
 
-## Verifikasi
+### Verifikasi
 
 * [x] Backend build & test lolos
 * [x] Endpoint (options/expenses/summary/trend/topups/update/delete) jalan terhadap MySQL lokal
@@ -592,9 +592,9 @@ Memindahkan penyimpanan dari Google Sheets ke database MySQL (berbagi instance d
 
 ---
 
-# Phase 18 - Tambah & Hapus Budget
+## Phase 18 - Tambah & Hapus Budget
 
-## Backend
+### Backend
 
 * [x] `budgets` tambah kolom `is_active` (soft delete); DB fresh via `CREATE TABLE`, DB lama migrasi manual (`ALTER TABLE budgets ADD COLUMN is_active BOOLEAN NOT NULL DEFAULT TRUE`)
 * [x] `BudgetRepository`: filter `is_active`, `create`, `softDelete` (rename `DELETED_<nama>_<id>` agar nama asli bisa dipakai ulang), `update` (nama + saldo)
@@ -603,7 +603,7 @@ Memindahkan penyimpanan dari Google Sheets ke database MySQL (berbagi instance d
 * [x] Unit test create/duplicate/delete/update
 * [ ] Regenerasi native config (endpoint & model baru)
 
-## Frontend
+### Frontend
 
 * [x] Types/service/hook: useCreateBudget, useUpdateBudget, useDeleteBudget
 * [x] `AddBudgetModal` (nama + saldo awal), `EditBudgetModal` (nama + saldo), `DeleteBudgetModal` (konfirmasi)
@@ -611,18 +611,18 @@ Memindahkan penyimpanan dari Google Sheets ke database MySQL (berbagi instance d
 * [x] Build & lint lolos
 * [x] Cek di docker local
 
-## Verifikasi
+### Verifikasi
 
 * [ ] Backend build & test lolos
 * [ ] `/options` tidak menampilkan budget nonaktif
 
 ---
 
-# Phase 19 - Migrasi DB dengan Flyway
+## Phase 19 - Migrasi DB dengan Flyway
 
 Mengganti `spring.sql.init` (schema.sql) dengan Flyway versioned migrations agar penambahan kolom/ubah skema ke depan lebih mudah.
 
-## Backend
+### Backend
 
 * [x] Tambah `flyway-core` + `flyway-mysql`
 * [x] `FlywayConfig` bean (Boot 4 tanpa auto-config) dengan `baselineOnMigrate(true)`
@@ -632,11 +632,11 @@ Mengganti `spring.sql.init` (schema.sql) dengan Flyway versioned migrations agar
 * [x] `V3__seed_default_budgets.sql` (INSERT IGNORE)
 * [x] `scripts/seed_budgets.py` diubah jadi upsert (ON DUPLICATE KEY UPDATE)
 
-## Infra
+### Infra
 
 * [x] Hapus `scripts/initdb` & mount-nya (skema & seed kini via Flyway)
 
-## Verifikasi
+### Verifikasi
 
 * [x] Fresh DB: V1+V2+V3 jalan, schema & seed budget ada
 * [x] Existing DB tanpa history & tanpa is_active: baseline V1 -> V2 tambah is_active -> V3, data dipertahankan
@@ -644,28 +644,28 @@ Mengganti `spring.sql.init` (schema.sql) dengan Flyway versioned migrations agar
 
 ---
 
-# Phase 20 - Backup & Restore MySQL
+## Phase 20 - Backup & Restore MySQL
 
-## Scripts
+### Scripts
 
 * [x] `scripts/backup_mysql.sh` (mysqldump + gzip + rotasi, baca kredensial dari `.env`)
 * [x] `scripts/restore_mysql.sh`
 
-## VPS
+### VPS
 
 * [x] Backup manual teruji (dump berisi data produksi)
 * [x] Restore teruji (menimpa DB dengan isi backup)
 * [x] Cron harian terpasang (20:00 UTC / 03:00 WIB) + log `/var/log/expense-backup.log`
 
-## Docs
+### Docs
 
 * [x] README: section Backup & Restore MySQL
 
 ---
 
-# Phase 21 - Upload & Lihat Foto Invoice
+## Phase 21 - Upload & Lihat Foto Invoice
 
-## Backend
+### Backend
 
 * [x] Flyway `V4__expense_photo.sql`: `expenses.photo_path`
 * [x] Env `UPLOAD_DIR` (default `/app/uploads`)
@@ -674,17 +674,17 @@ Mengganti `spring.sql.init` (schema.sql) dengan Flyway versioned migrations agar
 * [x] `GET /expenses/{id}/photo` (sajikan file; 404 jika tak ada)
 * [x] `ExpenseResponse.hasPhoto`; multipart config
 
-## Frontend
+### Frontend
 
 * [x] `/catat`: `PhotoInput` (modal pilihan Kamera / Galeri) + preview; upload setelah create
 * [x] Fix Content-Type: apiClient tidak memaksa JSON (agar FormData upload foto terkirim multipart)
 * [x] `/riwayat`: tombol 📷 jika `hasPhoto` -> modal tampil gambar
 
-## Infra
+### Infra
 
 * [x] docker-compose (local & prod): volume `uploads` -> `/app/uploads`
 
-## Verifikasi
+### Verifikasi
 
 * [x] Upload + tampil foto (local, langsung & via proxy)
 * [x] Non-image ditolak
@@ -692,9 +692,9 @@ Mengganti `spring.sql.init` (schema.sql) dengan Flyway versioned migrations agar
 
 ---
 
-# Phase 22 - Shared Invoice, Reuse Foto, Idempotensi, & Edit Foto
+## Phase 22 - Shared Invoice, Reuse Foto, Idempotensi, & Edit Foto
 
-## Backend
+### Backend
 
 * [x] Flyway `V5__invoices.sql`: tabel `invoices`, kolom `expenses.invoice_id`; migrasi foto lama dari `expenses.photo_path` ke invoice; hapus `photo_path`
 * [x] `InvoiceData` / `InvoiceRepository` / `InvoiceService` / `InvoiceController`
@@ -709,14 +709,14 @@ Mengganti `spring.sql.init` (schema.sql) dengan Flyway versioned migrations agar
 * [x] `@RegisterReflectionForBinding` + `InvoiceResponse[]` untuk serialisasi native `/invoices`
 * [x] Unit test: detachPhoto, updateExpense+invoice, InvoiceService, IdempotencyService
 
-## Frontend
+### Frontend
 
 * [x] `PhotoInput`: opsi ke-3 "Pakai Foto Periode Ini" (grid thumbnail invoice via `useInvoices`)
 * [x] `ExpenseForm`: kirim `invoiceId` saat reuse, guard `submittingRef` anti double-submit
 * [x] `services`/`hooks`: `getInvoices`, `getInvoicePhotoUrl`, `deletePhoto`, `useDeletePhoto`, invalidasi `useUploadPhoto`
 * [x] `EditExpenseModal`: ganti foto (upload baru / reuse periode ini) & hapus foto
 
-## Infra / Verifikasi
+### Infra / Verifikasi
 
 * [x] Idempotensi teruji (request key sama 2x → id sama, tidak duplikat)
 * [x] Delete photo → `hasPhoto` false; update dengan `invoiceId` → reuse foto
@@ -724,9 +724,9 @@ Mengganti `spring.sql.init` (schema.sql) dengan Flyway versioned migrations agar
 
 ---
 
-# Phase 23 - Notifikasi Email (microservice notifier)
+## Phase 23 - Notifikasi Email (microservice notifier)
 
-## notifier/ (Go)
+### notifier/ (Go)
 
 * [x] `main.go` + `go.mod` (std lib `net/smtp`, tanpa dependency)
 * [x] `POST /send` `{to[], subject, body}` — dukungan **SMTP (Gmail)** & **Resend** (`MAIL_PROVIDER`)
@@ -736,7 +736,7 @@ Mengganti `spring.sql.init` (schema.sql) dengan Flyway versioned migrations agar
 * [x] `Dockerfile` multi-stage (Go → alpine, ca-certificates + tzdata)
 * [x] Produksi: notifier dijalankan di **STB Armbian** (`docker-compose.stb.yml`), diakses backend VPS via **WireGuard** `10.8.0.4:8081` (karena SMTP dari Linode diblokir)
 
-## Backend
+### Backend
 
 * [x] Flyway `V8__budget_alert_threshold.sql`: `budgets.alert_threshold` (0 = nonaktif)
 * [x] `BudgetRepository.getAlertThreshold`
@@ -751,13 +751,13 @@ Mengganti `spring.sql.init` (schema.sql) dengan Flyway versioned migrations agar
 * [x] Config `notify.notifier-url` / `notify.emails`
 * [x] Unit test: alert terkirim saat < threshold, skip saat 0, notif top-up
 
-## Docker
+### Docker
 
 * [x] Service `notifier` di `docker-compose.yml` & `.docker-compose.prod.yml`
 * [x] Backend `NOTIFIER_URL=http://notifier:8081`
 * [x] `.env.example` di-update (NOTIFY_EMAILS, NOTIFIER_URL, SMTP_*)
 
-## Verifikasi (lokal)
+### Verifikasi (lokal)
 
 * [x] Backend test lolos (73)
 * [x] notifier health OK; `POST /send` mencapai Gmail SMTP (502 saat tanpa kredensial → wiring benar)
@@ -772,11 +772,11 @@ Mengganti `spring.sql.init` (schema.sql) dengan Flyway versioned migrations agar
 
 ---
 
-# Phase 24 - Scan Struk dengan AI (`/scan`)
+## Phase 24 - Scan Struk dengan AI (`/scan`)
 
 Upload struk foto/PDF → AI (Gemini Flash) membaca → review & assign budget → auto-create banyak expense per budget. Async dengan state machine status invoice.
 
-## Backend
+### Backend
 
 * [x] Dukungan PDF pada invoice (`ALLOWED_EXTENSIONS` + pdf, simpan mentah, serve `application/pdf`)
 * [x] `POST /invoices` (multipart file + date) → buat invoice `scan_flow`, status `ANALYZING`, trigger analisis async
@@ -795,7 +795,7 @@ Upload struk foto/PDF → AI (Gemini Flash) membaca → review & assign budget �
 * [x] Unit test: batch create, PDF storage, createInvoiceForAi, listByDate scan/type, description limit
 * [x] Regenerasi native config (endpoint & model baru + Gemini call)
 
-## Frontend
+### Frontend
 
 * [x] Halaman `/scan` (route + nav link di semua halaman): upload foto/PDF, list status + polling
 * [x] Filter status + sort (terbaru/terlama) + pagination di `/scan`
@@ -807,8 +807,37 @@ Upload struk foto/PDF → AI (Gemini Flash) membaca → review & assign budget �
 * [x] `/riwayat` auto-pilih periode terbaru saat dibuka
 * [x] Deskripsi scan di-truncate; field deskripsi `maxLength` 10000
 
-## Infra / Docs
+### Infra / Docs
 
 * [x] `scripts/clean_data.sh` (bersihkan expense/invoice/topup/idempotency + upload, tabel budget dipertahankan)
 * [x] Update PRD.md, README.md, TASKS.md
 * [x] Native build + uji lokal: upload → analisis → TO_REVIEW → batch → SUBMITTED
+
+---
+
+## Phase 25 - Trace ID End-to-End
+
+Menambahkan trace id (`X-Trace-Id`) di setiap request agar log satu request bisa ditelusuri frontend → backend → notifier.
+
+### Backend
+
+* [x] `TraceIdFilter` (config) — baca `X-Trace-Id` atau generate UUID, set ke MDC `trace.id`, kembalikan header; urutan paling awal.
+* [x] `MdcTask` (config) — capture + restore MDC ke thread pool agar trace id ikut ke task async.
+* [x] Integrasi async: `InvoiceAnalysisService` & `NotificationService` membungkus task dengan `MdcTask.wrap(...)`.
+* [x] `NotificationService.doSend` meneruskan `X-Trace-Id` dari MDC saat memanggil notifier.
+* [x] Unit test `TraceIdFilterTest`.
+
+### Frontend
+
+* [x] Axios request interceptor mengirim `X-Trace-Id` (UUID baru) pada setiap request.
+
+### Notifier (Go)
+
+* [x] Baca `X-Trace-Id` dari header (fallback UUID), tulis `trace.id` di log ECS, kembalikan header.
+* [x] Semua log `/send` (request/failed/success) membawa trace id.
+
+### Verifikasi
+
+* [x] Log backend & notifier memuat `trace.id`.
+* [x] Deploy: backend (JVM) + frontend di VPS, notifier di STB.
+

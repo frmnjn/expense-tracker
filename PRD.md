@@ -1,6 +1,4 @@
-# PRD.md
-
-# Expense Tracker
+# Expense Tracker PRD
 
 ## Overview
 
@@ -12,7 +10,7 @@ Target: sederhana, mudah dijalankan dengan Docker, mudah dikembangkan.
 
 ---
 
-# Objectives
+## Objectives
 
 * Mencatat pengeluaran.
 * Memantau saldo tiap budget (ditambah via top-up, berkurang saat pengeluaran).
@@ -22,9 +20,9 @@ Target: sederhana, mudah dijalankan dengan Docker, mudah dikembangkan.
 
 ---
 
-# Tech Stack
+## Tech Stack
 
-## Frontend
+### Frontend
 
 * React 19 + Vite + TypeScript
 * React Router
@@ -32,25 +30,30 @@ Target: sederhana, mudah dijalankan dengan Docker, mudah dikembangkan.
 * Axios
 * Mantine UI
 
-## Backend
+### Backend
 
 * Java 25 + Spring Boot 4
 * Spring JDBC (JdbcTemplate)
 * Flyway (DB migration)
 * GraalVM 25 Native Image (produksi)
 
-## Storage
+### Storage
 
 * MySQL 8+
 
-## Infrastructure
+### Notifier (email)
+
+* Go (std lib `net/smtp`), microservice terpisah untuk kirim email (SMTP Gmail / fallback Resend), berjalan di STB Armbian.
+
+### Infrastructure
 
 * Docker Compose
 * nginx (reverse proxy + SSL)
+* WireGuard (VPS → notifier di STB)
 
 ---
 
-# Halaman
+## Halaman
 
 * `/` — halaman Catat (form pengeluaran + foto invoice).
 * `/scan` — **Scan Struk dengan AI** (upload foto/PDF, analisis otomatis, review & assign budget, auto-create banyak expense).
@@ -62,7 +65,7 @@ Saat aplikasi dibuka, user langsung melihat halaman Catat.
 
 ---
 
-# Database (MySQL)
+## Database (MySQL)
 
 Database `expense_tracker` pada instance MySQL yang berbagi dengan WordPress. Skema dikelola oleh **Flyway** (migration versioned di `backend/src/main/resources/db/migration`).
 
@@ -70,7 +73,7 @@ Tabel:
 
 | Tabel | Kolom |
 | ----- | ----- |
-| `budgets` | `id` PK, `name` UNIQUE, `balance`, `is_active`, `alert_threshold` (0 = nonaktif) |
+| `budgets` | `id` PK, `name` UNIQUE, `balance`, `is_active`, `alert_threshold` (0 = nonaktif), `description` (nullable, dipakai AI saat menyarankan budget) |
 | `expenses` | `id` PK, `period`, `period_start`, `date_time`, `budget_id` FK→`budgets`, `name`, `amount`, `description` (TEXT), `deleted`, `invoice_id` FK→`invoices` (nullable), `created_at` (DATETIME(6), untuk pengurutan deterministik) |
 | `invoices` | `id` PK, `period`, `period_start`, `photo_path`, `deleted`, `status` (`ANALYZING`/`TO_REVIEW`/`SUBMITTED`/`ERROR`), `analysis_json`, `error_message`, `scan_flow` |
 | `idempotency_keys` | `id_key` PK, `response_json`, `created_at` |
@@ -92,6 +95,9 @@ Migration saat ini:
 * `V12__expenses_created_at.sql` — kolom `expenses.created_at` (pengurutan deterministik).
 * `V13__expenses_created_at_fractional.sql` — `created_at` jadi `DATETIME(6)` (mikrodetik, hindari tie dalam satu batch scan).
 * `V14__wider_description.sql` — `description` expense & top_up jadi `TEXT` (deskripsi auto-generate scan bisa > 255).
+* `V15__invoice_status_uppercase.sql` — normalisasi status invoice ke `UPPERCASE` (default `SUBMITTED`).
+* `V16__invoice_original_name.sql` — kolom `invoices.original_name` (nama file asli upload).
+* `V17__budget_description.sql` — kolom `budgets.description` (deskripsi budget, dipakai AI saat menyarankan budget).
 
 Index yang ada: `budgets` PK(id) + UNIQUE(name); `expenses` PK(id), `budget_id` FK, `deleted`, `invoice_id`, komposit `(period, deleted)`; `invoices` PK(id) + `period`; `top_ups` PK(id) + `budget_id`; `idempotency_keys` PK(id_key) + `created_at`.
 
@@ -107,9 +113,9 @@ Penghapusan expense dilakukan dengan **soft delete** (`deleted = TRUE`); baris t
 
 ---
 
-# Fitur
+## Fitur
 
-## Catat Pengeluaran
+### Catat Pengeluaran
 
 Field:
 
@@ -129,7 +135,7 @@ Field:
 * Submit: create expense → jika ada foto, upload foto (atau pakai `invoiceId` saat memilih foto yang sudah ada) → reset form + notifikasi sukses.
 * Idempotensi: setiap POST mengirim header `Idempotency-Key` (UUID). Backend menyimpan hasilnya selama 24 jam; request dengan key yang sama mengembalikan respons tersimpan tanpa membuat duplikat. Guard `submittingRef` di frontend juga mencegah double-submit.
 
-## Scan Struk dengan AI (`/scan`)
+### Scan Struk dengan AI (`/scan`)
 
 Alur untuk belanja supermarket yang memakai banyak budget dalam satu struk, tanpa harus menghitung manual. AI (Google Gemini Flash) membaca struk gambar/PDF, lalu user tinggal review & assign budget sebelum expense dibuat otomatis.
 
@@ -149,7 +155,7 @@ Detail teknis:
 * Pengurutan riwayat pakai `date_time DESC, created_at ASC` (created_at mikrodetik) agar urutan batch scan stabil & urut sesuai urutan item.
 * Konfigurasi AI: `GEMINI_API_KEY`, `AI_MODEL` (default `gemini-3.5-flash-lite`), `AI_TIMEOUT`.
 
-## Dashboard
+### Dashboard
 
 * Daftar saldo per budget — tiap kartu menampilkan:
   * nama budget, badge urutan (1–3) jika masuk pengeluaran terbesar periode
@@ -162,7 +168,7 @@ Detail teknis:
 * Tombol "+ Budget" (modal: nama + saldo awal opsional).
 * Ringkasan "3 Bulan Terakhir" (total + transaksi per periode, bar visual).
 
-## Riwayat
+### Riwayat
 
 * Dropdown periode.
 * Search nama, filter budget, dan sort (waktu/nominal) — muncul setelah periode dipilih.
@@ -172,23 +178,24 @@ Detail teknis:
 * Edit bisa **ganti foto** (upload baru / pakai foto periode ini) atau **hapus foto**.
 * Preview perubahan saldo saat edit/hapus.
 
-## Budget
+### Budget
 
-* Tambah (nama + saldo awal opsional + ambang notifikasi opsional).
-* Edit (nama + saldo + ambang notifikasi).
+* Tambah (nama + saldo awal opsional + ambang notifikasi opsional + **deskripsi opsional**).
+* Edit (nama + saldo + ambang notifikasi + deskripsi).
+* Deskripsi budget menjelaskan kegunaan budget; ditampilkan di kartu budget (ikon info `ⓘ`) dan **dipakai AI** saat menyarankan budget pada analisis struk (`/scan`).
 * Kartu budget di Dashboard menampilkan indikator `⚠️ Ambang Rp…` jika `alert_threshold > 0`.
 * Hapus (soft delete): nama diubah jadi `DELETED_<nama>_<id>` sehingga nama asli bisa dipakai ulang; expense di bawah budget ikut soft-delete.
 
-## Top-up
+### Top-up
 
 * Tambah saldo budget (nominal + deskripsi), tercatat sebagai riwayat.
 * Saldo budget bertambah sebesar nominal.
 
-## Dark Mode
+### Dark Mode
 
 Mode terang/gelap, toggle tersimpan di perangkat (localStorage), default gelap.
 
-## Notifikasi (email)
+### Notifikasi (email)
 
 Notifikasi dikirim via **microservice `notifier`** (Go) yang memakai **Gmail SMTP** (App Password). Backend memanggil notifier via HTTP (JDK HttpClient), **fire-and-log**: kalau gagal kirim hanya dicatat di log, tidak menggagalkan operasi utama. Penerima diambil dari env `NOTIFY_EMAILS` (comma-separated, mis. 2 alamat).
 
@@ -211,7 +218,7 @@ Mode testing: jika `NOTIFY_TEST_MODE=true`, email hanya dikirim ke `NOTIFY_TEST_
 
 ---
 
-# API
+## API
 
 Semua respons:
 
@@ -221,11 +228,11 @@ Semua respons:
 
 Error menggunakan HTTP status yang sesuai dan `{ "success": false, "message": "..." }`.
 
-## GET /health
+### GET /health
 
 Pengecekan status.
 
-## GET /options
+### GET /options
 
 Daftar budget aktif beserta saldonya.
 
@@ -240,11 +247,11 @@ Daftar budget aktif beserta saldonya.
 }
 ```
 
-## GET /periods
+### GET /periods
 
 Daftar periode (hanya yang masih punya expense aktif), diurutkan terbaru.
 
-## GET /expenses?period=YYYY-MON-MON
+### GET /expenses?period=YYYY-MON-MON
 
 Daftar expense aktif pada periode.
 
@@ -267,7 +274,7 @@ Daftar expense aktif pada periode.
 }
 ```
 
-## POST /expenses
+### POST /expenses
 
 Membuat expense.
 
@@ -295,30 +302,30 @@ Response:
 
 `data.id` dipakai untuk mengunggah foto.
 
-## PUT /expenses/{id}
+### PUT /expenses/{id}
 
 Mengedit expense (body sama seperti `POST /expenses`, `invoiceId` opsional). Saldo disesuaikan ulang. Mengirim `invoiceId` mengganti referensi foto expense ke invoice tersebut (harus periode yang sama).
 
-## DELETE /expenses/{id}
+### DELETE /expenses/{id}
 
 Menghapus (soft delete) expense dan mengembalikan saldo budget.
 
-## POST /expenses/{id}/photo
+### POST /expenses/{id}/photo
 
 Mengunggah/mengganti foto invoice (multipart `file`). Membuat invoice baru (atau mengganti referensi jika expense sudah punya foto). Opsional.
 
 * Hanya gambar: jpeg, png, webp, gif.
 * Maksimal 10MB.
 
-## DELETE /expenses/{id}/photo
+### DELETE /expenses/{id}/photo
 
 Menghapus foto expense (melepas `invoice_id`). Jika invoice tersebut tidak lagi dipakai expense mana pun, baris invoice **dan file foto** di disk ikut dihapus; jika masih dipakai expense lain, invoice & file dipertahankan.
 
-## GET /expenses/{id}/photo
+### GET /expenses/{id}/photo
 
 Mengembalikan file foto invoice. `404` jika tidak ada.
 
-## GET /invoices?date=yyyy-MM-dd HH:mm
+### GET /invoices?date=yyyy-MM-dd HH:mm
 
 Daftar id invoice yang punya foto pada periode dari `date` (untuk fitur "Pakai Foto Periode Ini").
 
@@ -329,25 +336,25 @@ Daftar id invoice yang punya foto pada periode dari `date` (untuk fitur "Pakai F
 }
 ```
 
-## GET /invoices/{id}/photo
+### GET /invoices/{id}/photo
 
 Mengembalikan file foto sebuah invoice. `404` jika tidak ada. Mendukung `application/pdf`.
 
-## POST /invoices
+### POST /invoices
 
 Membuat invoice **alur Scan AI** dari file upload (multipart `file` + `date` `yyyy-MM-dd HH:mm`), menandai `scan_flow`, mengatur status `ANALYZING`, lalu memicu analisis AI **async**. Mengembalikan `{ "invoiceId": "..." }`.
 
 * Hanya gambar (jpg/png/webp/gif) atau **PDF**, maksimal 10MB.
 
-## GET /invoices/{id}
+### GET /invoices/{id}
 
 Detail sebuah invoice: `{ id, type, status, errorMessage?, analysis? }`. Saat status `TO_REVIEW`, `analysis` berisi hasil AI `{ storeName, total, items: [{ name, amount, suggestedBudget }] }`.
 
-## POST /invoices/{id}/retry
+### POST /invoices/{id}/retry
 
 Mengulang analisis AI untuk invoice berstatus `ERROR` (reset ke `ANALYZING` + jalankan ulang).
 
-## POST /expenses/batch
+### POST /expenses/batch
 
 Membuat banyak expense hasil split struk dalam **satu transaksi** (alur `/scan`).
 
@@ -363,15 +370,15 @@ Membuat banyak expense hasil split struk dalam **satu transaksi** (alur `/scan`)
 
 Semua group memakai `dateTime` yang sama; saldo di-adjust **agregat per budget**; invoice ditandai `SUBMITTED`; mengirim **1 email ringkasan** (bukan per expense). Respons `{ "count": N }`. Idempotensi via `Idempotency-Key`.
 
-## GET /invoices?date=...&scan=...
+### GET /invoices?date=...&scan=...
 
 Daftar id invoice per periode (untuk "Pakai Foto Periode Ini"). Dengan `scan=true`, hanya invoice alur `/scan` yang dikembalikan. Setiap item: `{ id, createdAt, status, type }`.
 
-## Idempotensi
+### Idempotensi
 
 Semua endpoint `POST` (`/expenses`, `/expenses/batch`, `/expenses/{id}/photo`, `/topups`, `/budgets`, `/invoices`) menerima header `Idempotency-Key` opsional. Jika key diberikan, backend menyimpan respons selama **24 jam** dan mengembalikan respons tersimpan untuk key yang sama (mencegah duplikat saat retry). Baris lama dibersihkan otomatis saat penyimpanan baru.
 
-## GET /summary?period=YYYY-MON-MON
+### GET /summary?period=YYYY-MON-MON
 
 Ringkasan periode: total, jumlah transaksi, dan pengeluaran per budget (urut terbesar).
 
@@ -389,15 +396,15 @@ Ringkasan periode: total, jumlah transaksi, dan pengeluaran per budget (urut ter
 }
 ```
 
-## GET /trend?months=3
+### GET /trend?months=3
 
 Ringkasan beberapa periode terakhir (total + count), urut terlama ke terbaru.
 
-## GET /topups
+### GET /topups
 
 Daftar riwayat top-up.
 
-## POST /topups
+### POST /topups
 
 Menambah saldo budget.
 
@@ -407,29 +414,33 @@ Menambah saldo budget.
 
 `dateTime` opsional (default waktu sekarang).
 
-## POST /budgets
+### POST /budgets
 
 Menambah budget.
 
 ```json
-{ "name": "Gadget", "balance": 100000, "alertThreshold": 50000 }
+{ "name": "Gadget", "balance": 100000, "alertThreshold": 50000, "description": "Elektronik & aksesori" }
 ```
 
-`balance` opsional (default 0). `alertThreshold` opsional (default 0 = nonaktif, memicu notifikasi "budget menipis" saat `balance < alertThreshold`). Duplikat nama → `Budget already exists`.
+`balance` opsional (default 0). `alertThreshold` opsional (default 0 = nonaktif, memicu notifikasi "budget menipis" saat `balance < alertThreshold`). `description` opsional (nullable). Duplikat nama → `Budget already exists`.
 
-## PUT /budgets/{name}
+### PUT /budgets/{name}
 
-Mengedit budget (nama, saldo, dan/atau `alertThreshold`). `balance` dan `alertThreshold` opsional (jika null, tidak diubah).
+Mengedit budget (nama, saldo, `alertThreshold`, dan/atau `description`). `balance`, `alertThreshold`, dan `description` opsional (jika null, tidak diubah).
 
-## DELETE /budgets/{name}
+### DELETE /budgets/{name}
 
 Menghapus budget (soft delete, rename `DELETED_<nama>_<id>`, expense-nya ikut soft-delete).
 
+### Traceability (X-Trace-Id)
+
+Setiap request membawa header `X-Trace-Id` (UUID) untuk menelusuri satu request end-to-end di log (frontend → backend → notifier). Detail di `AGENTS.md` → *Trace ID end-to-end*. Header bersifat opsional dari sisi client (backend & notifier generate sendiri bila kosong), dan selalu dikembalikan sebagai response header `X-Trace-Id`.
+
 ---
 
-# Environment Variables
+## Environment Variables
 
-## Backend (`backend/.env`)
+### Backend (`backend/.env`)
 
 ```text
 PORT=8080
@@ -442,7 +453,7 @@ AI_MODEL=gemini-3.5-flash-lite    # opsional, default
 AI_TIMEOUT=60                     # opsional, detik
 ```
 
-## Frontend
+### Frontend
 
 ```text
 VITE_API_URL=/api
@@ -450,7 +461,7 @@ VITE_API_URL=/api
 
 ---
 
-# Docker
+## Docker
 
 ```bash
 docker compose up --build
@@ -460,11 +471,11 @@ Frontend: http://localhost:3000 · Backend: http://localhost:8080
 
 Untuk **lokal**, `docker-compose.yml` menyertakan service `mysql` sendiri (self-contained); skema & seed budget dibuat otomatis oleh Flyway. Foto tersimpan di direktori `./uploads` (bind mount).
 
-Untuk **produksi**, `docker-compose.prod.yml` memakai MySQL VPS dan image native.
+Untuk **produksi**, `docker-compose.prod.yml` memakai MySQL VPS dan image native. Jika ingin memakai backend **JVM** (mis. RAM VPS kecil), gunakan override `docker-compose.jvm.yml` (image `expense-tracker-backend-jvm:latest`); untuk dev cepat ada `docker-compose.local.yml` (build dari `backend/Dockerfile`).
 
 ---
 
-# Acceptance Criteria
+## Acceptance Criteria
 
 * User dapat membuka aplikasi dari browser.
 * User dapat mencatat pengeluaran (dengan/ tanpa foto invoice).
@@ -476,7 +487,7 @@ Untuk **produksi**, `docker-compose.prod.yml` memakai MySQL VPS dan image native
 
 ---
 
-# Out of Scope
+## Out of Scope
 
 * Login / authentication
 * Multi-user
@@ -487,7 +498,7 @@ Untuk **produksi**, `docker-compose.prod.yml` memakai MySQL VPS dan image native
 
 ---
 
-# Future Improvements
+## Future Improvements
 
 * Authentication & multi-user
 * Grafik tren yang lebih detail
