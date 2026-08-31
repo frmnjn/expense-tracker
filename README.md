@@ -14,6 +14,7 @@ Aplikasi web untuk mencatat pengeluaran harian, memantau saldo per budget, dan m
 * Kelola budget (tambah/edit/hapus, soft delete) — termasuk ambang notifikasi "budget menipis" per budget
 * Idempotensi POST (header `Idempotency-Key`) untuk mencegah duplikat
 * Notifikasi email (Gmail SMTP via microservice `notifier`): konfirmasi expense/top-up/budget + peringatan budget menipis (threshold per budget)
+* Trace id end-to-end (header `X-Trace-Id` FE → BE → notifier) untuk menelusuri log satu request
 * Dark mode (default gelap)
 
 ---
@@ -21,7 +22,7 @@ Aplikasi web untuk mencatat pengeluaran harian, memantau saldo per budget, dan m
 ## Tech Stack
 
 * **Frontend:** React 19 + Vite + TypeScript, React Router, TanStack Query, Axios, Mantine UI
-* **Backend:** Java 25 + Spring Boot 4, Spring JDBC (JdbcTemplate), Flyway, GraalVM Native Image (produksi)
+* **Backend:** Java 25 + Spring Boot 4, Spring JDBC (JdbcTemplate), Flyway; runtime JVM (`Dockerfile`) atau GraalVM Native Image (`Dockerfile.native`, default produksi)
 * **AI:** Google Gemini (`gemini-3.5-flash-lite`) via JDK HttpClient untuk analisis struk (gambar/PDF)
 * **Notifier:** Go (std lib `net/smtp`), kirim email via SMTP (Gmail), fallback Resend
 * **Storage:** MySQL 8+
@@ -49,7 +50,7 @@ GEMINI_API_KEY=AIza... docker compose -f docker-compose.yml -f docker-compose.lo
 
 ## Menjalankan (produksi)
 
-`docker-compose.prod.yml` memakai MySQL yang sudah ada di VPS (berbagi dengan WordPress) dan image backend **native**.
+`docker-compose.prod.yml` memakai MySQL yang sudah ada di VPS (berbagi dengan WordPress) dan image backend **native**. Bila ingin memakai backend **JVM**, gunakan override `docker-compose.jvm.yml` (image `expense-tracker-backend-jvm:latest`).
 
 Setup database (sekali):
 

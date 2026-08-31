@@ -1,6 +1,6 @@
 # AGENTS.md
 
-# AI Agent Instructions
+## AI Agent Instructions
 
 Dokumen ini berisi aturan implementasi yang harus dipatuhi oleh seluruh AI Coding Agent yang bekerja pada project ini.
 
@@ -8,7 +8,7 @@ Selalu baca file ini sebelum melakukan perubahan kode.
 
 ---
 
-# Primary Goal
+## Primary Goal
 
 Implementasikan fitur sesuai `PRD.md`.
 
@@ -18,7 +18,7 @@ Jika ada requirement yang ambigu, pilih implementasi paling sederhana.
 
 ---
 
-# General Principles
+## General Principles
 
 * Keep It Simple.
 * Jangan overengineering.
@@ -29,24 +29,38 @@ Jika ada requirement yang ambigu, pilih implementasi paling sederhana.
 
 ---
 
-# Architecture
+## Architecture
 
-Project terdiri dari dua aplikasi.
+Project terdiri dari tiga komponen:
 
 ```
 frontend/
 backend/
+notifier/   # microservice Go (kirim email), berjalan di STB Armbian
 ```
 
 Frontend dan backend harus independen.
 
-Komunikasi dilakukan menggunakan REST API.
+Komunikasi frontend ↔ backend dilakukan menggunakan REST API.
 
-Data disimpan di database MySQL (dikelola backend).
+Backend menyimpan data di database MySQL.
+
+Notifier dipanggil backend via HTTP untuk mengirim email (SMTP/Resend); di produksi berjalan di STB (dijangkau VPS lewat WireGuard).
+
+### Trace ID end-to-end
+
+Setiap request membawa trace id (header `X-Trace-Id`) dari frontend → backend → notifier:
+
+* **Frontend**: mengirim `X-Trace-Id` (UUID baru) pada setiap request (axios interceptor).
+* **Backend**: `TraceIdFilter` membaca `X-Trace-Id` (atau generate), menyimpan ke MDC `trace.id` (muncul otomatis di log ECS), dan mengembalikan header yang sama.
+* **Backend → notifier**: `NotificationService` meneruskan `X-Trace-Id` dari MDC saat memanggil notifier.
+* **Notifier**: membaca `X-Trace-Id`, menulis `trace.id` di log ECS, dan mengembalikan header.
+
+Jangan menambahkan mekanisme trace lain yang menumpuk; gunakan header `X-Trace-Id` yang sudah ada.
 
 ---
 
-# Frontend Rules
+## Frontend Rules
 
 Framework
 
@@ -96,7 +110,7 @@ utils/
 
 ---
 
-# Backend Rules
+## Backend Rules
 
 Language
 
@@ -146,7 +160,7 @@ Rules
 
 ---
 
-# Error Handling
+## Error Handling
 
 Semua error harus dikembalikan dalam format:
 
@@ -161,7 +175,7 @@ Jangan mengembalikan stack trace kepada client.
 
 ---
 
-# Logging
+## Logging
 
 Gunakan structured logging.
 
@@ -173,9 +187,11 @@ Log:
 
 Jangan log credential.
 
+Setiap request memakai trace id dari MDC (`trace.id`, header `X-Trace-Id`) agar log satu request bisa ditelusuri end-to-end (lihat **Trace ID end-to-end**).
+
 ---
 
-# Configuration
+## Configuration
 
 Semua konfigurasi harus berasal dari Environment Variable.
 
@@ -188,7 +204,7 @@ Jangan hardcode:
 
 ---
 
-# Docker
+## Docker
 
 Seluruh aplikasi harus dapat dijalankan menggunakan:
 
@@ -200,7 +216,7 @@ Foto invoice tersimpan di direktori `./uploads` (bind mount) — jangan ubah men
 
 ---
 
-# Dependency Rules
+## Dependency Rules
 
 Gunakan library seminimal mungkin.
 
@@ -210,7 +226,7 @@ Lebih baik menggunakan library resmi dibanding library pihak ketiga.
 
 ---
 
-# Code Style
+## Code Style
 
 Prioritas:
 
@@ -223,7 +239,7 @@ Jangan membuat kode menjadi kompleks demi optimasi yang belum dibutuhkan.
 
 ---
 
-# Naming
+## Naming
 
 Gunakan nama yang jelas.
 
@@ -253,7 +269,7 @@ Misc
 
 ---
 
-# Comments
+## Comments
 
 Jangan menambahkan komentar yang menjelaskan hal yang sudah jelas.
 
@@ -265,7 +281,7 @@ Komentar hanya digunakan untuk:
 
 ---
 
-# Testing
+## Testing
 
 Untuk setiap business logic baru:
 
@@ -277,7 +293,7 @@ Untuk endpoint baru:
 
 ---
 
-# UI Guidelines
+## UI Guidelines
 
 Gunakan tampilan sederhana.
 
@@ -291,7 +307,7 @@ Prioritas:
 
 Tidak perlu animasi.
 
-## Responsive Mobile
+### Responsive Mobile
 
 * Di layar kecil, **ganti layout** daripada memaksa kolom dikecilkan.
 * Contoh: untuk daftar baris padat (tabel), gunakan `useMediaQuery('(max-width: 48em)')` dan render **list kartu** (`Stack` + `Paper`) di mobile, bukan tabel yang kolomnya diperkecil/di-ellipsis.
@@ -299,7 +315,7 @@ Tidak perlu animasi.
 
 ---
 
-# Future Features
+## Future Features
 
 Jika menemukan kebutuhan fitur baru selama implementasi:
 
@@ -309,7 +325,7 @@ Tambahkan sebagai TODO atau usulkan pada PRD.
 
 ---
 
-# Definition of Done
+## Definition of Done
 
 Sebuah task dianggap selesai jika:
 
@@ -323,7 +339,7 @@ Sebuah task dianggap selesai jika:
 
 ---
 
-# Runtime Backend (PENTING: JVM vs Native)
+## Runtime Backend (PENTING: JVM vs Native)
 
 Produksi memakai **GraalVM Native Image**, bukan JVM. Dua Dockerfile backend:
 
@@ -334,7 +350,9 @@ Produksi memakai **GraalVM Native Image**, bukan JVM. Dua Dockerfile backend:
 
 Kedua `docker-compose.yml` & `docker-compose.prod.yml` memakai `image: expense-tracker-backend-native:latest`.
 
-## Konsekuensi untuk perubahan kode
+Untuk memakai **JVM** (mis. di VPS), ada override `docker-compose.jvm.yml` (backend memakai `expense-tracker-backend-jvm:latest`) dan `docker-compose.local.yml` (build backend dari `backend/Dockerfile`).
+
+### Konsekuensi untuk perubahan kode
 
 * **Native memakai analisis statis.** Semua refleksi/resource yang dipakai runtime harus terdaftar di `backend/native-config/reachability-metadata.json`.
 * Model yang di-bind JSON (request/response) harus didaftarkan via `@RegisterReflectionForBinding` di `ExpenseTrackerApplication`.
@@ -347,7 +365,7 @@ Kedua `docker-compose.yml` & `docker-compose.prod.yml` memakai `image: expense-t
 
 ---
 
-# Alur Build & Deploy Native
+## Alur Build & Deploy Native
 
 Build & deploy **hanya dari PC lokal** (bukan di VPS, karena butuh RAM ~7GB).
 
@@ -362,7 +380,7 @@ Backup MySQL otomatis (cron di VPS) dan manual via `scripts/backup_mysql.sh` / `
 
 ---
 
-# Git
+## Git
 
 Buat perubahan sekecil mungkin.
 
