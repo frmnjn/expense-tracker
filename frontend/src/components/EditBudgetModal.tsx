@@ -7,11 +7,13 @@ function EditBudgetModal({
   budget,
   balance,
   alertThreshold,
+  description,
   onClose,
 }: {
   budget: string | null
   balance: number | undefined
   alertThreshold: number | undefined
+  description: string | undefined
   onClose: () => void
 }) {
   const updateBudget = useUpdateBudget()
@@ -19,14 +21,16 @@ function EditBudgetModal({
   const [name, setName] = useState('')
   const [newBalance, setNewBalance] = useState<string | number>('')
   const [newThreshold, setNewThreshold] = useState<string | number>('')
+  const [newDescription, setNewDescription] = useState('')
 
   useEffect(() => {
     if (budget) {
       setName(budget)
       setNewBalance(balance ?? '')
       setNewThreshold(alertThreshold ?? '')
+      setNewDescription(description ?? '')
     }
-  }, [budget, balance, alertThreshold])
+  }, [budget, balance, alertThreshold, description])
 
   const submitDisabled = name.trim() === '' || updateBudget.isPending
 
@@ -39,6 +43,7 @@ function EditBudgetModal({
           name: name.trim(),
           balance: newBalance === '' ? undefined : Number(newBalance),
           alertThreshold: newThreshold === '' ? 0 : Number(newThreshold),
+          description: newDescription.trim() === '' ? undefined : newDescription.trim(),
         },
       },
       {
@@ -86,6 +91,14 @@ function EditBudgetModal({
           prefix="Rp"
           thousandSeparator="."
           decimalSeparator=","
+          size="md"
+        />
+        <TextInput
+          label="Deskripsi (opsional)"
+          placeholder="Budget ini untuk apa?"
+          value={newDescription}
+          onChange={(e) => setNewDescription(e.currentTarget.value)}
+          maxLength={500}
           size="md"
         />
         <Group justify="flex-end" mt="md">

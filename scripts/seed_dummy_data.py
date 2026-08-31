@@ -29,7 +29,7 @@ import uuid
 MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
 
 BUDGETS = [
-    {"id": 1, "name": "Household", "balance": 3_000_000, "alertThreshold": 500_000, "items": [
+    {"id": 1, "name": "Household", "balance": 3_000_000, "alertThreshold": 500_000, "description": "Pengeluaran untuk kebutuhan rumah tangga yang digunakan bersama atau untuk keperluan rumah secara umum, seperti beras, minyak, gula, telur, bahan makanan rumah, air minum, deterjen, sabun cuci, tissue rumah, alat kebersihan, perlengkapan dapur, dan kebutuhan rumah tangga sehari-hari lainnya. Jika barang tidak ditujukan secara khusus untuk Mama, Papa, atau Alana dan digunakan untuk kebutuhan rumah secara umum, masukkan ke budget Household.", "items": [
         ("Sembako", 50_000, 350_000),
         ("Token Listrik", 100_000, 300_000),
         ("Gas LPG", 22_000, 25_000),
@@ -40,7 +40,7 @@ BUDGETS = [
         ("Daging Ayam", 25_000, 70_000),
         ("Bumbu Dapur", 5_000, 30_000),
     ]},
-    {"id": 2, "name": "Alana", "balance": 2_000_000, "alertThreshold": 300_000, "items": [
+    {"id": 2, "name": "Alana", "balance": 2_000_000, "alertThreshold": 300_000, "description": "Pengeluaran yang secara khusus ditujukan untuk kebutuhan Alana sebagai anak, seperti popok, tissue basah untuk anak, susu, makanan anak, skincare anak, pakaian anak, mainan, perlengkapan bayi/anak, obat atau kebutuhan perawatan anak, dan kebutuhan anak lainnya. Jika barang ditujukan untuk Alana secara spesifik, masukkan ke budget Alana.", "items": [
         ("Popok", 40_000, 90_000),
         ("Susu Anak", 60_000, 120_000),
         ("Skincare Anak", 25_000, 80_000),
@@ -48,7 +48,7 @@ BUDGETS = [
         ("Vitamin Anak", 20_000, 60_000),
         ("Mainan", 15_000, 80_000),
     ]},
-    {"id": 3, "name": "Papa", "balance": 1_500_000, "alertThreshold": 200_000, "items": [
+    {"id": 3, "name": "Papa", "balance": 1_500_000, "alertThreshold": 200_000, "description": "Pengeluaran yang secara khusus ditujukan untuk kebutuhan pribadi Papa, seperti pakaian, sepatu, aksesori, grooming, perlengkapan pribadi, hobi pribadi, dan kebutuhan pribadi lainnya. Jika barang ditujukan untuk Papa secara spesifik, masukkan ke budget Papa.", "items": [
         ("Kopi", 10_000, 30_000),
         ("Jajan Papa", 5_000, 25_000),
         ("Bensin", 50_000, 100_000),
@@ -56,7 +56,7 @@ BUDGETS = [
         ("Pulsa", 25_000, 50_000),
         ("Buku", 20_000, 90_000),
     ]},
-    {"id": 4, "name": "Playing", "balance": 2_000_000, "alertThreshold": 300_000, "items": [
+    {"id": 4, "name": "Playing", "balance": 2_000_000, "alertThreshold": 300_000, "description": "Pengeluaran untuk hiburan, rekreasi, bersenang-senang, jalan-jalan, nongkrong, makan di luar untuk leisure, aktivitas weekend, liburan, dan pengeluaran lifestyle yang sifatnya discretionary atau bukan kebutuhan pokok.", "items": [
         ("Makan Enak", 50_000, 250_000),
         ("Jajan Mall", 30_000, 120_000),
         ("Jalan-jalan", 20_000, 150_000),
@@ -64,7 +64,7 @@ BUDGETS = [
         ("Coffee Date", 40_000, 100_000),
         ("Parkir & Tol", 10_000, 50_000),
     ]},
-    {"id": 5, "name": "Mama", "balance": 1_500_000, "alertThreshold": 250_000, "items": [
+    {"id": 5, "name": "Mama", "balance": 1_500_000, "alertThreshold": 250_000, "description": "Pengeluaran yang secara khusus ditujukan untuk kebutuhan pribadi Mama, seperti skincare, makeup, kosmetik, pakaian, sepatu, tas, aksesori, perawatan diri, dan kebutuhan pribadi lainnya. Jika barang ditujukan untuk Mama secara spesifik, masukkan ke budget Mama.", "items": [
         ("Skincare Mama", 30_000, 150_000),
         ("Makeup", 40_000, 200_000),
         ("Jajan Mama", 10_000, 40_000),
@@ -113,10 +113,11 @@ def build_sql(days: int, seed: int, reset: bool) -> str:
         ]
 
     budget_rows = ", ".join(
-        f"({b['id']}, '{esc(b['name'])}', {b['balance']}, {b['alertThreshold']}, 1)" for b in BUDGETS
+        f"({b['id']}, '{esc(b['name'])}', {b['balance']}, {b['alertThreshold']}, '{esc(b.get('description') or '')}', 1)"
+        for b in BUDGETS
     )
     parts.append(
-        "INSERT INTO budgets (id, name, balance, alert_threshold, is_active) VALUES "
+        "INSERT INTO budgets (id, name, balance, alert_threshold, description, is_active) VALUES "
         + budget_rows
         + ";"
     )
