@@ -2,7 +2,7 @@ services:
   backend:
     image: expense-tracker-backend-native:latest
     restart: unless-stopped
-    mem_limit: 192m
+    mem_limit: 256m
     env_file:
       - ./backend/.env
     extra_hosts:
