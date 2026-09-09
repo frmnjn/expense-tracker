@@ -38,9 +38,10 @@ class InvoiceAnalysisServiceTest {
     private static class TestService extends InvoiceAnalysisService {
         String[] responses = new String[0];
         int call = 0;
+        Double rate = null;
 
         TestService(InvoiceRepository repo, BudgetRepository budgetRepo) {
-            super(repo, budgetRepo, new ObjectMapper(), "key", "gemini-test", 600L, 50, 0L);
+            super(repo, budgetRepo, new ObjectMapper(), "key", "gemini-test", 600L, 50, 0L, "", 8000L);
         }
 
         @Override
@@ -57,6 +58,11 @@ class InvoiceAnalysisServiceTest {
                 throw new IOException("connection reset");
             }
             return r;
+        }
+
+        @Override
+        Double fetchRate(String base, String date) {
+            return rate;
         }
     }
 
@@ -120,5 +126,50 @@ class InvoiceAnalysisServiceTest {
         // Gagal permanen -> tidak boleh increment retry
         verify(invoiceRepository, never()).incrementRetry(id);
         verify(invoiceRepository).updateError(eq(id), anyString());
+    }
+
+    @Test
+    void analyze_convertsNonIdrToIdrUsingRate() throws Exception {
+        String id = "inv-4";
+        stubInvoice(id);
+        String base = "USD";
+        service.responses = new String[]{
+                "{\"storeName\":\"Boutique\",\"total\":10,\"dateTime\":\"2026-09-05 13:31:00\","
+                        + "\"currency\":\"" + base + "\",\"originalTotal\":10,"
+                        + "\"items\":[{\"name\":\"Tshirt\",\"amount\":10,\"suggestedBudget\":\"Makan\"}]}"};
+        service.rate = 17730.42601401;
+
+        org.mockito.ArgumentCaptor<String> captor = org.mockito.ArgumentCaptor.forClass(String.class);
+        service.analyzeForTest(id);
+
+        verify(invoiceRepository).updateAnalysis(eq(id), eq(InvoiceStatus.TO_REVIEW.value()), captor.capture());
+        com.expensetracker.model.AiAnalysisResponse out =
+                new tools.jackson.databind.ObjectMapper().readValue(captor.getValue(), com.expensetracker.model.AiAnalysisResponse.class);
+        assertEquals("USD", out.currency());
+        assertEquals(177304L, out.total());
+        assertEquals(177304L, out.items().get(0).amount());
+        assertEquals(Double.valueOf(17730.42601401), out.exchangeRate());
+        assertEquals("2026-09-05", out.exchangeDate());
+        assertEquals(Double.valueOf(10), out.originalTotal());
+    }
+
+    @Test
+    void analyze_keepsIdrAmountsWhenCurrencyIsIdr() throws Exception {
+        String id = "inv-5";
+        stubInvoice(id);
+        service.responses = new String[]{
+                "{\"storeName\":\"Warteg\",\"total\":10000,\"dateTime\":\"2026-09-05 13:31:00\","
+                        + "\"currency\":\"IDR\",\"originalTotal\":null,"
+                        + "\"items\":[{\"name\":\"Nasi\",\"amount\":10000,\"suggestedBudget\":\"Makan\"}]}"};
+
+        org.mockito.ArgumentCaptor<String> captor = org.mockito.ArgumentCaptor.forClass(String.class);
+        service.analyzeForTest(id);
+
+        verify(invoiceRepository).updateAnalysis(eq(id), eq(InvoiceStatus.TO_REVIEW.value()), captor.capture());
+        com.expensetracker.model.AiAnalysisResponse out =
+                new tools.jackson.databind.ObjectMapper().readValue(captor.getValue(), com.expensetracker.model.AiAnalysisResponse.class);
+        assertEquals(10000L, out.total());
+        assertEquals(10000L, out.items().get(0).amount());
+        assertEquals(null, out.exchangeRate());
     }
 }

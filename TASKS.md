@@ -879,3 +879,5 @@ tampil di UI.
 ### Infra / Docs
 
 * [x] **Note:** `docker compose restart` tidak membaca ulang `env_file`; gunakan `docker compose up -d` untuk menerapkan perubahan `AI_MODEL`.
+
+* [x] Konversi mata uang asing -> IDR memakai kurs API fawazahmed0 (historical date), backend yang konversi; gemini hanya deteksi currency; info kurs & nilai asli tampil di UI review + deskripsi expense.
