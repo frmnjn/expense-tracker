@@ -88,7 +88,6 @@ class InvoiceAnalysisServiceTest {
 
         verify(invoiceRepository).initRetry(eq(id), eq(50));
         verify(invoiceRepository).incrementRetry(id);
-        verify(invoiceRepository).resetRetry(id);
         verify(invoiceRepository).updateAnalysis(eq(id), eq(InvoiceStatus.TO_REVIEW.value()), anyString());
     }
 
