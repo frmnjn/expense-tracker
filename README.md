@@ -50,7 +50,7 @@ GEMINI_API_KEY=AIza... docker compose -f docker-compose.yml -f docker-compose.lo
 
 ## Menjalankan (produksi)
 
-`docker-compose.prod.yml` memakai MySQL yang sudah ada di VPS (berbagi dengan WordPress) dan image backend **JVM** (`expense-tracker-backend-jvm:latest`). Image dibuild di PC lalu ditransfer ke VPS via `./deploy-jvm.sh` (VPS tidak kompilasi).
+`docker-compose.prod.yml` memakai MySQL yang sudah ada di VPS (berbagi dengan WordPress) dan image backend **JVM** (`expense-tracker-backend-jvm:latest`). Image dibuild langsung di VPS via `./deploy-vps.sh` (terbukti aman tanpa OOM, lihat AGENTS.md).
 
 Setup database (sekali):
 
@@ -176,13 +176,13 @@ Build & deploy hanya dari PC lokal (butuh RAM ~7GB untuk build native).
 ```bash
 ./build-native.sh       # build image native lokal (~6 menit)
 ./deploy-native.sh      # deploy penuh: export native image -> scp -> VPS git pull -> up -d -> prune
-./deploy-vps.sh         # deploy ringan ke VPS (rebuild frontend + restart) bila backend Java tak berubah
+./deploy-vps.sh         # deploy penuh produksi: git pull -> build backend JVM (di VPS) -> up -d -> prune
 ./deploy-stb.sh         # deploy notifier ke STB (git pull + rebuild via docker-compose.stb.yml)
 ```
 
 * Regenerasi native config saat menambah endpoint/model: `./backend/generate-native-config.sh`
 * Cleanup data (expense/invoice/topup/idempotency + folder upload, **tabel budget dipertahankan**): `scripts/clean_data.sh`
-* `deploy-native.sh` / `deploy-vps.sh` mengasumsikan SSH key `root@expense.frmnjn.my.id` terdaftar; `deploy-stb.sh` mengasumsikan SSH key `root@10.8.0.4` (WireGuard) terdaftar.
+* `deploy-native.sh` / `deploy-vps.sh` mengasumsikan SSH key `root@frmnjn.my.id` terdaftar; `deploy-stb.sh` mengasumsikan SSH key `root@10.8.0.4` (WireGuard) terdaftar.
 
 ---
 

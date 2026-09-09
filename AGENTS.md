@@ -350,7 +350,7 @@ Produksi **memakai image JVM** (`expense-tracker-backend-jvm:latest`, dibuild da
 
 `docker-compose.yml` (dev) memakai `image: ${BACKEND_IMAGE:-expense-tracker-backend-jvm:latest}`; `docker-compose.prod.yml` memakai `image: expense-tracker-backend-jvm:latest`.
 
-**Mengapa JVM default?** VPS ber-RAM terbatas (~3.8GB) dan dipakai banyak service lain. Kompilasi native perlu ~7GB; kompilasi JVM lebih ringan tapi tetap tidak aman dilakukan di VPS yang sedang sibuk. Karena itu image backend selalu dibuild di PC lalu ditransfer ke VPS.
+**Mengapa JVM default?** Kompilasi native perlu ~7GB RAM dan tidak aman dilakukan di VPS yang RAM-nya terbatas (~3.7GB, dipakai banyak service lain). Kompilasi JVM jauh lebih ringan dan sudah terbukti aman tanpa OOM — bahkan di STB ber-RAM 1.7GB (available ~400MB) sekalipun. Karena itu image backend JVM dibuild **langsung di VPS** (avail ~2.1GB, jauh lebih lega dari STB).
 
 ### Konsekuensi untuk perubahan kode
 
@@ -362,24 +362,22 @@ Produksi **memakai image JVM** (`expense-tracker-backend-jvm:latest`, dibuild da
 
 ## Alur Build & Deploy
 
-Image backend (JVM) dibuild **di PC** lalu ditransfer ke VPS (VPS tidak kompilasi):
+Image backend (JVM) dibuild **langsung di VPS** (terbukti aman tanpa OOM, lihat **Runtime Backend**):
 
 ```bash
-./build-jvm.sh    # build image JVM lokal (docker build backend/Dockerfile) -> expense-tracker-backend-jvm:latest
-./deploy-jvm.sh   # export -> scp -> VPS git pull -> docker load -> up -d -> prune dangling images
+./deploy-vps.sh   # git pull -> docker build backend (di VPS) -> compose up -d --build -> prune -> verifikasi
 ```
 
 Skrip lain:
 
 ```bash
 ./deploy-local.sh        # build image JVM + jalankan stack lokal (dev/test)
-./deploy-vps.sh          # deploy perubahan frontend/notifier/compose ke VPS (tanpa rebuild backend)
 ./deploy-stb.sh          # deploy notifier ke STB (Armbian via WireGuard)
 ./deploy-native.sh       # OPSIONAL: transfer image native ke VPS (hanya bila memakai native)
 ./build-native.sh        # OPSIONAL: build image native lokal
 ```
 
-Semua deploy ke VPS berasumsi SSH key `root@expense.frmnjn.my.id` tanpa password sudah terdaftar (dijalankan dari PC).
+Semua deploy ke VPS berasumsi SSH key `root@frmnjn.my.id` tanpa password sudah terdaftar.
 
 Backup MySQL otomatis (cron di VPS) dan manual via `scripts/backup_mysql.sh` / `scripts/restore_mysql.sh`.
 
