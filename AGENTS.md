@@ -339,42 +339,47 @@ Sebuah task dianggap selesai jika:
 
 ---
 
-## Runtime Backend (PENTING: JVM vs Native)
+## Runtime Backend (PENTING: JVM default, Native opsional)
 
-Produksi memakai **GraalVM Native Image**, bukan JVM. Dua Dockerfile backend:
+Produksi **memakai image JVM** (`expense-tracker-backend-jvm:latest`, dibuild dari `backend/Dockerfile`). Dua Dockerfile backend:
 
 | File | Pemakaian |
 |---|---|
-| `backend/Dockerfile` | Image JVM (fallback, pengembangan) |
-| `backend/Dockerfile.native` | Image native (produksi, `expense-tracker-backend-native:latest`) |
+| `backend/Dockerfile` | Image JVM — **default** produksi & dev (`expense-tracker-backend-jvm:latest`) |
+| `backend/Dockerfile.native` | GraalVM Native — **opsional/legacy**, RAM build besar (~7GB) |
 
-Kedua `docker-compose.yml` & `docker-compose.prod.yml` memakai `image: expense-tracker-backend-native:latest`.
+`docker-compose.yml` (dev) memakai `image: ${BACKEND_IMAGE:-expense-tracker-backend-jvm:latest}`; `docker-compose.prod.yml` memakai `image: expense-tracker-backend-jvm:latest`.
 
-Untuk memakai **JVM** (mis. di VPS), ada override `docker-compose.jvm.yml` (backend memakai `expense-tracker-backend-jvm:latest`) dan `docker-compose.local.yml` (build backend dari `backend/Dockerfile`).
+**Mengapa JVM default?** VPS ber-RAM terbatas (~3.8GB) dan dipakai banyak service lain. Kompilasi native perlu ~7GB; kompilasi JVM lebih ringan tapi tetap tidak aman dilakukan di VPS yang sedang sibuk. Karena itu image backend selalu dibuild di PC lalu ditransfer ke VPS.
 
 ### Konsekuensi untuk perubahan kode
 
-* **Native memakai analisis statis.** Semua refleksi/resource yang dipakai runtime harus terdaftar di `backend/native-config/reachability-metadata.json`.
-* Model yang di-bind JSON (request/response) harus didaftarkan via `@RegisterReflectionForBinding` di `ExpenseTrackerApplication`.
-* **Flyway** tidak bisa memindai `classpath:` di native — migration dibaca dari `filesystem:/app/db/migration` (file di-copy ke image). Jangan mengubah lokasi ini kecuali perlu.
-* Jika menambah **endpoint/kelas yang memakai refleksi** atau **model baru**, regenerasi native config:
-  ```bash
-  ./backend/generate-native-config.sh   # regenerasi reachability-metadata terhadap MySQL lokal
-  ./build-native.sh                     # rebuild image native
-  ```
+* Image **JVM** adalah default → tidak butuh config refleksi/native.
+* **Native (opsional)** memakai analisis statis. Bila kembali memakai native, semua refleksi/resource runtime harus terdaftar di `backend/native-config/reachability-metadata.json`; model JSON (request/response) harus via `@RegisterReflectionForBinding` di `ExpenseTrackerApplication`; dan regenerasi native config via `./backend/generate-native-config.sh`.
+* **Flyway**: pada image native, migration tidak bisa dipindai dari `classpath:` (dibaca dari `filesystem:/app/db/migration`). Pada image JVM normal tidak ada kendala ini — jangan mengubah lokasi copy migration kecuali perlu.
 
 ---
 
-## Alur Build & Deploy Native
+## Alur Build & Deploy
 
-Build & deploy **hanya dari PC lokal** (bukan di VPS, karena butuh RAM ~7GB).
+Image backend (JVM) dibuild **di PC** lalu ditransfer ke VPS (VPS tidak kompilasi):
 
 ```bash
-./build-native.sh     # build image native lokal (docker build Dockerfile.native)
-./deploy-native.sh    # export -> scp -> VPS git pull -> docker load -> up -d -> prune dangling images
+./build-jvm.sh    # build image JVM lokal (docker build backend/Dockerfile) -> expense-tracker-backend-jvm:latest
+./deploy-jvm.sh   # export -> scp -> VPS git pull -> docker load -> up -d -> prune dangling images
 ```
 
-`deploy-native.sh` berasumsi SSH key `root@expense.frmnjn.my.id` tanpa password sudah terdaftar.
+Skrip lain:
+
+```bash
+./deploy-local.sh        # build image JVM + jalankan stack lokal (dev/test)
+./deploy-vps.sh          # deploy perubahan frontend/notifier/compose ke VPS (tanpa rebuild backend)
+./deploy-stb.sh          # deploy notifier ke STB (Armbian via WireGuard)
+./deploy-native.sh       # OPSIONAL: transfer image native ke VPS (hanya bila memakai native)
+./build-native.sh        # OPSIONAL: build image native lokal
+```
+
+Semua deploy ke VPS berasumsi SSH key `root@expense.frmnjn.my.id` tanpa password sudah terdaftar (dijalankan dari PC).
 
 Backup MySQL otomatis (cron di VPS) dan manual via `scripts/backup_mysql.sh` / `scripts/restore_mysql.sh`.
 

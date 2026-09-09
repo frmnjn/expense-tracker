@@ -10,3 +10,8 @@ deploy/nginx-expense.conf
 uploads/
 .idea/
 scripts/run-backend-local.sh
+
+# backup & arsip lokal
+*.bak*
+*.backup*
+backups/

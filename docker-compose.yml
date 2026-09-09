@@ -23,9 +23,9 @@ services:
       start_period: 20s
 
   backend:
-    image: expense-tracker-backend-native:latest
+    image: ${BACKEND_IMAGE:-expense-tracker-backend-jvm:latest}
     restart: unless-stopped
-    mem_limit: 256m
+    mem_limit: 512m
     ports:
       - "8080:8080"
     env_file:

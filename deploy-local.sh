@@ -3,14 +3,12 @@
 # deploy-local.sh
 #
 # Build & jalankan seluruh stack secara lokal untuk keperluan development/test.
+# Default backend memakai image JVM (expense-tracker-backend-jvm:latest).
 #
 # Alur:
 #   1. Jalankan unit test backend (bisa dilewati dengan SKIP_TESTS=1)
-#   2. Build image backend JVM fallback (backend/Dockerfile) dan di-tag sebagai
-#      expense-tracker-backend-native:latest agar docker-compose.yml jalan.
-#      Catatan: ini MENIMPA tag tsb secara lokal — image native asli di PC ini
-#      hanya hilang tag-nya, image tetap ada. Untuk rebuild native asli,
-#      gunakan ./build-native.sh.
+#   2. Build image backend JVM (backend/Dockerfile) dengan tag
+#      expense-tracker-backend-jvm:latest.
 #   3. docker compose up --build -d (mysql, backend, notifier, frontend)
 #   4. Bersihkan image dangling
 #   5. Tunggu backend sehat, lalu tampilkan URL akses.
@@ -27,7 +25,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BACKEND_DIR="${SCRIPT_DIR}/backend"
 
-BACKEND_IMAGE="${BACKEND_IMAGE:-expense-tracker-backend-native:latest}"
+BACKEND_IMAGE="${BACKEND_IMAGE:-expense-tracker-backend-jvm:latest}"
 
 echo "==> [1/4] unit test backend"
 if [ "${SKIP_TESTS:-0}" = "1" ]; then
@@ -36,7 +34,7 @@ else
     (cd "${BACKEND_DIR}" && mvn test)
 fi
 
-echo "==> [2/4] build image backend JVM (fallback dev): ${BACKEND_IMAGE}"
+echo "==> [2/4] build image backend JVM (default): ${BACKEND_IMAGE}"
 docker build -f "${BACKEND_DIR}/Dockerfile" -t "${BACKEND_IMAGE}" "${BACKEND_DIR}"
 
 echo "==> [3/4] docker compose up --build -d"

@@ -22,7 +22,7 @@ Aplikasi web untuk mencatat pengeluaran harian, memantau saldo per budget, dan m
 ## Tech Stack
 
 * **Frontend:** React 19 + Vite + TypeScript, React Router, TanStack Query, Axios, Mantine UI
-* **Backend:** Java 25 + Spring Boot 4, Spring JDBC (JdbcTemplate), Flyway; runtime JVM (`Dockerfile`) atau GraalVM Native Image (`Dockerfile.native`, default produksi)
+* **Backend:** Java 25 + Spring Boot 4, Spring JDBC (JdbcTemplate), Flyway; runtime **JVM** (`Dockerfile`, default) atau GraalVM Native Image (`Dockerfile.native`, opsional/legacy)
 * **AI:** Google Gemini (`gemini-3.5-flash-lite`) via JDK HttpClient untuk analisis struk (gambar/PDF)
 * **Notifier:** Go (std lib `net/smtp`), kirim email via SMTP (Gmail), fallback Resend
 * **Storage:** MySQL 8+
@@ -50,7 +50,7 @@ GEMINI_API_KEY=AIza... docker compose -f docker-compose.yml -f docker-compose.lo
 
 ## Menjalankan (produksi)
 
-`docker-compose.prod.yml` memakai MySQL yang sudah ada di VPS (berbagi dengan WordPress) dan image backend **native**. Bila ingin memakai backend **JVM**, gunakan override `docker-compose.jvm.yml` (image `expense-tracker-backend-jvm:latest`).
+`docker-compose.prod.yml` memakai MySQL yang sudah ada di VPS (berbagi dengan WordPress) dan image backend **JVM** (`expense-tracker-backend-jvm:latest`). Image dibuild di PC lalu ditransfer ke VPS via `./deploy-jvm.sh` (VPS tidak kompilasi).
 
 Setup database (sekali):
 
@@ -194,9 +194,9 @@ backend/    # Spring Boot
   src/main/resources/db/migration/   # Flyway migration
 notifier/   # Go microservice notifikasi email (SMTP, fallback Resend)
 scripts/    # backup, restore, seed, clean_data
-docker-compose.yml       # lokal (dengan mysql + notifier service, backend native)
-docker-compose.local.yml # override dev: backend JVM (cepat, tanpa build native)
-docker-compose.prod.yml  # produksi (MySQL VPS, backend native)
+docker-compose.yml       # lokal (dengan mysql + notifier service, backend JVM default)
+docker-compose.local.yml # override dev: backend JVM (build dari backend/Dockerfile)
+docker-compose.prod.yml  # produksi (MySQL VPS, backend JVM)
 docker-compose.stb.yml   # notifier di STB Armbian (WireGuard 10.8.0.4)
 uploads/                 # foto/PDF invoice (bind mount)
 ```
