@@ -339,4 +339,52 @@ class InvoiceServiceTest {
         assertFalse(invoiceService.deleteIfUnused("  "));
         verify(invoiceRepository, never()).delete(anyString());
     }
+
+    @Test
+    void deleteScanInvoice_deletableStatus_shouldDelete() {
+        when(invoiceRepository.findById("inv-1")).thenReturn(new InvoiceData("inv-1", "2026-JUL-AUG", "a.jpg", "2026-07-25T09:00:00", "TO_REVIEW", null));
+        when(invoiceRepository.countExpensesUsing("inv-1")).thenReturn(0);
+        when(invoiceRepository.getPhotoPath("inv-1")).thenReturn("a.jpg");
+        invoiceService.deleteScanInvoice("inv-1");
+        verify(invoiceRepository).delete("inv-1");
+    }
+
+    @Test
+    void deleteScanInvoice_shouldAllowNotInvoiceAndError() {
+        when(invoiceRepository.findById("inv-1")).thenReturn(new InvoiceData("inv-1", "2026-JUL-AUG", "a.jpg", "2026-07-25T09:00:00", "NOT_INVOICE", null));
+        when(invoiceRepository.countExpensesUsing("inv-1")).thenReturn(0);
+        when(invoiceRepository.getPhotoPath("inv-1")).thenReturn("a.jpg");
+        invoiceService.deleteScanInvoice("inv-1");
+        verify(invoiceRepository).delete("inv-1");
+
+        when(invoiceRepository.findById("inv-2")).thenReturn(new InvoiceData("inv-2", "2026-JUL-AUG", "b.jpg", "2026-07-25T09:00:00", "ERROR", null));
+        when(invoiceRepository.countExpensesUsing("inv-2")).thenReturn(0);
+        when(invoiceRepository.getPhotoPath("inv-2")).thenReturn("b.jpg");
+        invoiceService.deleteScanInvoice("inv-2");
+        verify(invoiceRepository).delete("inv-2");
+    }
+
+    @Test
+    void deleteScanInvoice_notDeletableStatus_shouldReject() {
+        for (String status : new String[]{"ANALYZING", "SUBMITTED"}) {
+            when(invoiceRepository.findById("inv-1")).thenReturn(new InvoiceData("inv-1", "2026-JUL-AUG", "a.jpg", "2026-07-25T09:00:00", status, null));
+            assertThrows(ValidationException.class, () -> invoiceService.deleteScanInvoice("inv-1"));
+            verify(invoiceRepository, never()).delete("inv-1");
+        }
+    }
+
+    @Test
+    void deleteScanInvoice_notFound_shouldReject() {
+        when(invoiceRepository.findById("missing")).thenReturn(null);
+        ValidationException ex = assertThrows(ValidationException.class, () -> invoiceService.deleteScanInvoice("missing"));
+        assertEquals("Invoice not found", ex.getMessage());
+    }
+
+    @Test
+    void deleteScanInvoice_stillUsedByExpense_shouldReject() {
+        when(invoiceRepository.findById("inv-1")).thenReturn(new InvoiceData("inv-1", "2026-JUL-AUG", "a.jpg", "2026-07-25T09:00:00", "TO_REVIEW", null));
+        when(invoiceRepository.countExpensesUsing("inv-1")).thenReturn(1);
+        assertThrows(ValidationException.class, () -> invoiceService.deleteScanInvoice("inv-1"));
+        verify(invoiceRepository, never()).delete("inv-1");
+    }
 }

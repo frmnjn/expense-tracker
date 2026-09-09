@@ -175,3 +175,8 @@ export async function deleteExpense(id: string): Promise<ApiResponse<void>> {
   const response = await apiClient.delete<ApiResponse<void>>(`/expenses/${id}`)
   return response.data
 }
+
+export async function deleteInvoice(id: string): Promise<ApiResponse<void>> {
+  const response = await apiClient.delete<ApiResponse<void>>(`/invoices/${id}`)
+  return response.data
+}
