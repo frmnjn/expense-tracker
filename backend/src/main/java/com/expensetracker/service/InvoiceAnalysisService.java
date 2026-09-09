@@ -247,9 +247,13 @@ public class InvoiceAnalysisService implements ApplicationRunner {
                 + "\"suggestedBudget\":\"<budget barang dominan>\"} dan {\"name\":\"Service\",\"amount\":5000,"
                 + "\"suggestedBudget\":\"<budget barang dominan>\"}. Untuk suggestedBudget item PPN/service, "
                 + "ikuti budget yang paling cocok dengan jenis belanja struk tersebut; isi string kosong jika ragu. "
-                + "Abaikan baris saldo, kembalian, dan pembulatan (bukan barang); jangan jadikan TOTAL sebagai item. "
+                + "JANGAN abaikan pembulatan: jika struk menampilkan pembulatan yang membuat grand total berbeda dari "
+                + "jumlah seluruh item lainnya, masukkan sebagai item \"Pembulatan\" dengan amount sebesar selisihnya "
+                + "(POSITIF bila grand total lebih besar, NEGATIF bila lebih kecil), contoh {\"name\":\"Pembulatan\",\"amount\":22}; "
+                + "hanya tampilkan item Pembulatan bila struk memang memuat pembulatan, jangan dibuat-buat bila tidak ada. "
+                + "Abaikan baris saldo dan kembalian (bukan barang); jangan jadikan TOTAL sebagai item. "
                 + "Hanya masukkan barang yang benar-benar dibeli dan potongan yang valid. "
-                + "Jumlah seluruh item (barang, diskon negatif, PPN, dan service) HARUS sama persis dengan total struk. "
+                + "Jumlah seluruh item (barang, diskon negatif, PPN, service, dan pembulatan) HARUS sama persis dengan total struk. "
                 + "Jika gambar BUKAN struk/invoice belanja (mis. foto orang, pemandangan, dokumen lain), "
                 + "kembalikan JSON dengan items KOSONG: {\"storeName\":\"\",\"total\":0,\"items\":[]}.";
     }
