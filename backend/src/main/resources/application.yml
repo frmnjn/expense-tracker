@@ -27,6 +27,8 @@ ai:
   timeout: ${AI_TIMEOUT:600}
   max-attempts: ${AI_MAX_ATTEMPTS:50}
   retry-delay-ms: ${AI_RETRY_DELAY_MS:2000}
+  fx-api: ${AI_FX_API:https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@%DATE%/v1/currencies/%CUR%.json}
+  fx-timeout-ms: ${AI_FX_TIMEOUT_MS:8000}
 
 notify:
   notifier-url: ${NOTIFIER_URL:}

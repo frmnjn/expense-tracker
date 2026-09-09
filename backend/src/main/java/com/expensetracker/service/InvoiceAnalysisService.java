@@ -5,6 +5,7 @@ import com.expensetracker.data.BudgetRepository;
 import com.expensetracker.data.InvoiceData;
 import com.expensetracker.data.InvoiceRepository;
 import com.expensetracker.model.AiAnalysisResponse;
+import com.expensetracker.model.AiInvoiceItem;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -54,6 +55,8 @@ public class InvoiceAnalysisService implements ApplicationRunner {
     private final Duration timeout;
     private final int maxAttempts;
     private final long retryDelayMs;
+    private final String fxApi;
+    private final Duration fxTimeout;
 
     @Value("${upload.dir:/app/uploads}")
     private String uploadDir;
@@ -65,7 +68,9 @@ public class InvoiceAnalysisService implements ApplicationRunner {
                                   @Value("${ai.model:gemini-3.5-flash-lite}") String model,
                                   @Value("${ai.timeout:600}") long timeoutSeconds,
                                   @Value("${ai.max-attempts:50}") int maxAttempts,
-                                  @Value("${ai.retry-delay-ms:2000}") long retryDelayMs) {
+                                  @Value("${ai.retry-delay-ms:2000}") long retryDelayMs,
+                                  @Value("${ai.fx-api:}") String fxApi,
+                                  @Value("${ai.fx-timeout-ms:8000}") long fxTimeoutMs) {
         this.invoiceRepository = invoiceRepository;
         this.budgetRepository = budgetRepository;
         this.objectMapper = objectMapper;
@@ -74,6 +79,8 @@ public class InvoiceAnalysisService implements ApplicationRunner {
         this.timeout = Duration.ofSeconds(timeoutSeconds);
         this.maxAttempts = maxAttempts < 1 ? 1 : maxAttempts;
         this.retryDelayMs = retryDelayMs < 0 ? 0 : retryDelayMs;
+        this.fxApi = fxApi == null ? "" : fxApi.trim();
+        this.fxTimeout = Duration.ofMillis(fxTimeoutMs < 1 ? 8000 : fxTimeoutMs);
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(10))
                 .build();
@@ -123,9 +130,7 @@ public class InvoiceAnalysisService implements ApplicationRunner {
             // Periode invoice TIDAK dipindah di sini — tetap di periode upload hingga submit,
             // agar invoice selalu tampil di daftar /scan periode berjalan.
             String cleanedDate = cleanDate(analysis.dateTime());
-            AiAnalysisResponse clean = new AiAnalysisResponse(
-                    analysis.storeName(), analysis.total(), cleanedDate, analysis.currency(),
-                    analysis.exchangeRate(), analysis.exchangeDate(), analysis.originalTotal(), analysis.items());
+            AiAnalysisResponse clean = applyCurrencyConversion(analysis, cleanedDate);
             invoiceRepository.updateAnalysis(invoiceId, InvoiceStatus.TO_REVIEW.value(),
                     objectMapper.writeValueAsString(clean));
         } catch (Exception e) {
@@ -137,6 +142,109 @@ public class InvoiceAnalysisService implements ApplicationRunner {
     /** Jalankan analisis secara sinkron (helper untuk unit test). */
     void analyzeForTest(String invoiceId) {
         analyze(invoiceId);
+    }
+
+    /**
+     * Terapkan konversi mata uang asing -> IDR memakai kurs dari API eksternal
+     * (fawazahmed0). Item & total dari AI diasumsikan dalam mata uang asli
+     * (original), lalu dikonversi ke IDR di sini. originalTotal dipertahankan
+     * dalam mata uang asli untuk kebutuhan UI. Bila kurs tidak bisa didapat
+     * (API error / mata uang tidak ada / tanggal future), exchangeRate=null
+     * dan nilai dibiarkan apa adanya (UI menampilkan "kurs tidak diketahui").
+     */
+    private AiAnalysisResponse applyCurrencyConversion(AiAnalysisResponse analysis, String cleanedDate) {
+        String currency = analysis.currency();
+        if (currency == null || currency.isBlank() || "IDR".equalsIgnoreCase(currency)) {
+            return copyWith(analysis, cleanedDate, analysis.total(), null, null);
+        }
+        String base = currency.toUpperCase(java.util.Locale.ROOT);
+        String exchangeDate = exchangeDateOf(cleanedDate);
+        Double rate = fetchRate(base, exchangeDate);
+        if (rate == null) {
+            LOGGER.warn("fx rate unavailable for {} at {}, keeping original amounts", base, exchangeDate);
+            return copyWith(analysis, cleanedDate, null, null, exchangeDate);
+        }
+        List<AiInvoiceItem> convertedItems = analysis.items() == null
+                ? null
+                : analysis.items().stream()
+                        .map(it -> toIdrItem(it, rate))
+                        .toList();
+        Long total = analysis.total() == null ? null : Math.round(analysis.total() * rate);
+        return copyWith(analysis, cleanedDate, total, rate, exchangeDate, convertedItems);
+    }
+
+    private AiInvoiceItem toIdrItem(AiInvoiceItem item, double rate) {
+        Long amount = item.amount() == null ? null : Math.round(item.amount() * rate);
+        return new AiInvoiceItem(item.name(), amount, item.suggestedBudget());
+    }
+
+    private static String exchangeDateOf(String cleanedDate) {
+        if (cleanedDate == null || cleanedDate.isBlank()) {
+            return java.time.LocalDate.now().toString();
+        }
+        String datePart = cleanedDate.substring(0, Math.min(10, cleanedDate.length()));
+        try {
+            return java.time.LocalDate.parse(datePart).toString();
+        } catch (Exception e) {
+            return java.time.LocalDate.now().toString();
+        }
+    }
+
+    private AiAnalysisResponse copyWith(AiAnalysisResponse a, String cleanedDate,
+                                        Long total, Double rate, String exchangeDate) {
+        return copyWith(a, cleanedDate, total, rate, exchangeDate, a.items());
+    }
+
+    private AiAnalysisResponse copyWith(AiAnalysisResponse a, String cleanedDate,
+                                        Long total, Double rate, String exchangeDate, List<AiInvoiceItem> items) {
+        return new AiAnalysisResponse(
+                a.storeName(), total, cleanedDate, a.currency(), rate, exchangeDate, a.originalTotal(), items);
+    }
+
+    /**
+     * Ambil kurs 1 {base} = IDR dari API kurs (fawazahmed0) untuk tanggal tertentu.
+     * Coba tanggal yang diminta; bila tanggal future/belum rilis, coba mundur
+     * hingga 5 hari sebelum menyerah. Mengembalikan null bila gagal.
+     */
+    Double fetchRate(String base, String date) {
+        if (fxApi.isBlank()) {
+            return null;
+        }
+        for (int back = 0; back <= 5; back++) {
+            String target = back == 0 ? date : java.time.LocalDate.parse(date).minusDays(back).toString();
+            try {
+                Double rate = fetchRateFor(base, target);
+                if (rate != null) {
+                    if (back > 0) {
+                        LOGGER.warn("fx date {} unavailable, using {} for {}", date, target, base);
+                    }
+                    return rate;
+                }
+            } catch (Exception e) {
+                LOGGER.warn("fx fetch failed for {} at {}: {}", base, target, e.getMessage());
+            }
+        }
+        return null;
+    }
+
+    private Double fetchRateFor(String base, String date) throws Exception {
+        String url = fxApi.replace("%DATE%", date).replace("%CUR%", base.toLowerCase(java.util.Locale.ROOT));
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(url))
+                .timeout(Duration.ofMillis(fxTimeout.toMillis()))
+                .GET()
+                .build();
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() < 200 || response.statusCode() >= 300) {
+            return null;
+        }
+        JsonNode root = objectMapper.readTree(response.body());
+        JsonNode baseNode = root.path(base.toLowerCase(java.util.Locale.ROOT)).path("idr");
+        if (baseNode.isMissingNode() || baseNode.asText().isBlank()) {
+            return null;
+        }
+        double rate = baseNode.asDouble();
+        return rate > 0 ? rate : null;
     }
 
     /**
@@ -286,20 +394,15 @@ public class InvoiceAnalysisService implements ApplicationRunner {
                 + "terbalik menjadi tahun 2014. Konversikan ke format YYYY-MM-DD HH:mm:ss (sertakan jam:menit:detik bila "
                 + "struk menampilkannya; bila hanya tanggal pakai YYYY-MM-DD; string kosong jika tidak ada).\","
                 + "\"currency\":\"kode mata uang struk (IDR default)\","
-                + "\"exchangeRate\":<angka desimal kurs 1 mata uang asli = IDR; hanya bila bukan IDR, jika tidak yakin gunakan null>,"
-                + "\"exchangeDate\":\"tanggal kurs (YYYY-MM-DD; hanya bila bukan IDR)\","
-                + "\"originalTotal\":<nilai total asli dalam mata uang struk; angka desimal bila bukan IDR, jika IDR gunakan null>,"
-                + "\"items\":[{\"name\":\"nama barang\",\"amount\":<harga integer dalam IDR>,"
+                + "\"originalTotal\":<nilai total asli dalam mata uang struk (desimal; null bila IDR)>,"
+                + "\"items\":[{\"name\":\"nama barang\",\"amount\":<harga integer dalam MATA UANG ASLI struk>,"
                 + "\"suggestedBudget\":\"<nama budget>\"}]}\n"
                 + "Daftar budget tersedia (pilih yang paling cocok per item; isi string kosong jika ragu):\n"
                 + budgetList + "\n"
-                + "Gunakan Rupiah (IDR). Deteksi mata uang struk: bila struk memakai mata uang selain IDR "
-                + "(mis. USD, SGD, MYR, dst), KONVERSI semua amount item dan total ke IDR memakai kurs untuk "
-                + "tanggal belanja (tentukan sendiri nilainya, jangan dibulatkan, bisa desimal). Isi \"currency\" "
-                + "dengan kode mata uang asli, \"exchangeRate\" dengan kurs (1 mata uang asli = IDR), "
-                + "\"exchangeDate\" dengan tanggal kurs, dan \"originalTotal\" dengan total asli dalam mata uang "
-                + "asli. Bila mata uang IDR, isi \"currency\"=\"IDR\" dan biarkan exchangeRate/exchangeDate/"
-                + "originalTotal bernilai null. Jika tidak yakin kursnya, isi exchangeRate null. "
+                + "Deteksi mata uang struk, isi \"currency\" dengan kode mata uang asli (IDR default). "
+                + "SELURUH jumlah (total dan setiap item) diisi dalam MATA UANG ASLI struk — JANGAN konversi ke "
+                + "IDR (konversi dilakukan sistem belakangan). Nilai \"originalTotal\" sama dengan total struk (desimal "
+                + "bila ada koma, integer bila tidak). Bila mata uang IDR, isi \"currency\"=\"IDR\" dan \"originalTotal\"=null. "
                 + "JANGAN abaikan diskon/promo: jika struk menampilkan potongan harga "
                 + "(Disk, Disc, Promo, Potongan, Voucher), masukkan sebagai item dengan amount NEGATIF, "
                 + "contoh {\"name\":\"Diskon\",\"amount\":-5000}. "
