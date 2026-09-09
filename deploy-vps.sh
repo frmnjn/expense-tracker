@@ -33,13 +33,14 @@ IMAGE="${IMAGE:-expense-tracker-backend-jvm:latest}"
 step() {
     local label="$1"
     shift
-    local start end
+    local start end ms
     start=$(date +%s%3N)
     echo ""
     echo "==> ${label}"
     "$@"
     end=$(date +%s%3N)
-    printf '    selesai dalam %.3fs\n' "$((end - start))e-3"
+    ms=$((end - start))
+    printf '    selesai dalam %d.%03ds\n' $((ms / 1000)) $((ms % 1000))
 }
 
 if ! ssh -o BatchMode=yes -o ConnectTimeout=10 "root@${VPS_HOST}" 'true' >/dev/null 2>&1; then
@@ -54,7 +55,7 @@ step "[1/5] git pull di VPS" \
 
 step "[2/5] build image backend JVM di VPS (${IMAGE})" \
     ssh -o BatchMode=yes "root@${VPS_HOST}" \
-    "cd ${VPS_DIR} && start=\$(date +%s%3N) && docker build -f backend/Dockerfile -t ${IMAGE} backend/ && printf \"    build selesai dalam %.3fs\\n\" \"\$((\$(date +%s%3N) - start))e-3\""
+    "cd ${VPS_DIR} && start=\$(date +%s%3N) && docker build -f backend/Dockerfile -t ${IMAGE} backend/ && ms=\$((\$(date +%s%3N) - start)) && printf \"    build selesai dalam %d.%03ds\\n\" \$((ms / 1000)) \$((ms % 1000))\""
 
 step "[3/5] docker compose up -d --build (rebuild frontend + start backend)" \
     ssh -o BatchMode=yes "root@${VPS_HOST}" \
