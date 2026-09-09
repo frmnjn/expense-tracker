@@ -245,9 +245,14 @@ function ScanPage() {
                       </Group>
                     )}
                     {inv.status === 'SUBMITTED' && (
-                      <Button size="xs" variant="light" fullWidth onClick={() => setViewingSubmitted(inv)}>
-                        Lihat rincian
-                      </Button>
+                      <Group justify="space-between" wrap="nowrap">
+                        <Badge color="green" variant="light">
+                          Selesai{retryLabel(inv)}
+                        </Badge>
+                        <Button size="compact-xs" variant="light" onClick={() => setViewingSubmitted(inv)}>
+                          Lihat rincian
+                        </Button>
+                      </Group>
                     )}
                     {inv.status === 'NOT_INVOICE' && (
                       <Group justify="space-between" wrap="nowrap">
