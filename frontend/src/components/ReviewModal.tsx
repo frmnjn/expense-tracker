@@ -155,7 +155,14 @@ function ReviewModal({
   }
 
   return (
-    <Modal opened onClose={onClose} title="Review Hasil Analisis" centered size="md">
+    <Modal
+      opened
+      onClose={onClose}
+      title="Review Hasil Analisis"
+      centered
+      size="md"
+      styles={{ body: { maxHeight: 'calc(100dvh - 140px)', overflowY: 'auto' } }}
+    >
       {isPending || data?.status === 'ANALYZING' ? (
         <Group justify="center" py="xl">
           <Loader />
