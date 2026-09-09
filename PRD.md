@@ -471,7 +471,7 @@ Frontend: http://localhost:3000 · Backend: http://localhost:8080
 
 Untuk **lokal**, `docker-compose.yml` menyertakan service `mysql` sendiri (self-contained); skema & seed budget dibuat otomatis oleh Flyway. Foto tersimpan di direktori `./uploads` (bind mount).
 
-Untuk **produksi**, `docker-compose.prod.yml` memakai MySQL VPS dan image backend **JVM** (`expense-tracker-backend-jvm:latest`). Image dibuild di PC (`./build-jvm.sh`) lalu ditransfer ke VPS (`./deploy-jvm.sh`); untuk dev lokal ada `docker-compose.local.yml` (build dari `backend/Dockerfile`). GraalVM Native (`Dockerfile.native`) hanya opsional/legacy.
+Untuk **produksi**, `docker-compose.prod.yml` memakai MySQL VPS dan image backend **JVM** (`expense-tracker-backend-jvm:latest`). Image dibuild langsung di VPS via `./deploy-vps.sh`; untuk dev lokal ada `docker-compose.local.yml` (build dari `backend/Dockerfile`). GraalVM Native (`Dockerfile.native`) hanya opsional/legacy.
 
 ---
 
