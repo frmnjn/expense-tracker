@@ -1,9 +1,12 @@
 package com.expensetracker.service;
 
+import com.expensetracker.data.ExpenseData;
+import com.expensetracker.data.ExpenseRepository;
 import com.expensetracker.data.InvoiceAnalysis;
 import com.expensetracker.data.InvoiceData;
 import com.expensetracker.data.InvoiceRepository;
 import com.expensetracker.model.AiAnalysisResponse;
+import com.expensetracker.model.ExpenseResponse;
 import com.expensetracker.model.InvoiceDetailResponse;
 import com.expensetracker.model.InvoiceResponse;
 import com.expensetracker.model.InvoicesResponse;
@@ -42,13 +45,15 @@ public class InvoiceService {
             InvoiceStatus.ERROR.value());
 
     private final InvoiceRepository invoiceRepository;
+    private final ExpenseRepository expenseRepository;
     private final ObjectMapper objectMapper;
 
     @Value("${upload.dir:/app/uploads}")
     private String uploadDir;
 
-    public InvoiceService(InvoiceRepository invoiceRepository, ObjectMapper objectMapper) {
+    public InvoiceService(InvoiceRepository invoiceRepository, ExpenseRepository expenseRepository, ObjectMapper objectMapper) {
         this.invoiceRepository = invoiceRepository;
+        this.expenseRepository = expenseRepository;
         this.objectMapper = objectMapper;
     }
 
@@ -92,15 +97,24 @@ public class InvoiceService {
                 LOGGER.warn("failed to parse analysis for invoice {}: {}", id, e.getMessage());
             }
         }
+        String status = analysis == null ? invoice.status() : analysis.status();
         return new InvoiceDetailResponse(
                 invoice.id(),
                 typeOf(invoice),
-                analysis == null ? invoice.status() : analysis.status(),
+                status,
                 analysis == null ? null : analysis.errorMessage(),
                 invoice.originalName(),
                 parsed,
                 analysis == null ? invoice.retryCount() : analysis.retryCount(),
-                analysis == null ? invoice.retryMax() : analysis.retryMax());
+                analysis == null ? invoice.retryMax() : analysis.retryMax(),
+                InvoiceStatus.SUBMITTED.value().equals(status)
+                        ? expenseRepository.findByInvoiceId(id).stream().map(this::toExpenseResponse).toList()
+                        : null);
+    }
+
+    private ExpenseResponse toExpenseResponse(ExpenseData e) {
+        return new ExpenseResponse(e.id(), e.dateTime(), e.name(), e.budgetName(), e.amount(),
+                e.description(), e.hasPhoto(), e.photoType(), e.photoName());
     }
 
     public String getInvoicePhotoPath(String id) {
