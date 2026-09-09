@@ -134,6 +134,7 @@ export interface InvoiceDetail {
   analysis?: AiAnalysis
   retryCount?: number
   retryMax?: number
+  expenses?: Expense[]
 }
 
 export interface BatchExpenseItem {

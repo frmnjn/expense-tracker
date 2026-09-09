@@ -44,13 +44,43 @@ class InvoiceServiceTest {
 
     @Mock
     private InvoiceRepository invoiceRepository;
+    @Mock
+    private com.expensetracker.data.ExpenseRepository expenseRepository;
 
     private InvoiceService invoiceService;
 
     @BeforeEach
     void setUp() {
-        invoiceService = new InvoiceService(invoiceRepository, new ObjectMapper());
+        invoiceService = new InvoiceService(invoiceRepository, expenseRepository, new ObjectMapper());
         ReflectionTestUtils.setField(invoiceService, "uploadDir", "/tmp");
+    }
+
+    @Test
+    void getDetail_submitted_shouldReturnExpenses() {
+        String id = "inv-sub";
+        when(invoiceRepository.findById(id))
+                .thenReturn(new InvoiceData(id, "2026-AGU-SEP", "a.jpg", "2026-09-05T13:31:00", "SUBMITTED", null));
+        when(invoiceRepository.findAnalysis(id))
+                .thenReturn(new com.expensetracker.data.InvoiceAnalysis(id, "SUBMITTED", null, null));
+        when(expenseRepository.findByInvoiceId(id)).thenReturn(List.of(
+                new com.expensetracker.data.ExpenseData("e1", "2026-AGU-SEP", "2026-09-05 13:31", "RamenYA", "Makan", 181300L, "A 1000, B 2000", false, true, id, "image", "a.jpg")));
+
+        var detail = invoiceService.getDetail(id);
+        assertEquals(1, detail.expenses().size());
+        assertEquals("Makan", detail.expenses().get(0).budget());
+        assertEquals(Long.valueOf(181300L), detail.expenses().get(0).amount());
+    }
+
+    @Test
+    void getDetail_toReview_shouldNotReturnExpenses() {
+        String id = "inv-review";
+        when(invoiceRepository.findById(id))
+                .thenReturn(new InvoiceData(id, "2026-AGU-SEP", "a.jpg", "2026-09-05T13:31:00", "TO_REVIEW", null));
+        when(invoiceRepository.findAnalysis(id))
+                .thenReturn(new com.expensetracker.data.InvoiceAnalysis(id, "TO_REVIEW", "{}", null));
+
+        var detail = invoiceService.getDetail(id);
+        assertEquals(null, detail.expenses());
     }
 
     @Test
