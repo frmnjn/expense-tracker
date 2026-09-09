@@ -19,7 +19,7 @@
 
 set -euo pipefail
 
-VPS_HOST="${VPS_HOST:-expense.example.com}"
+VPS_HOST="${VPS_HOST:-example.com}"
 VPS_DIR="${VPS_DIR:-/opt/expense-tracker}"
 IMAGE="${IMAGE:-expense-tracker-backend-native:latest}"
 TARBALL="${TARBALL:-/tmp/backend-native.tar.gz}"
