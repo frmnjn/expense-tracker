@@ -4,8 +4,8 @@
 #
 # Deploy perubahan aplikasi (frontend rebuild + restart backend) ke VPS.
 # Digunakan untuk perubahan frontend/notifier/compose TANPA rebuild image
-# native backend. Kalau kode backend (Java) berubah, pakai ./deploy-native.sh
-# (transfer image native).
+# backend. Kalau kode backend (Java) berubah, pakai ./deploy-jvm.sh
+# (build image JVM di PC, lalu transfer ke VPS).
 #
 # Prasyarat:
 #   - Perubahan sudah di-commit & push ke origin/master.

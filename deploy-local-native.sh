@@ -4,8 +4,9 @@
 #
 # Build & jalankan seluruh stack secara lokal dengan BACKEND NATIVE (GraalVM).
 #
-# Berbeda dengan deploy-local.sh (JVM fallback), skrip ini membuild image
-# native asli via backend/Dockerfile.native lalu menjalankan docker-compose.
+# Native sekarang OPSIONAL/legacy (default produksi = JVM). Skrip ini membuild
+# image native via backend/Dockerfile.native, lalu menjalankan docker-compose
+# dengan BACKEND_IMAGE=expense-tracker-backend-native:latest.
 #
 # Alur:
 #   1. Jalankan unit test backend (bisa dilewati dengan SKIP_TESTS=1)
@@ -49,8 +50,8 @@ fi
 echo "==> [3/5] build image backend native via build-native.sh"
 IMAGE="${BACKEND_IMAGE}" "${SCRIPT_DIR}/build-native.sh"
 
-echo "==> [4/5] docker compose up --build -d"
-(cd "${SCRIPT_DIR}" && docker compose up --build -d)
+echo "==> [4/5] docker compose up --build -d (BACKEND_IMAGE=${BACKEND_IMAGE})"
+(cd "${SCRIPT_DIR}" && BACKEND_IMAGE="${BACKEND_IMAGE}" docker compose up --build -d)
 
 echo "==> [5/5] bersihkan image dangling"
 docker image prune -f >/dev/null 2>&1 || true
