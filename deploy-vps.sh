@@ -27,6 +27,7 @@ set -euo pipefail
 VPS_HOST="${VPS_HOST:-frmnjn.my.id}"
 VPS_DIR="${VPS_DIR:-/root/expense-tracker}"
 IMAGE="${IMAGE:-expense-tracker-backend-jvm:latest}"
+TOTAL_MS=0
 
 # step <label> <bash-cmd...>
 # Menjalankan perintah dan menampilkan durasi step (dengan millis).
@@ -40,6 +41,7 @@ step() {
     "$@"
     end=$(date +%s%3N)
     ms=$((end - start))
+    TOTAL_MS=$((TOTAL_MS + ms))
     printf '    selesai dalam %d.%03ds\n' $((ms / 1000)) $((ms % 1000))
 }
 
@@ -68,6 +70,8 @@ step "[5/5] verifikasi" \
     ssh -o BatchMode=yes "root@${VPS_HOST}" \
     "cd ${VPS_DIR} && docker compose -f docker-compose.prod.yml ps"
 
+echo ""
+printf 'Total semua step: %d.%03ds\n' $((TOTAL_MS / 1000)) $((TOTAL_MS % 1000))
 echo ""
 echo "Deploy VPS selesai. Cek health:"
 echo "  curl -s http://localhost:23824/api/health"

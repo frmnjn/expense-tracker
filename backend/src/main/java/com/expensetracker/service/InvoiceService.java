@@ -98,7 +98,9 @@ public class InvoiceService {
                 analysis == null ? invoice.status() : analysis.status(),
                 analysis == null ? null : analysis.errorMessage(),
                 invoice.originalName(),
-                parsed);
+                parsed,
+                analysis == null ? invoice.retryCount() : analysis.retryCount(),
+                analysis == null ? invoice.retryMax() : analysis.retryMax());
     }
 
     public String getInvoicePhotoPath(String id) {
@@ -226,7 +228,7 @@ public class InvoiceService {
 
     private InvoiceResponse toResponse(InvoiceData invoice) {
         return new InvoiceResponse(invoice.id(), invoice.createdAt(), invoice.status(), typeOf(invoice),
-                invoice.originalName());
+                invoice.originalName(), invoice.retryCount(), invoice.retryMax());
     }
 
     private static String extensionOf(String filename) {

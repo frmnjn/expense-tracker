@@ -841,3 +841,41 @@ Menambahkan trace id (`X-Trace-Id`) di setiap request agar log satu request bisa
 * [x] Log backend & notifier memuat `trace.id`.
 * [x] Deploy: backend (JVM) + frontend di VPS, notifier di STB.
 
+
+## Phase 26 - Auto-Retry Analisa AI + Delete Scan Invoice
+
+Delete struk scan (hanya status TO_REVIEW / NOT_INVOICE / ERROR) dan auto-retry
+analisa AI untuk error transien Gemini (HTTP 429/5xx) dengan progress yang
+tampil di UI.
+
+### Backend — Delete Scan Invoice
+
+* [x] `DELETE /invoices/{id}` — hanya izinkan status `TO_REVIEW`/`NOT_INVOICE`/`ERROR`; hard delete + hapus file foto.
+* [x] `InvoiceService.deleteScanInvoice` (guard status + `deleteIfUnused`), controller endpoint.
+* [x] Unit test `InvoiceServiceTest` (status boleh hapus, status dilarang, invoice tak ditemukan, masih dipakai expense).
+
+### Backend — Auto-Retry Analisa AI
+
+* [x] Config `ai.max-attempts` (default 50) & `ai.retry-delay-ms` (default 2000) di `application.yml`.
+* [x] Migration `V18__invoice_ai_retry.sql` (kolom `retry_count`, `retry_max` di `invoices`).
+* [x] `InvoiceRepository`: `initRetry`, `incrementRetry`, `resetRetry`.
+* [x] `InvoiceAnalysisService`: loop retry untuk `RetryableException` (429/5xx) & koneksi; gagal permanen (4xx lain) tidak di-retry; `analyzeForTest` helper.
+* [x] `RetryableException` baru.
+* [x] Response `InvoiceResponse`/`InvoiceDetailResponse` mengembalikan `retryCount`/`retryMax`.
+* [x] Unit test `InvoiceAnalysisServiceTest` (sukses setelah 503, kehabisan max, gagal permanent tidak retry).
+
+### Backend — Model AI
+
+* [x] Upgrade model `gemini-3.5-flash-lite` → `gemini-3.7-flash` → `gemini-3.8-flash` (via `backend/.env` di VPS).
+* [x] Prompt AI memuat PPN/service sebagai item, item `Pembulatan` bila ada, item `Penyesuaian` penyeimbang.
+* [x] `AI_MODEL_LOG.md` mencatat riwayat & rollback model.
+
+### Frontend
+
+* [x] Tipe `Invoice`/`InvoiceDetail` menambah `retryCount`/`retryMax`.
+* [x] ScanPage: tampilkan progres retry (`Retry n/max`) saat `ANALYZING`, dan `(n/max)` saat `ERROR`.
+* [x] Tombol "Coba lagi" tetap ada sebagai jaring pengaman manual.
+
+### Infra / Docs
+
+* [x] **Note:** `docker compose restart` tidak membaca ulang `env_file`; gunakan `docker compose up -d` untuk menerapkan perubahan `AI_MODEL`.

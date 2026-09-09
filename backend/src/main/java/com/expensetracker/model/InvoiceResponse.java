@@ -9,5 +9,7 @@ public record InvoiceResponse(
         @JsonProperty("createdAt") String createdAt,
         @JsonProperty("status") String status,
         @JsonProperty("type") String type,
-        @JsonProperty("name") String name) {
+        @JsonProperty("name") String name,
+        @JsonProperty("retryCount") Integer retryCount,
+        @JsonProperty("retryMax") Integer retryMax) {
 }
