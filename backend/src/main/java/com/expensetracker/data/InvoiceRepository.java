@@ -30,14 +30,14 @@ public class InvoiceRepository {
 
     public List<InvoiceData> findByPeriod(String period) {
         return jdbcTemplate.query(
-                "SELECT id, period, photo_path, created_at, status, original_name FROM invoices "
+                "SELECT id, period, photo_path, created_at, status, original_name, retry_count, retry_max FROM invoices "
                         + "WHERE period = ? AND deleted = FALSE ORDER BY created_at DESC, id",
                 this::mapRow, period);
     }
 
     public List<InvoiceData> findByPeriodScanOnly(String period) {
         return jdbcTemplate.query(
-                "SELECT id, period, photo_path, created_at, status, original_name FROM invoices "
+                "SELECT id, period, photo_path, created_at, status, original_name, retry_count, retry_max FROM invoices "
                         + "WHERE period = ? AND deleted = FALSE AND scan_flow = TRUE "
                         + "ORDER BY created_at DESC, id",
                 this::mapRow, period);
@@ -46,7 +46,7 @@ public class InvoiceRepository {
     /** Semua invoice alur scan (tanpa filter periode), terbaru dulu. */
     public List<InvoiceData> findAllScan() {
         return jdbcTemplate.query(
-                "SELECT id, period, photo_path, created_at, status, original_name FROM invoices "
+                "SELECT id, period, photo_path, created_at, status, original_name, retry_count, retry_max FROM invoices "
                         + "WHERE deleted = FALSE AND scan_flow = TRUE ORDER BY created_at DESC, id",
                 this::mapRow);
     }
@@ -57,7 +57,7 @@ public class InvoiceRepository {
 
     public InvoiceData findById(String id) {
         List<InvoiceData> rows = jdbcTemplate.query(
-                "SELECT id, period, photo_path, created_at, status, original_name FROM invoices "
+                "SELECT id, period, photo_path, created_at, status, original_name, retry_count, retry_max FROM invoices "
                         + "WHERE id = ? AND deleted = FALSE",
                 this::mapRow, id);
         return rows.isEmpty() ? null : rows.get(0);
@@ -72,14 +72,31 @@ public class InvoiceRepository {
 
     public InvoiceAnalysis findAnalysis(String id) {
         List<InvoiceAnalysis> rows = jdbcTemplate.query(
-                "SELECT id, status, analysis_json, error_message FROM invoices WHERE id = ? AND deleted = FALSE",
+                "SELECT id, status, analysis_json, error_message, retry_count, retry_max FROM invoices WHERE id = ? AND deleted = FALSE",
                 (rs, rowNum) -> new InvoiceAnalysis(
                         rs.getString("id"),
                         rs.getString("status"),
                         rs.getString("analysis_json"),
-                        rs.getString("error_message")),
+                        rs.getString("error_message"),
+                        rs.getInt("retry_count"),
+                        rs.getInt("retry_max")),
                 id);
         return rows.isEmpty() ? null : rows.get(0);
+    }
+
+    /** Atur ulang counter retry saat analisa mulai (mis. trigger/retry baru). */
+    public void initRetry(String id, int retryMax) {
+        jdbcTemplate.update("UPDATE invoices SET retry_count = 0, retry_max = ? WHERE id = ?", retryMax, id);
+    }
+
+    /** Tambah counter retry pada satu percobaan gagal. */
+    public void incrementRetry(String id) {
+        jdbcTemplate.update("UPDATE invoices SET retry_count = retry_count + 1 WHERE id = ?", id);
+    }
+
+    /** Reset counter retry saat analisa sukses. */
+    public void resetRetry(String id) {
+        jdbcTemplate.update("UPDATE invoices SET retry_count = 0 WHERE id = ?", id);
     }
 
     public void updateStatus(String id, String status) {
@@ -139,6 +156,8 @@ public class InvoiceRepository {
                 rs.getString("photo_path"),
                 createdAt == null ? null : createdAt.toLocalDateTime().toString(),
                 rs.getString("status"),
-                rs.getString("original_name"));
+                rs.getString("original_name"),
+                rs.getInt("retry_count"),
+                rs.getInt("retry_max"));
     }
 }

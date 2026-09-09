@@ -392,3 +392,31 @@ Jangan mengubah file yang tidak berhubungan.
 Jangan melakukan refactor besar ketika sedang mengerjakan fitur kecil.
 
 > **Jangan commit/push tanpa perintah eksplisit dari user.**
+
+## Toolchain Lokal (STB Armbian — mesin dev ini)
+
+> **Khusus mesin dev ini (STB Armbian).** Path toolchain di bawah hanya berlaku
+> di device ini. Di mesin lain (mis. VPS, PC) lokasinya bisa berbeda — cek
+> dahulu apakah Maven/JDK/npm tersedia sebelum memakai path `/data/dev`.
+
+Untuk menjalankan build/test di mesin ini (tanpa Docker), gunakan toolchain yang
+tersimpan di `/data/dev`. Ekspor sebelum menjalankan Maven/Java (shell tool yang
+non-interaktif tidak memuat `.bashrc`):
+
+```bash
+export JAVA_HOME=/data/dev/jdk
+export PATH="/data/dev/apache-maven-3.9.11/bin:$JAVA_HOME/bin:$PATH"
+```
+
+* JDK: `/data/dev/jdk` (Temurin 25 — default image backend JVM).
+* Maven: `/data/dev/apache-maven-3.9.11`.
+* Node/npm: via nvm di `/data/dev/nvm` (sudah terpasang).
+
+Contoh menjalankan test backend dari repo ini:
+
+```bash
+cd backend && mvn -q -Dtest=InvoiceServiceTest test
+```
+
+Build/test backend lokal memakai Maven JDK dari `/data/dev`. Frontend memakai
+`npm`/`node` dari nvm (lihat `frontend/package.json`).

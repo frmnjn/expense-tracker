@@ -100,6 +100,8 @@ export interface Invoice {
   status: 'ANALYZING' | 'TO_REVIEW' | 'SUBMITTED' | 'ERROR' | 'NOT_INVOICE' | string
   type: 'image' | 'pdf'
   name?: string
+  retryCount?: number
+  retryMax?: number
 }
 
 export interface InvoicesResponse {
@@ -126,6 +128,8 @@ export interface InvoiceDetail {
   errorMessage?: string
   name?: string
   analysis?: AiAnalysis
+  retryCount?: number
+  retryMax?: number
 }
 
 export interface BatchExpenseItem {

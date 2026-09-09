@@ -10,5 +10,7 @@ public record InvoiceDetailResponse(
         @JsonProperty("status") String status,
         @JsonProperty("errorMessage") String errorMessage,
         @JsonProperty("name") String name,
-        @JsonProperty("analysis") AiAnalysisResponse analysis) {
+        @JsonProperty("analysis") AiAnalysisResponse analysis,
+        @JsonProperty("retryCount") Integer retryCount,
+        @JsonProperty("retryMax") Integer retryMax) {
 }
