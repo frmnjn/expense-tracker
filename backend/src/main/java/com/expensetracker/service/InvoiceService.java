@@ -11,6 +11,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 import tools.jackson.databind.ObjectMapper;
 
@@ -33,6 +34,12 @@ public class InvoiceService {
     private static final Logger LOGGER = LoggerFactory.getLogger(InvoiceService.class);
 
     private static final Set<String> ALLOWED_EXTENSIONS = Set.of("jpg", "jpeg", "png", "pdf");
+
+    /** Status scan yang boleh dihapus dari halaman scan (belum pernah di-submit jadi expense). */
+    private static final Set<String> DELETABLE_SCAN_STATUSES = Set.of(
+            InvoiceStatus.TO_REVIEW.value(),
+            InvoiceStatus.NOT_INVOICE.value(),
+            InvoiceStatus.ERROR.value());
 
     private final InvoiceRepository invoiceRepository;
     private final ObjectMapper objectMapper;
@@ -166,6 +173,22 @@ public class InvoiceService {
      * Menghapus invoice + file foto jika tidak lagi dipakai expense mana pun.
      * Mengembalikan true jika dihapus, false jika masih dipakai.
      */
+    /**
+     * Menghapus struk dari halaman scan. Hanya diizinkan untuk status yang belum
+     * menjadi expense (TO_REVIEW/NOT_INVOICE/ERROR); struk yang masih diproses
+     * AI (ANALYZING) atau sudah disubmit (SUBMITTED) ditolak.
+     */
+    @Transactional
+    public void deleteScanInvoice(String id) {
+        InvoiceData invoice = requireInvoice(id);
+        if (!DELETABLE_SCAN_STATUSES.contains(invoice.status())) {
+            throw new ValidationException("Struk yang masih diproses atau sudah disubmit tidak dapat dihapus");
+        }
+        if (!deleteIfUnused(id)) {
+            throw new ValidationException("Invoice is used by expense and cannot be deleted");
+        }
+    }
+
     public boolean deleteIfUnused(String id) {
         if (id == null || id.isBlank()) {
             return false;

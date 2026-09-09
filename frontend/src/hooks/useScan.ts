@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useState } from 'react'
 import {
   createExpensesBatch,
+  deleteInvoice,
   getInvoiceDetail,
   getInvoices,
   retryInvoiceAnalysis,
@@ -48,6 +49,17 @@ export function useRetryAnalysis() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => retryInvoiceAnalysis(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['scan-invoices'] })
+      queryClient.invalidateQueries({ queryKey: ['invoice-detail'] })
+    },
+  })
+}
+
+export function useDeleteInvoice() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => deleteInvoice(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['scan-invoices'] })
       queryClient.invalidateQueries({ queryKey: ['invoice-detail'] })
