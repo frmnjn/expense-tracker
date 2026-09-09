@@ -242,8 +242,14 @@ public class InvoiceAnalysisService implements ApplicationRunner {
                 + "Gunakan Rupiah. JANGAN abaikan diskon/promo: jika struk menampilkan potongan harga "
                 + "(Disk, Disc, Promo, Potongan, Voucher), masukkan sebagai item dengan amount NEGATIF, "
                 + "contoh {\"name\":\"Diskon\",\"amount\":-5000}. "
-                + "Abaikan baris saldo, kembalian, PPN, pembulatan, dan TOTAL (bukan barang). "
+                + "JANGAN abaikan PPN/Pajak dan service charge: jika struk menampilkannya, masukkan sebagai "
+                + "item terpisah dengan amount POSITIF, contoh {\"name\":\"PPN 11%\",\"amount\":900,"
+                + "\"suggestedBudget\":\"<budget barang dominan>\"} dan {\"name\":\"Service\",\"amount\":5000,"
+                + "\"suggestedBudget\":\"<budget barang dominan>\"}. Untuk suggestedBudget item PPN/service, "
+                + "ikuti budget yang paling cocok dengan jenis belanja struk tersebut; isi string kosong jika ragu. "
+                + "Abaikan baris saldo, kembalian, dan pembulatan (bukan barang); jangan jadikan TOTAL sebagai item. "
                 + "Hanya masukkan barang yang benar-benar dibeli dan potongan yang valid. "
+                + "Jumlah seluruh item (barang, diskon negatif, PPN, dan service) HARUS sama persis dengan total struk. "
                 + "Jika gambar BUKAN struk/invoice belanja (mis. foto orang, pemandangan, dokumen lain), "
                 + "kembalikan JSON dengan items KOSONG: {\"storeName\":\"\",\"total\":0,\"items\":[]}.";
     }
