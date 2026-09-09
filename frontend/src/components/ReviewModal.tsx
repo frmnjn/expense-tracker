@@ -31,6 +31,8 @@ interface EditItem {
 
 const MAX_DESC = 1000
 
+const DEFAULT_CURRENCY = 'IDR'
+
 function toEditItems(analysis: { items: { name: string; amount: number; suggestedBudget?: string }[] } | undefined, budgetNames: string[]): EditItem[] {
   return (analysis?.items ?? []).map((it, i) => ({
     key: `${Date.now()}-${i}`,
@@ -38,6 +40,16 @@ function toEditItems(analysis: { items: { name: string; amount: number; suggeste
     amount: Number(it.amount) || 0,
     budget: it.suggestedBudget && budgetNames.includes(it.suggestedBudget) ? it.suggestedBudget : null,
   }))
+}
+
+/** Format angka desimal id-ID (koma), tanpa simbol, tanpa pembulatan. */
+function formatNumber(value: number): string {
+  return new Intl.NumberFormat('id-ID', { maximumFractionDigits: 10 }).format(value)
+}
+
+/** Format kurs: Rp{angka} (tanpa simbol, tanpa pembulatan). */
+function formatRate(rate: number): string {
+  return `Rp${formatNumber(rate)}`
 }
 
 function ReviewModal({
@@ -61,6 +73,13 @@ function ReviewModal({
 
   const analysis = data?.status === 'TO_REVIEW' ? data.analysis : undefined
   const storeName = analysis?.storeName?.trim() || 'Belanja'
+
+  // Konversi mata uang: bila currency bukan IDR, tampilkan info kurs & nilau asli.
+  const currency = analysis?.currency?.trim() || DEFAULT_CURRENCY
+  const isConverted = currency.toUpperCase() !== DEFAULT_CURRENCY
+  const exchangeRate = analysis?.exchangeRate
+  const exchangeDate = analysis?.exchangeDate
+  const originalTotal = analysis?.originalTotal
 
   const initialDateTime = useMemo(() => {
     const now = dayjs()
@@ -123,9 +142,14 @@ function ReviewModal({
       .map((it) => `${it.name.trim()} ${formatCurrency(Number(it.amount))}`)
       .filter(Boolean)
       .join(', ')
-    if (full.length <= MAX_DESC) return full
-    const truncated = full.slice(0, MAX_DESC).replace(/,\s*$/, '')
-    return `${truncated}…`
+    const base = full.length <= MAX_DESC ? full : `${full.slice(0, MAX_DESC).replace(/,\s*$/, '')}…`
+    if (!isConverted) return base
+    const rateStr = exchangeRate ? `Kurs 1 ${currency} = ${formatRate(exchangeRate)}` : 'kurs tidak diketahui'
+    const dateStr = exchangeDate ? ` pada ${exchangeDate}` : ''
+    const originalStr = originalTotal ? `Nilai asli: ${formatNumber(originalTotal)} ${currency}.` : ''
+    const note = `Hasil konversi dari ${currency} ke IDR. ${rateStr}${dateStr}. ${originalStr}`
+    const combined = `${note} ${base}`
+    return combined.length <= MAX_DESC ? combined : `${combined.slice(0, MAX_DESC).replace(/,\s*$/, '')}…`
   }
 
   const handleSubmit = () => {
@@ -226,6 +250,28 @@ function ReviewModal({
               </Stack>
             </Group>
           </Paper>
+
+          {isConverted && (
+            <Paper withBorder p="sm" radius="md" style={{ background: 'rgba(255, 193, 7, 0.12)' }}>
+              <Text size="xs" fw={600} c="orange">
+                ⚠️ Ditampilkan dalam IDR. Hasil konversi dari {currency} ke IDR (kira-kira, tidak persis).
+              </Text>
+              {exchangeRate && exchangeDate ? (
+                <Text size="xs" c="dimmed" mt={4}>
+                  Kurs pada {exchangeDate} = {formatRate(exchangeRate)} per 1 {currency}
+                </Text>
+              ) : (
+                <Text size="xs" c="dimmed" mt={4}>
+                  Kurs tidak diketahui, periksa manual.
+                </Text>
+              )}
+              {originalTotal ? (
+                <Text size="xs" c="dimmed" mt={2}>
+                  Total asli: {formatNumber(originalTotal)} {currency}
+                </Text>
+              ) : null}
+            </Paper>
+          )}
 
           <Text size="sm" fw={600}>
             Pengeluaran per budget

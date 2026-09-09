@@ -124,7 +124,8 @@ public class InvoiceAnalysisService implements ApplicationRunner {
             // agar invoice selalu tampil di daftar /scan periode berjalan.
             String cleanedDate = cleanDate(analysis.dateTime());
             AiAnalysisResponse clean = new AiAnalysisResponse(
-                    analysis.storeName(), analysis.total(), cleanedDate, analysis.items());
+                    analysis.storeName(), analysis.total(), cleanedDate, analysis.currency(),
+                    analysis.exchangeRate(), analysis.exchangeDate(), analysis.originalTotal(), analysis.items());
             invoiceRepository.updateAnalysis(invoiceId, InvoiceStatus.TO_REVIEW.value(),
                     objectMapper.writeValueAsString(clean));
         } catch (Exception e) {
@@ -279,16 +280,27 @@ public class InvoiceAnalysisService implements ApplicationRunner {
                 : String.join("\n", budgets);
         return "Kamu adalah asisten pencatat keuangan. Baca struk/invoice berikut dan ekstrak item belanjanya.\n"
                 + "Berikan output HANYA JSON tanpa teks lain, dengan struktur:\n"
-                + "{\"storeName\":\"nama toko\",\"total\":<jumlah total integer>,"
+                + "{\"storeName\":\"nama toko\",\"total\":<jumlah total integer dalam IDR>,"
                 + "\"dateTime\":\"tanggal & jam belanja dari struk. PENTING: struk Indonesia biasanya menulis tanggal "
                 + "dengan format dd-mm-yyyy (hari-bulan-tahun), contoh '14-08-2026' berarti 14 Agustus 2026, JANGAN "
                 + "terbalik menjadi tahun 2014. Konversikan ke format YYYY-MM-DD HH:mm:ss (sertakan jam:menit:detik bila "
                 + "struk menampilkannya; bila hanya tanggal pakai YYYY-MM-DD; string kosong jika tidak ada).\","
-                + "\"items\":[{\"name\":\"nama barang\",\"amount\":<harga integer>,"
+                + "\"currency\":\"kode mata uang struk (IDR default)\","
+                + "\"exchangeRate\":<angka desimal kurs 1 mata uang asli = IDR; hanya bila bukan IDR, jika tidak yakin gunakan null>,"
+                + "\"exchangeDate\":\"tanggal kurs (YYYY-MM-DD; hanya bila bukan IDR)\","
+                + "\"originalTotal\":<nilai total asli dalam mata uang struk; angka desimal bila bukan IDR, jika IDR gunakan null>,"
+                + "\"items\":[{\"name\":\"nama barang\",\"amount\":<harga integer dalam IDR>,"
                 + "\"suggestedBudget\":\"<nama budget>\"}]}\n"
                 + "Daftar budget tersedia (pilih yang paling cocok per item; isi string kosong jika ragu):\n"
                 + budgetList + "\n"
-                + "Gunakan Rupiah. JANGAN abaikan diskon/promo: jika struk menampilkan potongan harga "
+                + "Gunakan Rupiah (IDR). Deteksi mata uang struk: bila struk memakai mata uang selain IDR "
+                + "(mis. USD, SGD, MYR, dst), KONVERSI semua amount item dan total ke IDR memakai kurs untuk "
+                + "tanggal belanja (tentukan sendiri nilainya, jangan dibulatkan, bisa desimal). Isi \"currency\" "
+                + "dengan kode mata uang asli, \"exchangeRate\" dengan kurs (1 mata uang asli = IDR), "
+                + "\"exchangeDate\" dengan tanggal kurs, dan \"originalTotal\" dengan total asli dalam mata uang "
+                + "asli. Bila mata uang IDR, isi \"currency\"=\"IDR\" dan biarkan exchangeRate/exchangeDate/"
+                + "originalTotal bernilai null. Jika tidak yakin kursnya, isi exchangeRate null. "
+                + "JANGAN abaikan diskon/promo: jika struk menampilkan potongan harga "
                 + "(Disk, Disc, Promo, Potongan, Voucher), masukkan sebagai item dengan amount NEGATIF, "
                 + "contoh {\"name\":\"Diskon\",\"amount\":-5000}. "
                 + "JANGAN abaikan PPN/Pajak dan service charge: jika struk menampilkannya, masukkan sebagai "

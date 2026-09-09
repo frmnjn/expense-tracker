@@ -118,6 +118,10 @@ export interface AiAnalysis {
   storeName?: string
   total?: number
   dateTime?: string
+  currency?: string
+  exchangeRate?: number
+  exchangeDate?: string
+  originalTotal?: number
   items: AiInvoiceItem[]
 }
 
