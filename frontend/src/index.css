@@ -140,7 +140,9 @@ body {
     opacity: 1 !important;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
-    z-index: 1000 !important;
+    /* Di bawah z-index modal Mantine (200) agar modal & dropdown (budget/tanggal)
+       tidak ketutupan bottom nav, tapi tetap di atas konten (z-index modal > 130). */
+    z-index: 130 !important;
   }
 
   .app-navbar > .mantine-Stack-root {
