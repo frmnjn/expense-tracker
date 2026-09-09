@@ -243,14 +243,9 @@ function ScanPage() {
                       </Group>
                     )}
                     {inv.status === 'SUBMITTED' && (
-                      <Group justify="space-between" wrap="nowrap">
-                        <Badge color="green" variant="light">
-                          Selesai{retryLabel(inv)}
-                        </Badge>
-                        <ActionIcon variant="light" color="red" size="md" onClick={() => setDeleting(inv)} aria-label="Hapus struk">
-                          🗑
-                        </ActionIcon>
-                      </Group>
+                      <Badge color="green" variant="light">
+                        Selesai{retryLabel(inv)}
+                      </Badge>
                     )}
                     {inv.status === 'NOT_INVOICE' && (
                       <Group justify="space-between" wrap="nowrap">
