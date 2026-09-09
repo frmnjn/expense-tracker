@@ -1,5 +1,6 @@
 import { useMemo, useRef, useState } from 'react'
 import {
+  ActionIcon,
   Badge,
   Button,
   Container,
@@ -23,6 +24,7 @@ import { getInvoicePhotoUrl } from '../services/expense'
 import { getErrorMessage } from '../utils/error'
 import { InvoiceThumb } from '../components/InvoiceThumb'
 import ReviewModal from '../components/ReviewModal'
+import DeleteInvoiceModal from '../components/DeleteInvoiceModal'
 import { AppPagination } from '../components/AppPagination'
 import { useToast } from '../components/Toast'
 import type { Invoice } from '../types/expense'
@@ -46,6 +48,7 @@ function periodOf(date: Date): string {
 function ScanPage() {
   const [reviewId, setReviewId] = useState<string | null>(null)
   const [viewingInvoice, setViewingInvoice] = useState<Invoice | null>(null)
+  const [deleting, setDeleting] = useState<Invoice | null>(null)
   const cameraRef = useRef<HTMLInputElement>(null)
   const galleryRef = useRef<HTMLInputElement>(null)
   const isMobile = useMediaQuery('(max-width: 48em)')
@@ -218,9 +221,14 @@ function ScanPage() {
                       </Group>
                     )}
                     {inv.status === 'TO_REVIEW' && (
-                      <Button size="xs" variant="light" fullWidth onClick={() => setReviewId(inv.id)}>
-                        Review
-                      </Button>
+                      <Group justify="space-between" wrap="nowrap">
+                        <Button size="xs" variant="light" style={{ flex: 1, minWidth: 0 }} onClick={() => setReviewId(inv.id)}>
+                          Review
+                        </Button>
+                        <ActionIcon variant="light" color="red" size="md" onClick={() => setDeleting(inv)} aria-label="Hapus struk">
+                          🗑
+                        </ActionIcon>
+                      </Group>
                     )}
                     {inv.status === 'SUBMITTED' && (
                       <Badge color="green" variant="light">
@@ -228,18 +236,28 @@ function ScanPage() {
                       </Badge>
                     )}
                     {inv.status === 'NOT_INVOICE' && (
-                      <Badge color="orange" variant="light">
-                        Bukan Invoice
-                      </Badge>
+                      <Group justify="space-between" wrap="nowrap">
+                        <Badge color="orange" variant="light">
+                          Bukan Invoice
+                        </Badge>
+                        <ActionIcon variant="light" color="red" size="md" onClick={() => setDeleting(inv)} aria-label="Hapus struk">
+                          🗑
+                        </ActionIcon>
+                      </Group>
                     )}
                     {inv.status === 'ERROR' && (
                       <Group justify="space-between" wrap="nowrap">
-                        <Text size="xs" c="red">
-                          Gagal
-                        </Text>
-                        <Button size="compact-xs" variant="subtle" color="red" onClick={() => handleRetry(inv.id)}>
-                          Coba lagi
-                        </Button>
+                        <Group gap={4} wrap="nowrap">
+                          <Text size="xs" c="red">
+                            Gagal
+                          </Text>
+                          <Button size="compact-xs" variant="subtle" color="red" onClick={() => handleRetry(inv.id)}>
+                            Coba lagi
+                          </Button>
+                        </Group>
+                        <ActionIcon variant="light" color="red" size="md" onClick={() => setDeleting(inv)} aria-label="Hapus struk">
+                          🗑
+                        </ActionIcon>
                       </Group>
                     )}
                   </Stack>
@@ -276,6 +294,8 @@ function ScanPage() {
           onSubmitted={() => setReviewId(null)}
         />
       )}
+
+      <DeleteInvoiceModal invoice={deleting} onClose={() => setDeleting(null)} />
 
       <Modal
         opened={!!viewingInvoice}

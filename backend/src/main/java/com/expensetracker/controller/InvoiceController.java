@@ -12,6 +12,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -117,6 +118,22 @@ public class InvoiceController {
                     .body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
             LOGGER.error("internal error retrying invoice analysis", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Internal server error"));
+        }
+    }
+
+    @DeleteMapping("/invoices/{id}")
+    public ResponseEntity<ApiResponse> deleteInvoice(@PathVariable String id) {
+        try {
+            invoiceService.deleteScanInvoice(id);
+            return ResponseEntity.ok(ApiResponse.ok());
+        } catch (ValidationException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            LOGGER.error("internal error deleting invoice", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("Internal server error"));
         }
