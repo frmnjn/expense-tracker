@@ -55,7 +55,7 @@ step "[1/5] git pull di VPS" \
 
 step "[2/5] build image backend JVM di VPS (${IMAGE})" \
     ssh -o BatchMode=yes "root@${VPS_HOST}" \
-    "cd ${VPS_DIR} && start=\$(date +%s%3N) && docker build -f backend/Dockerfile -t ${IMAGE} backend/ && ms=\$((\$(date +%s%3N) - start)) && printf \"    build selesai dalam %d.%03ds\\n\" \$((ms / 1000)) \$((ms % 1000))\""
+    "cd ${VPS_DIR} && docker build -f backend/Dockerfile -t ${IMAGE} backend/"
 
 step "[3/5] docker compose up -d --build (rebuild frontend + start backend)" \
     ssh -o BatchMode=yes "root@${VPS_HOST}" \
