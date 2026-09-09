@@ -161,6 +161,7 @@ function ReviewModal({
       title="Review Hasil Analisis"
       centered
       size="md"
+      zIndex={1100}
       styles={{ body: { maxHeight: 'calc(100dvh - 140px)', overflowY: 'auto' } }}
     >
       {isPending || data?.status === 'ANALYZING' ? (
