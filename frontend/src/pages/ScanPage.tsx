@@ -25,6 +25,7 @@ import { getErrorMessage } from '../utils/error'
 import { InvoiceThumb } from '../components/InvoiceThumb'
 import ReviewModal from '../components/ReviewModal'
 import DeleteInvoiceModal from '../components/DeleteInvoiceModal'
+import SubmittedExpensesModal from '../components/SubmittedExpensesModal'
 import { AppPagination } from '../components/AppPagination'
 import { useToast } from '../components/Toast'
 import type { Invoice } from '../types/expense'
@@ -49,6 +50,7 @@ function ScanPage() {
   const [reviewId, setReviewId] = useState<string | null>(null)
   const [viewingInvoice, setViewingInvoice] = useState<Invoice | null>(null)
   const [deleting, setDeleting] = useState<Invoice | null>(null)
+  const [viewingSubmitted, setViewingSubmitted] = useState<Invoice | null>(null)
   const cameraRef = useRef<HTMLInputElement>(null)
   const galleryRef = useRef<HTMLInputElement>(null)
   const isMobile = useMediaQuery('(max-width: 48em)')
@@ -243,9 +245,9 @@ function ScanPage() {
                       </Group>
                     )}
                     {inv.status === 'SUBMITTED' && (
-                      <Badge color="green" variant="light">
-                        Selesai{retryLabel(inv)}
-                      </Badge>
+                      <Button size="xs" variant="light" fullWidth onClick={() => setViewingSubmitted(inv)}>
+                        Lihat rincian
+                      </Button>
                     )}
                     {inv.status === 'NOT_INVOICE' && (
                       <Group justify="space-between" wrap="nowrap">
@@ -313,6 +315,14 @@ function ScanPage() {
       )}
 
       <DeleteInvoiceModal invoice={deleting} onClose={() => setDeleting(null)} />
+
+      {viewingSubmitted && (
+        <SubmittedExpensesModal
+          invoiceId={viewingSubmitted.id}
+          type={viewingSubmitted.type}
+          onClose={() => setViewingSubmitted(null)}
+        />
+      )}
 
       <Modal
         opened={!!viewingInvoice}

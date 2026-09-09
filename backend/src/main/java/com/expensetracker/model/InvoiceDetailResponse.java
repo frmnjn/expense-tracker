@@ -3,6 +3,8 @@ package com.expensetracker.model;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 
+import java.util.List;
+
 @JsonInclude(JsonInclude.Include.NON_NULL)
 public record InvoiceDetailResponse(
         @JsonProperty("id") String id,
@@ -12,5 +14,6 @@ public record InvoiceDetailResponse(
         @JsonProperty("name") String name,
         @JsonProperty("analysis") AiAnalysisResponse analysis,
         @JsonProperty("retryCount") Integer retryCount,
-        @JsonProperty("retryMax") Integer retryMax) {
+        @JsonProperty("retryMax") Integer retryMax,
+        @JsonProperty("expenses") List<ExpenseResponse> expenses) {
 }

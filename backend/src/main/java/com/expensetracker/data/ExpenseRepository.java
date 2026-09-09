@@ -41,6 +41,14 @@ public class ExpenseRepository {
                 period);
     }
 
+    public List<ExpenseData> findByInvoiceId(String invoiceId) {
+        return jdbcTemplate.query(
+                SELECT_COLS + "WHERE e.invoice_id = ? AND e.deleted = FALSE "
+                        + "ORDER BY e.created_at ASC, e.id",
+                this::mapRow,
+                invoiceId);
+    }
+
     public List<String> getPeriods() {
         return jdbcTemplate.query(
                 "SELECT period FROM expenses WHERE deleted = FALSE GROUP BY period ORDER BY MAX(period_start) DESC",
