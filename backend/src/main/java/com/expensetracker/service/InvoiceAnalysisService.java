@@ -116,7 +116,6 @@ public class InvoiceAnalysisService implements ApplicationRunner {
             String raw = callGeminiWithRetry(invoiceId, bytes, mime, prompt);
             AiAnalysisResponse analysis = objectMapper.readValue(raw, AiAnalysisResponse.class);
             if (!hasPurchases(analysis)) {
-                invoiceRepository.resetRetry(invoiceId);
                 invoiceRepository.markNotInvoice(invoiceId, "Bukan struk invoice");
                 return;
             }
@@ -126,7 +125,6 @@ public class InvoiceAnalysisService implements ApplicationRunner {
             String cleanedDate = cleanDate(analysis.dateTime());
             AiAnalysisResponse clean = new AiAnalysisResponse(
                     analysis.storeName(), analysis.total(), cleanedDate, analysis.items());
-            invoiceRepository.resetRetry(invoiceId);
             invoiceRepository.updateAnalysis(invoiceId, InvoiceStatus.TO_REVIEW.value(),
                     objectMapper.writeValueAsString(clean));
         } catch (Exception e) {

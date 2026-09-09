@@ -103,6 +103,11 @@ function ScanPage() {
 
   const isRetrying = (inv: Invoice) => !!inv.retryMax && inv.retryMax > 0 && (inv.retryCount ?? 0) > 0
 
+  const retryLabel = (inv: Invoice) => {
+    const c = inv.retryCount ?? 0
+    return c > 0 ? ` · retry ${c}×` : ''
+  }
+
   return (
     <Container size="sm" px="md" py="lg">
       <Stack gap="lg">
@@ -219,11 +224,11 @@ function ScanPage() {
                         <Text size="xs" c="dimmed">
                           Menunggu AI…
                         </Text>
-                        {isRetrying(inv) && (
-                          <Text size="xs" c="orange">
-                            Retry {inv.retryCount}/{inv.retryMax}
+                        {inv.retryMax ? (
+                          <Text size="xs" c={isRetrying(inv) ? 'orange' : 'dimmed'}>
+                            {inv.retryCount}/{inv.retryMax}
                           </Text>
-                        )}
+                        ) : null}
                         <Loader size="xs" />
                       </Group>
                     )}
@@ -238,14 +243,19 @@ function ScanPage() {
                       </Group>
                     )}
                     {inv.status === 'SUBMITTED' && (
-                      <Badge color="green" variant="light">
-                        Selesai
-                      </Badge>
+                      <Group justify="space-between" wrap="nowrap">
+                        <Badge color="green" variant="light">
+                          Selesai{retryLabel(inv)}
+                        </Badge>
+                        <ActionIcon variant="light" color="red" size="md" onClick={() => setDeleting(inv)} aria-label="Hapus struk">
+                          🗑
+                        </ActionIcon>
+                      </Group>
                     )}
                     {inv.status === 'NOT_INVOICE' && (
                       <Group justify="space-between" wrap="nowrap">
                         <Badge color="orange" variant="light">
-                          Bukan Invoice
+                          Bukan Invoice{retryLabel(inv)}
                         </Badge>
                         <ActionIcon variant="light" color="red" size="md" onClick={() => setDeleting(inv)} aria-label="Hapus struk">
                           🗑

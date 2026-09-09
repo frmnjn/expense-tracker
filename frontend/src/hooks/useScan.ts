@@ -16,7 +16,7 @@ export function useScanInvoices(period: string | null) {
     enabled: !!period,
     refetchInterval: (query) => {
       const hasAnalyzing = query.state.data?.invoices.some((i) => i.status === 'ANALYZING')
-      return hasAnalyzing ? 3000 : false
+      return hasAnalyzing ? 1000 : false
     },
   })
 }
@@ -26,7 +26,7 @@ export function useInvoiceDetail(id: string | null) {
     queryKey: ['invoice-detail', id],
     queryFn: () => getInvoiceDetail(id ?? ''),
     enabled: !!id,
-    refetchInterval: (query) => (query.state.data?.status === 'ANALYZING' ? 3000 : false),
+    refetchInterval: (query) => (query.state.data?.status === 'ANALYZING' ? 1000 : false),
   })
 }
 
