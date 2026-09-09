@@ -6,5 +6,10 @@ public record InvoiceData(
         String photoPath,
         String createdAt,
         String status,
-        String originalName) {
+        String originalName,
+        int retryCount,
+        int retryMax) {
+    public InvoiceData(String id, String period, String photoPath, String createdAt, String status, String originalName) {
+        this(id, period, photoPath, createdAt, status, originalName, 0, 0);
+    }
 }

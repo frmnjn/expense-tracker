@@ -101,6 +101,8 @@ function ScanPage() {
     })
   }
 
+  const isRetrying = (inv: Invoice) => !!inv.retryMax && inv.retryMax > 0 && (inv.retryCount ?? 0) > 0
+
   return (
     <Container size="sm" px="md" py="lg">
       <Stack gap="lg">
@@ -217,6 +219,11 @@ function ScanPage() {
                         <Text size="xs" c="dimmed">
                           Menunggu AI…
                         </Text>
+                        {isRetrying(inv) && (
+                          <Text size="xs" c="orange">
+                            Retry {inv.retryCount}/{inv.retryMax}
+                          </Text>
+                        )}
                         <Loader size="xs" />
                       </Group>
                     )}
@@ -251,6 +258,11 @@ function ScanPage() {
                           <Text size="xs" c="red">
                             Gagal
                           </Text>
+                          {isRetrying(inv) && (
+                            <Text size="xs" c="dimmed">
+                              ({inv.retryCount}/{inv.retryMax})
+                            </Text>
+                          )}
                           <Button size="compact-xs" variant="subtle" color="red" onClick={() => handleRetry(inv.id)}>
                             Coba lagi
                           </Button>

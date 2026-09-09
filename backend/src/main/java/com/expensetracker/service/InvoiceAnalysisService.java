@@ -15,6 +15,7 @@ import tools.jackson.databind.ObjectMapper;
 import jakarta.annotation.PreDestroy;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
@@ -51,6 +52,8 @@ public class InvoiceAnalysisService implements ApplicationRunner {
     private final String apiKey;
     private final String model;
     private final Duration timeout;
+    private final int maxAttempts;
+    private final long retryDelayMs;
 
     @Value("${upload.dir:/app/uploads}")
     private String uploadDir;
@@ -60,13 +63,17 @@ public class InvoiceAnalysisService implements ApplicationRunner {
                                   ObjectMapper objectMapper,
                                   @Value("${ai.gemini-api-key:}") String apiKey,
                                   @Value("${ai.model:gemini-3.5-flash-lite}") String model,
-                                  @Value("${ai.timeout:600}") long timeoutSeconds) {
+                                  @Value("${ai.timeout:600}") long timeoutSeconds,
+                                  @Value("${ai.max-attempts:50}") int maxAttempts,
+                                  @Value("${ai.retry-delay-ms:2000}") long retryDelayMs) {
         this.invoiceRepository = invoiceRepository;
         this.budgetRepository = budgetRepository;
         this.objectMapper = objectMapper;
         this.apiKey = apiKey == null ? "" : apiKey.trim();
         this.model = model == null ? "gemini-3.5-flash-lite" : model;
         this.timeout = Duration.ofSeconds(timeoutSeconds);
+        this.maxAttempts = maxAttempts < 1 ? 1 : maxAttempts;
+        this.retryDelayMs = retryDelayMs < 0 ? 0 : retryDelayMs;
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(10))
                 .build();
@@ -105,9 +112,11 @@ public class InvoiceAnalysisService implements ApplicationRunner {
             byte[] bytes = Files.readAllBytes(resolved);
             String mime = mimeTypeOf(photoPath);
             String prompt = buildPrompt();
-            String raw = callGemini(bytes, mime, prompt);
+            invoiceRepository.initRetry(invoiceId, maxAttempts);
+            String raw = callGeminiWithRetry(invoiceId, bytes, mime, prompt);
             AiAnalysisResponse analysis = objectMapper.readValue(raw, AiAnalysisResponse.class);
             if (!hasPurchases(analysis)) {
+                invoiceRepository.resetRetry(invoiceId);
                 invoiceRepository.markNotInvoice(invoiceId, "Bukan struk invoice");
                 return;
             }
@@ -117,11 +126,48 @@ public class InvoiceAnalysisService implements ApplicationRunner {
             String cleanedDate = cleanDate(analysis.dateTime());
             AiAnalysisResponse clean = new AiAnalysisResponse(
                     analysis.storeName(), analysis.total(), cleanedDate, analysis.items());
+            invoiceRepository.resetRetry(invoiceId);
             invoiceRepository.updateAnalysis(invoiceId, InvoiceStatus.TO_REVIEW.value(),
                     objectMapper.writeValueAsString(clean));
         } catch (Exception e) {
             LOGGER.error("invoice analysis failed for {}: {}", invoiceId, e.getMessage());
             invoiceRepository.updateError(invoiceId, e.getMessage());
+        }
+    }
+
+    /** Jalankan analisis secara sinkron (helper untuk unit test). */
+    void analyzeForTest(String invoiceId) {
+        analyze(invoiceId);
+    }
+
+    /**
+     * Memanggil Gemini dengan retry untuk error transien (HTTP 429/5xx, koneksi/timeout).
+     * Gagal permanen (4xx lain, response tidak valid) langsung dilempar tanpa retry.
+     */
+    private String callGeminiWithRetry(String invoiceId, byte[] bytes, String mime, String prompt) throws Exception {
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                return callGemini(bytes, mime, prompt);
+            } catch (RetryableException | IOException e) {
+                invoiceRepository.incrementRetry(invoiceId);
+                if (attempt >= maxAttempts) {
+                    throw e;
+                }
+                LOGGER.warn("attempt {}/{} failed for invoice {}: {}; retrying in {}ms",
+                        attempt + 1, maxAttempts, invoiceId, e.getMessage(), retryDelayMs);
+                sleepRetry();
+            } catch (Exception e) {
+                // Error permanen (mis. 4xx non-transien, JSON tidak valid) — jangan retry.
+                LOGGER.warn("non-retryable failure for invoice {}: {}", invoiceId, e.getMessage());
+                throw e;
+            }
+        }
+        throw new IllegalStateException("Gemini analysis exhausted all attempts");
+    }
+
+    private void sleepRetry() throws InterruptedException {
+        if (retryDelayMs > 0) {
+            Thread.sleep(retryDelayMs);
         }
     }
 
@@ -185,7 +231,7 @@ public class InvoiceAnalysisService implements ApplicationRunner {
                 .anyMatch(it -> it.amount() != null && it.amount() > 0);
     }
 
-    private String callGemini(byte[] bytes, String mime, String prompt) throws Exception {
+    protected String callGemini(byte[] bytes, String mime, String prompt) throws Exception {
         if (apiKey.isBlank()) {
             throw new IllegalStateException("GEMINI_API_KEY is not configured");
         }
@@ -204,7 +250,12 @@ public class InvoiceAnalysisService implements ApplicationRunner {
                 .build();
         HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
-            throw new IllegalStateException("Gemini returned HTTP " + response.statusCode());
+            int code = response.statusCode();
+            // 429 (rate limit) dan 5xx (failover sesaat) bersifat transien -> retry.
+            if (code == 429 || code >= 500) {
+                throw new RetryableException("Gemini returned HTTP " + code);
+            }
+            throw new IllegalStateException("Gemini returned HTTP " + code);
         }
         JsonNode root = objectMapper.readTree(response.body());
         JsonNode text = root.path("candidates").path(0).path("content").path("parts").path(0).path("text");
