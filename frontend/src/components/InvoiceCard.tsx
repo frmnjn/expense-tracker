@@ -43,18 +43,17 @@ export function InvoiceCard({
         </Box>
 
         <Stack gap={6} style={{ flex: 1, minWidth: 0 }}>
-          <Group justify="space-between" align="center" wrap="nowrap" gap="xs">
-            <Badge color={meta.color} variant="light">
-              {meta.label}
-              {retryLabel}
-            </Badge>
-            <Text size="xs" c="dimmed" style={{ whiteSpace: 'nowrap' }}>
-              {dayjs(invoice.createdAt).format(DATE_TIME_FORMAT)}
-            </Text>
-          </Group>
+          <Badge color={meta.color} variant="light" style={{ alignSelf: 'flex-start', maxWidth: '100%' }}>
+            {meta.label}
+            {retryLabel}
+          </Badge>
 
           <Text size="sm" fw={600} truncate title={invoice.name}>
             {invoice.name?.trim() || 'Struk'}
+          </Text>
+
+          <Text size="xs" c="dimmed">
+            {dayjs(invoice.createdAt).format(DATE_TIME_FORMAT)}
           </Text>
 
           {invoice.status === 'ANALYZING' && (
@@ -85,14 +84,9 @@ export function InvoiceCard({
           )}
 
           {invoice.status === 'SUBMITTED' && (
-            <Group justify="space-between" wrap="nowrap" gap="xs">
-              <Button size="compact-sm" variant="light" onClick={onPreview}>
-                Lihat struk
-              </Button>
-              <Button size="compact-sm" variant="light" onClick={onViewDetail}>
-                Lihat rincian
-              </Button>
-            </Group>
+            <Button size="compact-sm" variant="light" style={{ alignSelf: 'flex-start' }} onClick={onViewDetail}>
+              Lihat rincian
+            </Button>
           )}
 
           {invoice.status === 'NOT_INVOICE' && (

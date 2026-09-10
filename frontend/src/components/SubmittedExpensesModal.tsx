@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Badge, Button, Divider, Group, Loader, Modal, Paper, Stack, Text } from '@mantine/core'
+import { Badge, Box, Button, Divider, Group, Loader, Modal, Paper, Stack, Text } from '@mantine/core'
 import { useMediaQuery } from '@mantine/hooks'
 import { useInvoiceDetail } from '../hooks/useScan'
 import { getInvoicePhotoUrl } from '../services/expense'
@@ -38,7 +38,9 @@ function SubmittedExpensesModal({ invoiceId, type, onClose }: { invoiceId: strin
         <Stack gap="sm">
           <Paper withBorder p="sm" radius="md">
             <Group gap="md" wrap="nowrap" align="flex-start">
-              <InvoiceThumb type={type} url={getInvoicePhotoUrl(invoiceId)} h={96} onClick={() => setViewingPhoto(true)} />
+              <Box w={96} style={{ flexShrink: 0 }}>
+                <InvoiceThumb type={type} url={getInvoicePhotoUrl(invoiceId)} h={96} onClick={() => setViewingPhoto(true)} />
+              </Box>
               <Stack gap={2} style={{ flex: 1, minWidth: 0 }}>
                 <Text size="sm" fw={600} truncate title={data?.name}>
                   {data?.name ?? 'Struk'}
@@ -90,7 +92,11 @@ function SubmittedExpensesModal({ invoiceId, type, onClose }: { invoiceId: strin
             <Button component="a" href={getInvoicePhotoUrl(invoiceId)} target="_blank" variant="light">Buka PDF</Button>
           </Stack>
         ) : (
-          <img src={getInvoicePhotoUrl(invoiceId)} alt="Struk" style={{ maxWidth: '100%', maxHeight: '70vh' }} />
+          <img
+            src={getInvoicePhotoUrl(invoiceId)}
+            alt="Struk"
+            style={{ display: 'block', marginInline: 'auto', maxWidth: '100%', maxHeight: '70vh', objectFit: 'contain' }}
+          />
         ))}
       </Modal>
     </Modal>
