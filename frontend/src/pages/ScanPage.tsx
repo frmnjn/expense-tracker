@@ -1,7 +1,5 @@
 import { useMemo, useRef, useState } from 'react'
 import {
-  ActionIcon,
-  Badge,
   Button,
   Container,
   Group,
@@ -22,7 +20,7 @@ import { useScanInvoices, useUploadInvoice, useRetryAnalysis } from '../hooks/us
 import { usePeriods } from '../hooks/useExpenses'
 import { getInvoicePhotoUrl } from '../services/expense'
 import { getErrorMessage } from '../utils/error'
-import { InvoiceThumb } from '../components/InvoiceThumb'
+import { InvoiceCard } from '../components/InvoiceCard'
 import ReviewModal from '../components/ReviewModal'
 import DeleteInvoiceModal from '../components/DeleteInvoiceModal'
 import SubmittedExpensesModal from '../components/SubmittedExpensesModal'
@@ -101,13 +99,6 @@ function ScanPage() {
     retry.mutate(id, {
       onError: (error) => toast.error(getErrorMessage(error), { title: 'Gagal' }),
     })
-  }
-
-  const isRetrying = (inv: Invoice) => !!inv.retryMax && inv.retryMax > 0 && (inv.retryCount ?? 0) > 0
-
-  const retryLabel = (inv: Invoice) => {
-    const c = inv.retryCount ?? 0
-    return c > 0 ? ` · retry ${c}×` : ''
   }
 
   return (
@@ -195,102 +186,44 @@ function ScanPage() {
               <Loader />
             </Group>
           ) : invoices.length === 0 ? (
-            <Text size="sm" c="dimmed">
-              Belum ada struk di periode ini. Upload foto/PDF untuk dianalisis.
-            </Text>
+            <Paper withBorder p="xl" radius="md">
+              <Stack align="center" gap={4}>
+                <Text fz={40}>🧾</Text>
+                <Text fw={600}>Belum ada struk</Text>
+                <Text size="sm" c="dimmed" ta="center">
+                  Upload foto atau PDF struk di periode ini untuk mulai dianalisis AI.
+                </Text>
+              </Stack>
+            </Paper>
           ) : (
-            <AppPagination data={visible} key={`${statusFilter}|${sortBy}|${period}`}>
-              {(pageData) =>
-                pageData.length === 0 ? (
-                  <Text size="sm" c="dimmed">
-                    Tidak ada struk yang cocok dengan filter.
-                  </Text>
-                ) : (
-                  <SimpleGrid cols={isMobile ? 2 : 3} spacing="sm">
-              {pageData.map((inv) => (
-                <Paper key={inv.id} withBorder p="xs" radius="md">
-                  <Stack gap={6}>
-                    <InvoiceThumb
-                      type={inv.type}
-                      url={getInvoicePhotoUrl(inv.id)}
-                      h={90}
-                      onClick={() => setViewingInvoice(inv)}
-                    />
-                    {inv.name ? (
-                      <Text size="xs" c="dimmed" truncate title={inv.name}>
-                        {inv.name}
-                      </Text>
-                    ) : null}
-                    {inv.status === 'ANALYZING' && (
-                      <Group justify="space-between" wrap="nowrap">
-                        <Text size="xs" c="dimmed">
-                          Menunggu AI…
-                        </Text>
-                        {inv.retryMax ? (
-                          <Text size="xs" c={isRetrying(inv) ? 'orange' : 'dimmed'}>
-                            {inv.retryCount}/{inv.retryMax}
-                          </Text>
-                        ) : null}
-                        <Loader size="xs" />
-                      </Group>
-                    )}
-                    {inv.status === 'TO_REVIEW' && (
-                      <Group justify="space-between" wrap="nowrap">
-                        <Button size="xs" variant="light" style={{ flex: 1, minWidth: 0 }} onClick={() => setReviewId(inv.id)}>
-                          Review
-                        </Button>
-                        <ActionIcon variant="light" color="red" size="md" onClick={() => setDeleting(inv)} aria-label="Hapus struk">
-                          🗑
-                        </ActionIcon>
-                      </Group>
-                    )}
-                    {inv.status === 'SUBMITTED' && (
-                      <Group justify="space-between" wrap="nowrap">
-                        <Badge color="green" variant="light">
-                          Selesai{retryLabel(inv)}
-                        </Badge>
-                        <Button size="compact-xs" variant="light" onClick={() => setViewingSubmitted(inv)}>
-                          Lihat rincian
-                        </Button>
-                      </Group>
-                    )}
-                    {inv.status === 'NOT_INVOICE' && (
-                      <Group justify="space-between" wrap="nowrap">
-                        <Badge color="orange" variant="light">
-                          Bukan Invoice{retryLabel(inv)}
-                        </Badge>
-                        <ActionIcon variant="light" color="red" size="md" onClick={() => setDeleting(inv)} aria-label="Hapus struk">
-                          🗑
-                        </ActionIcon>
-                      </Group>
-                    )}
-                    {inv.status === 'ERROR' && (
-                      <Group justify="space-between" wrap="nowrap">
-                        <Group gap={4} wrap="nowrap">
-                          <Text size="xs" c="red">
-                            Gagal
-                          </Text>
-                          {isRetrying(inv) && (
-                            <Text size="xs" c="dimmed">
-                              ({inv.retryCount}/{inv.retryMax})
-                            </Text>
-                          )}
-                          <Button size="compact-xs" variant="subtle" color="red" onClick={() => handleRetry(inv.id)}>
-                            Coba lagi
-                          </Button>
-                        </Group>
-                        <ActionIcon variant="light" color="red" size="md" onClick={() => setDeleting(inv)} aria-label="Hapus struk">
-                          🗑
-                        </ActionIcon>
-                      </Group>
-                    )}
-                  </Stack>
-                </Paper>
-              ))}
-                  </SimpleGrid>
-                )
-              }
-            </AppPagination>
+            <>
+              <Text size="sm" c="dimmed">
+                {visible.length} struk
+              </Text>
+              <AppPagination data={visible} key={`${statusFilter}|${sortBy}|${period}`}>
+                {(pageData) =>
+                  pageData.length === 0 ? (
+                    <Text size="sm" c="dimmed">
+                      Tidak ada struk yang cocok dengan filter.
+                    </Text>
+                  ) : (
+                    <Stack gap="sm">
+                      {pageData.map((inv) => (
+                        <InvoiceCard
+                          key={inv.id}
+                          invoice={inv}
+                          onPreview={() => setViewingInvoice(inv)}
+                          onReview={() => setReviewId(inv.id)}
+                          onViewDetail={() => setViewingSubmitted(inv)}
+                          onDelete={() => setDeleting(inv)}
+                          onRetry={() => handleRetry(inv.id)}
+                        />
+                      ))}
+                    </Stack>
+                  )
+                }
+              </AppPagination>
+            </>
           )}
         </Stack>
       </Stack>
