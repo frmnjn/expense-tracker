@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import {
   ActionIcon,
+  Box,
   Button,
   Group,
   Loader,
@@ -202,11 +203,13 @@ function ReviewModal({
         <Stack>
           <Paper withBorder p="sm" radius="md">
             <Group wrap="nowrap" align="flex-start" gap="md">
-              <InvoiceThumb
-                type={data?.type ?? 'image'}
-                url={getInvoicePhotoUrl(invoiceId)}
-                h={80}
-              />
+              <Box w={80} style={{ flexShrink: 0 }}>
+                <InvoiceThumb
+                  type={data?.type ?? 'image'}
+                  url={getInvoicePhotoUrl(invoiceId)}
+                  h={80}
+                />
+              </Box>
               <Stack gap={2} flex={1}>
                 <Text size="sm" fw={600}>
                   {storeName}
