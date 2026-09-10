@@ -12,6 +12,7 @@ import {
   Text,
   TextInput,
 } from '@mantine/core'
+import { useMediaQuery } from '@mantine/hooks'
 import { DateTimePicker } from '@mantine/dates'
 import dayjs from 'dayjs'
 import { useInvoiceDetail, useCreateExpenseBatch } from '../hooks/useScan'
@@ -65,6 +66,7 @@ function ReviewModal({
   const { data: options } = useOptions()
   const batch = useCreateExpenseBatch()
   const toast = useToast()
+  const isMobile = useMediaQuery('(max-width: 48em)')
   const [items, setItems] = useState<EditItem[]>([])
   const [groupNames, setGroupNames] = useState<Record<string, string>>({})
 
@@ -184,8 +186,9 @@ function ReviewModal({
       onClose={onClose}
       title="Review Hasil Analisis"
       centered
+      fullScreen={isMobile}
       size="md"
-      styles={{ body: { maxHeight: 'calc(100dvh - 140px)', overflowY: 'auto' } }}
+      styles={{ body: { maxHeight: isMobile ? undefined : 'calc(100dvh - 140px)', overflowY: 'auto' } }}
     >
       {isPending || data?.status === 'ANALYZING' ? (
         <Group justify="center" py="xl">
@@ -213,7 +216,7 @@ function ReviewModal({
                     {data.name}
                   </Text>
                 ) : null}
-                <Group justify="space-between" align="center">
+                <Group justify="space-between" align="center" wrap="nowrap" gap="xs">
                   <Text size="sm" c="dimmed">
                     Tanggal belanja
                   </Text>
@@ -223,7 +226,7 @@ function ReviewModal({
                     valueFormat="DD MMM YYYY HH:mm"
                     dropdownType="modal"
                     size="xs"
-                    style={{ width: 200 }}
+                    style={{ width: isMobile ? 150 : 200 }}
                   />
                 </Group>
                 <Group justify="space-between">
@@ -311,40 +314,82 @@ function ReviewModal({
           <Text size="sm" fw={600}>
             Item
           </Text>
-          {items.map((it) => (
-            <Group key={it.key} wrap="nowrap" align="flex-end" gap="xs">
-              <TextInput
-                size="xs"
-                placeholder="Nama"
-                value={it.name}
-                onChange={(e) => updateItem(it.key, { name: e.currentTarget.value })}
-                style={{ flex: 1.4 }}
-              />
-              <NumberInput
-                size="xs"
-                placeholder="0"
-                value={it.amount}
-                onChange={(v) => updateItem(it.key, { amount: Number(v) || 0 })}
-                allowNegative
-                prefix="Rp"
-                thousandSeparator="."
-                decimalSeparator=","
-                style={{ flex: 1 }}
-              />
-              <Select
-                size="xs"
-                placeholder="Budget"
-                data={budgetOptions}
-                value={it.budget}
-                onChange={(v) => updateItem(it.key, { budget: v })}
-                searchable
-                style={{ flex: 1.2 }}
-              />
-              <ActionIcon color="red" variant="subtle" onClick={() => removeItem(it.key)}>
-                ✕
-              </ActionIcon>
-            </Group>
-          ))}
+          {items.map((it, idx) =>
+            isMobile ? (
+              <Paper key={it.key} withBorder p="sm" radius="md">
+                <Group justify="space-between" align="center" mb="xs">
+                  <Text size="sm" fw={600}>
+                    Item {idx + 1}
+                  </Text>
+                  <ActionIcon color="red" variant="subtle" onClick={() => removeItem(it.key)} aria-label="Hapus item">
+                    ✕
+                  </ActionIcon>
+                </Group>
+                <Stack gap="xs">
+                  <TextInput
+                    size="xs"
+                    label="Nama"
+                    placeholder="Nama"
+                    value={it.name}
+                    onChange={(e) => updateItem(it.key, { name: e.currentTarget.value })}
+                  />
+                  <NumberInput
+                    size="xs"
+                    label="Nominal"
+                    placeholder="0"
+                    value={it.amount}
+                    onChange={(v) => updateItem(it.key, { amount: Number(v) || 0 })}
+                    allowNegative
+                    prefix="Rp"
+                    thousandSeparator="."
+                    decimalSeparator=","
+                  />
+                  <Select
+                    size="xs"
+                    label="Budget"
+                    placeholder="Budget"
+                    data={budgetOptions}
+                    value={it.budget}
+                    onChange={(v) => updateItem(it.key, { budget: v })}
+                    searchable
+                  />
+                </Stack>
+              </Paper>
+            ) : (
+              <Group key={it.key} wrap="nowrap" align="flex-end" gap="xs">
+                <TextInput
+                  size="xs"
+                  placeholder="Nama"
+                  value={it.name}
+                  onChange={(e) => updateItem(it.key, { name: e.currentTarget.value })}
+                  style={{ flex: 1.4 }}
+                />
+                <NumberInput
+                  size="xs"
+                  placeholder="0"
+                  value={it.amount}
+                  onChange={(v) => updateItem(it.key, { amount: Number(v) || 0 })}
+                  allowNegative
+                  prefix="Rp"
+                  thousandSeparator="."
+                  decimalSeparator=","
+                  style={{ flex: 1 }}
+                />
+                <Select
+                  size="xs"
+                  placeholder="Budget"
+                  data={budgetOptions}
+                  value={it.budget}
+                  onChange={(v) => updateItem(it.key, { budget: v })}
+                  searchable
+                  style={{ flex: 1.2 }}
+                />
+                <ActionIcon color="red" variant="subtle" onClick={() => removeItem(it.key)} aria-label="Hapus item">
+                  ✕
+                </ActionIcon>
+              </Group>
+            ),
+          )}
           <Button variant="light" size="xs" onClick={addItem} disabled={batch.isPending}>
             + Tambah item
           </Button>
