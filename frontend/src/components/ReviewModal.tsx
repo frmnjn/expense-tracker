@@ -355,6 +355,8 @@ function ReviewModal({
                     value={it.budget}
                     onChange={(v) => updateItem(it.key, { budget: v })}
                     searchable
+                    maxDropdownHeight={220}
+                    comboboxProps={{ withinPortal: false }}
                   />
                 </Stack>
               </Paper>
