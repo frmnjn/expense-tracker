@@ -313,6 +313,19 @@ Tidak perlu animasi.
 * Contoh: untuk daftar baris padat (tabel), gunakan `useMediaQuery('(max-width: 48em)')` dan render **list kartu** (`Stack` + `Paper`) di mobile, bukan tabel yang kolomnya diperkecil/di-ellipsis.
 * Pastikan tombol aksi (edit/hapus) selalu terlihat di layar HP, tidak pernah off-screen / butuh scroll horizontal.
 
+### Frontend UI Gotchas (Mantine)
+
+Catatan masalah yang sudah pernah terjadi, supaya tidak diriset ulang:
+
+* **Dropdown `Select` di dalam `Modal` `fullScreen` (mobile) tidak bisa diklik / bikin HP berat.**
+  Sebab: dropdown di-*portal* ke `document.body` (`withinPortal` default `true`), sehingga berada di luar modal dan kena focus-trap/scroll-lock.
+  Fix: `comboboxProps={{ withinPortal: false }}` (opsional `maxDropdownHeight`). Contoh: `HistoryPage.tsx` (modal filter), `ReviewModal.tsx` (Select budget mobile).
+  Untuk date picker, pakai `dropdownType="modal"` (lihat `ReviewModal.tsx`).
+* **Thumbnail gambar landscape menggeser layout.** Mantine `Image` ber-CSS `width: 100%` dan sebagai flex-item `min-width: auto` tidak menyusut. Fix: bungkus dengan `Box w={...}` + `flexShrink: 0` (lihat `InvoiceCard.tsx`, `SubmittedExpensesModal.tsx`, `ReviewModal.tsx`).
+* **z-index bottom nav mobile = `130`** (`index.css`), sengaja di bawah modal Mantine (`200`) & dropdown (`300`). Jangan dinaikkan melebihi `200` agar modal/dropdown tetap di atasnya.
+* **Badge status + tanggal jangan sebaris** di layar sempit (label panjang seperti "Bukan Invoice · retry 2×" menutupi tanggal). Pisahkan ke baris sendiri.
+* **Validasi form yang men-disable tombol harus menjelaskan alasannya** (item mana & kenapa), jangan hanya disable tanpa pesan. Contoh: `ReviewModal.tsx` menampilkan daftar `problems` (nama kosong / budget belum dipilih / nominal 0 / total budget ≤ 0).
+
 ---
 
 ## Future Features
