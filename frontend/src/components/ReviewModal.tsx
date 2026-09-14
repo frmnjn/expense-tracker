@@ -133,10 +133,23 @@ function ReviewModal({
   const itemsSum = items.reduce((s, it) => s + (Number(it.amount) || 0), 0)
   const aiTotal = analysis && Number(analysis.total) > 0 ? Number(analysis.total) : null
   const mismatch = aiTotal !== null && aiTotal !== itemsSum
-  const missingBudget = items.some((it) => !it.budget)
-  const invalid =
-    items.some((it) => it.name.trim() === '' || !it.budget || Number(it.amount) === 0) ||
-    groups.some(([, list]) => list.reduce((s, it) => s + Number(it.amount), 0) <= 0)
+
+  const problems = useMemo(() => {
+    const list: string[] = []
+    items.forEach((it, i) => {
+      const name = it.name.trim()
+      const label = name ? `Item ${i + 1} (${name})` : `Item ${i + 1}`
+      if (!name) list.push(`${label}: nama belum diisi`)
+      if (!it.budget) list.push(`${label}: budget belum dipilih`)
+      if (Number(it.amount) === 0) list.push(`${label}: nominal masih 0`)
+    })
+    for (const [budget, groupItems] of groups) {
+      const sum = groupItems.reduce((s, it) => s + Number(it.amount), 0)
+      if (sum <= 0) list.push(`Budget ${budget}: totalnya harus lebih dari 0`)
+    }
+    return list
+  }, [items, groups])
+  const invalid = problems.length > 0
 
   const groupName = (budget: string) => groupNames[budget] ?? storeName
 
@@ -399,6 +412,16 @@ function ReviewModal({
             + Tambah item
           </Button>
 
+          {problems.length > 0 && (
+            <Stack gap={2}>
+              {problems.map((problem) => (
+                <Text key={problem} size="xs" c="orange">
+                  ⚠ {problem}
+                </Text>
+              ))}
+            </Stack>
+          )}
+
           <Button
             fullWidth
             size="md"
@@ -408,11 +431,6 @@ function ReviewModal({
           >
             Buat {groups.length} Pengeluaran
           </Button>
-          {missingBudget && (
-            <Text size="xs" c="orange" ta="center">
-              Ada item yang belum diassign budget.
-            </Text>
-          )}
         </Stack>
       )}
     </Modal>
