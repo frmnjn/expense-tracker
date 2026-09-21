@@ -8,6 +8,8 @@ function iconFor(tone: Insight['tone']): { icon: string; color: string } {
       return { icon: '💡', color: 'teal' }
     case 'warning':
       return { icon: '⚠️', color: 'orange' }
+    case 'danger':
+      return { icon: '🚨', color: 'red' }
     default:
       return { icon: '💡', color: 'blue' }
   }
