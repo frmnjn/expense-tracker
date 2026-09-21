@@ -28,15 +28,17 @@ BACKUP_DIR="${BACKUP_DIR:-${PROJECT_ROOT}/backups}"
 KEEP="${KEEP:-14}"
 DB_NAME="expense_tracker"
 
-# ambil kredensial DB dari .env
+# Ambil kredensial DB dari .env. Hanya baca baris DB_USER/DB_PASSWORD —
+# jangan `source` seluruh file: nilai .env yang memuat spasi (mis. daftar email)
+# bisa dieksekusi shell dan membuat script gagal sebelum mysqldump dijalankan.
 if [ ! -f "${PROJECT_ROOT}/backend/.env" ]; then
     echo "ERROR: ${PROJECT_ROOT}/backend/.env tidak ditemukan" >&2
     exit 1
 fi
-# shellcheck disable=SC1091
-source "${PROJECT_ROOT}/backend/.env"
+DB_USER="$(grep -E '^DB_USER=' "${PROJECT_ROOT}/backend/.env" | head -n1 | cut -d= -f2- | tr -d '\r')"
+DB_PASSWORD="$(grep -E '^DB_PASSWORD=' "${PROJECT_ROOT}/backend/.env" | head -n1 | cut -d= -f2- | tr -d '\r')"
 
-if [ -z "${DB_USER:-}" ] || [ -z "${DB_PASSWORD:-}" ]; then
+if [ -z "${DB_USER}" ] || [ -z "${DB_PASSWORD}" ]; then
     echo "ERROR: DB_USER/DB_PASSWORD kosong di .env" >&2
     exit 1
 fi
@@ -50,6 +52,12 @@ docker exec "${MYSQL_CONTAINER}" \
     mysqldump --single-transaction --routines --triggers \
         -u"${DB_USER}" -p"${DB_PASSWORD}" "${DB_NAME}" 2>/dev/null \
     | gzip > "${OUT}"
+
+if [ ! -s "${OUT}" ]; then
+    echo "ERROR: backup kosong, mysqldump kemungkinan gagal" >&2
+    rm -f "${OUT}"
+    exit 1
+fi
 
 # rotasi: hapus backup lama, sisakan KEEP terbaru
 ls -1t "${BACKUP_DIR}/${DB_NAME}"_*.sql.gz 2>/dev/null | tail -n +$((KEEP + 1)) | while read -r old; do
