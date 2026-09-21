@@ -81,9 +81,10 @@ function DashboardPage() {
       prevTotal: comparison.prevTotal,
       byBudget: summary.byBudget ?? [],
       budgets,
+      expenses: expensesData?.expenses ?? [],
       comparisonNote,
     })
-  }, [summary, comparison, budgets, comparisonNote])
+  }, [summary, comparison, budgets, comparisonNote, expensesData])
 
   return (
     <Container size="lg" px={{ base: 'md', sm: 'md' }} py={{ base: 'md', sm: 'md' }} pb={{ base: 88, sm: 'md' }}>
@@ -150,7 +151,7 @@ function DashboardPage() {
           />
           <FinancialInsights
             insights={insights}
-            isLoading={summaryLoading}
+            isLoading={summaryLoading || expensesLoading}
             isError={summaryError}
             hasPeriod={!!period}
           />
