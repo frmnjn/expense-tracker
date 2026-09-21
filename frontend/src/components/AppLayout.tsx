@@ -7,6 +7,7 @@ const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: '⌂' },
   { to: '/catat', label: 'Catat Pengeluaran', icon: '+' },
   { to: '/scan', label: 'Scan Struk', icon: '◉' },
+  { to: '/inbox', label: 'Inbox Email', icon: '✉' },
   { to: '/riwayat', label: 'Riwayat', icon: '≡' },
 ]
 

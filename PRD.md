@@ -57,6 +57,7 @@ Target: sederhana, mudah dijalankan dengan Docker, mudah dikembangkan.
 
 * `/` — halaman Catat (form pengeluaran + foto invoice).
 * `/scan` — **Scan Struk dengan AI** (upload foto/PDF, analisis otomatis, review & assign budget, auto-create banyak expense).
+* `/inbox` — **Inbox Email** (transaksi dari email notifikasi bank, hasil pembacaan IMAP, review & import jadi expense).
 * `/dashboard` — ringkasan saldo per budget, top-up, riwayat top-up, dan 3 bulan terakhir.
 * `/riwayat` — daftar pengeluaran per periode, dengan filter/sort, pagination, edit, hapus, dan lihat foto (termasuk PDF).
 * `/catat` — alias halaman Catat.
@@ -215,6 +216,23 @@ Email dikirim sebagai **HTML** (inline-style, aksen `#863bff`), dengan nominal t
 Mode testing: jika `NOTIFY_TEST_MODE=true`, email hanya dikirim ke `NOTIFY_TEST_EMAIL` (mengabaikan `NOTIFY_EMAILS`). Default `false`.
 
 > Catatan Gmail: butuh **App Password** (aktifkan 2FA dulu), bukan password biasa. Batas ±500 email/hari — jauh di atas kebutuhan 2 penerima realtime.
+
+### Import Transaksi dari Email (`/inbox`)
+
+Transaksi dari email notifikasi bank dibaca **backend** via **IMAP Gmail** (App Password yang sama dengan notifier) secara **polling** (default tiap 5 menit), lalu disimpan sebagai antrian **PENDING_REVIEW**. User memeriksa lalu meng-import menjadi expense dari halaman `/inbox`.
+
+* Sumber yang didukung: **BCA Credit Card**, **BCA Internet Transaction Journal (myBCA/QRIS)**, **D-Bank PRO QRIS**.
+* Parsing **hibrida**: regex per format bank lebih dulu; bila field penting tidak terbaca → fallback **Gemini** (jika `GEMINI_API_KEY` ada).
+* Dedup memakai `Message-ID` email; folder IMAP dibuka **READ_ONLY** sehingga status baca email di Gmail tidak berubah.
+* Anti-loop: email difilter berdasarkan **whitelist domain pengirim** (`INBOX_SENDERS`), jadi email notifikasi milik aplikasi sendiri tidak ikut diproses.
+* Import expense memakai jalur yang sama dengan pencatatan manual (`ExpenseService.createExpense`) sehingga saldo budget & notifikasi tetap konsisten.
+* **Deteksi duplikat**: saat import, bila sudah ada expense aktif dengan **nominal persis sama** di **periode yang sama**, import ditolak dengan konfirmasi (HTTP 409). User tetap bisa melanjutkan dengan `force=true` (nominal sama bisa saja transaksi berbeda).
+* **Retry AI**: fallback Gemini di-retry untuk error transien (HTTP 429/5xx) memakai `ai.max-attempts`/`ai.retry-delay-ms` (default 50×, 2 detik), sama seperti Scan Struk.
+* **Status**: email transaksi → `PENDING_REVIEW`; bukan transaksi pengeluaran (mis. promo) → `DISCARDED`; gagal parse/error teknis → `FAILED`.
+* **Retry manual**: baris `FAILED` bisa diproses ulang lewat `POST /email-imports/{id}/retry` (email diambil ulang dari IMAP berdasarkan Message-ID, lalu parse lagi).
+* **Custom discard rule**: merchant yang cocok dengan keyword di `INBOX_DISCARD_MERCHANTS` otomatis ditandai `DISCARDED` (case-insensitive, toleran spasi/tanda baca — mis. `superindo` menangkap `SUPERINDO CNE` & `SUPER INDO`).
+
+> Catatan: IMAP keluar dari VPS (Linode) tidak diblokir (port 993), berbeda dengan SMTP keluar. Fitur ini berjalan di backend Java (image JVM); notifier tetap khusus kirim email.
 
 ---
 
@@ -432,6 +450,28 @@ Mengedit budget (nama, saldo, `alertThreshold`, dan/atau `description`). `balanc
 
 Menghapus budget (soft delete, rename `DELETED_<nama>_<id>`, expense-nya ikut soft-delete).
 
+### GET /email-imports?status=PENDING_REVIEW
+
+Daftar transaksi hasil import email. `status` opsional: `PENDING_REVIEW` (default), `IMPORTED`, `DISCARDED`, `FAILED`, atau `ALL` (semua status).
+
+### POST /email-imports/{id}/import
+
+Mengubah satu baris email menjadi expense. Body sama dengan `POST /expenses` (`ExpenseRequest`). Baris ditandai `IMPORTED` bila berhasil.
+
+Bila sudah ada expense aktif dengan nominal persis sama di periode yang sama, respons **409 Conflict** dengan pesan konfirmasi. Kirim ulang dengan query `?force=true` untuk tetap import.
+
+### POST /email-imports/{id}/discard
+
+Membuang baris email (hanya yang masih `PENDING_REVIEW` atau `FAILED`).
+
+### POST /email-imports/{id}/retry
+
+Memproses ulang baris `FAILED`: ambil ulang email dari inbox (IMAP, by Message-ID) lalu parse lagi. Hasil: `PENDING_REVIEW` bila transaksi, `DISCARDED` bila bukan pengeluaran / kena discard rule, atau tetap `FAILED` bila masih gagal.
+
+### POST /email-imports/poll
+
+Memicu pembacaan inbox IMAP secara manual (dipakai tombol Refresh). Mengembalikan `{ "count": N }`.
+
 ### Traceability (X-Trace-Id)
 
 Setiap request membawa header `X-Trace-Id` (UUID) untuk menelusuri satu request end-to-end di log (frontend → backend → notifier). Detail di `AGENTS.md` → *Trace ID end-to-end*. Header bersifat opsional dari sisi client (backend & notifier generate sendiri bila kosong), dan selalu dikembalikan sebagai response header `X-Trace-Id`.
@@ -451,6 +491,17 @@ UPLOAD_DIR=/app/uploads
 GEMINI_API_KEY=AIza...            # untuk Scan Struk dengan AI
 AI_MODEL=gemini-3.5-flash-lite    # opsional, default
 AI_TIMEOUT=60                     # opsional, detik
+INBOX_ENABLED=true                # aktifkan baca email (default false)
+INBOX_HOST=imap.gmail.com         # opsional
+INBOX_PORT=993                    # opsional
+INBOX_USER=                       # opsional; fallback ke SMTP_USER
+INBOX_APP_PASSWORD=               # opsional; fallback ke SMTP_APP_PASSWORD
+INBOX_FOLDER=INBOX                # opsional
+INBOX_POLL_MS=300000              # opsional, interval polling (ms)
+INBOX_SENDERS=klikbca.com,bca.co.id,danamon.co.id  # opsional, whitelist domain
+INBOX_LOOKBACK_DAYS=3             # opsional
+INBOX_MAX_PER_POLL=50             # opsional
+INBOX_DISCARD_MERCHANTS=superindo # opsional, keyword merchant auto-discard (comma-separated)
 ```
 
 ### Frontend

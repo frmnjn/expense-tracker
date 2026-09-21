@@ -3,6 +3,7 @@ import AppLayout from './components/AppLayout'
 import DashboardPage from './pages/DashboardPage'
 import ExpensePage from './pages/ExpensePage'
 import HistoryPage from './pages/HistoryPage'
+import InboxPage from './pages/InboxPage'
 import LockPage from './pages/LockPage'
 import ScanPage from './pages/ScanPage'
 import { getAccessCode } from './utils/access'
@@ -20,6 +21,7 @@ function App() {
           <Route path="/" element={<ExpensePage />} />
           <Route path="/catat" element={<ExpensePage />} />
           <Route path="/scan" element={<ScanPage />} />
+          <Route path="/inbox" element={<InboxPage />} />
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/riwayat" element={<HistoryPage />} />
         </Route>
