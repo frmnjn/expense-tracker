@@ -883,3 +883,48 @@ tampil di UI.
 * [x] Konversi mata uang asing -> IDR memakai kurs API fawazahmed0 (historical date), backend yang konversi; gemini hanya deteksi currency; info kurs & nilai asli tampil di UI review + deskripsi expense.
 
 * [x] Lihat rincian pengeluaran setelah submit (per budget + final total) via modal dari kartu "Selesai"; getDetail mengembalikan expenses by invoice_id.
+
+
+## Phase 27 - Import Transaksi dari Email (Inbox)
+
+Baca email notifikasi bank via IMAP (backend Java, polling), parse jadi antrian
+review, lalu import menjadi expense dari halaman `/inbox`. Notifier tetap
+khusus kirim email.
+
+### Backend
+
+* [x] Dependency `spring-boot-starter-mail` (Angus Mail) untuk IMAP.
+* [x] Config `inbox.*` di `application.yml` (`INBOX_ENABLED`, host/port, folder, poll, senders, lookback, max-per-poll).
+* [x] Kredensial inbox fallback ke `SMTP_USER`/`SMTP_APP_PASSWORD` (dipakai bersama notifier, tanpa duplikasi secret).
+* [x] Migration `V19__email_imports.sql` (tabel `email_imports`, unique `message_id`).
+* [x] `EmailImportData` + `EmailImportRepository` (JdbcTemplate).
+* [x] `HtmlText` util (HTML email → teks berbaris, tanpa dependency parser HTML).
+* [x] `EmailParserService` hibrida: regex BCA Credit Card, BCA Internet Journal, D-Bank QRIS; fallback Gemini; parse nominal ID/US & tanggal multi-format.
+* [x] `EmailInboxService`: polling `@Scheduled`, folder READ_ONLY (tidak menandai email terbaca), filter whitelist sender, dedup `Message-ID`.
+* [x] `EmailImportService` + `EmailImportController`: `GET /email-imports`, `POST /email-imports/{id}/import`, `POST /email-imports/{id}/discard`, `POST /email-imports/poll`.
+* [x] Deteksi duplikat: `ExpenseRepository.findByPeriodAndAmount` + `DuplicateExpenseException`; import ditolak **409** bila nominal persis sama di periode sama; bypass via `?force=true`.
+* [x] Retry fallback AI (`ai.max-attempts`/`ai.retry-delay-ms`) + `RetryableException` untuk 429/5xx.
+* [x] `NotExpenseException` → baris ditandai `DISCARDED` (bukan `FAILED`).
+* [x] `MerchantDiscardRule` + config `INBOX_DISCARD_MERCHANTS` (case-insensitive, toleran spasi); auto-`DISCARDED` saat insert & retry.
+* [x] Retry manual: `EmailInboxService.fetchByMessageId` (IMAP by Message-ID), `EmailImportRepository.updateParsed`/`markDiscarded(reason)`, `POST /email-imports/{id}/retry`.
+* [x] Unit test `EmailImportServiceTest` (duplikat ditolak, force lolos, tanpa match lolos, sudah diproses ditolak, retry → PENDING_REVIEW/DISCARDED/FAILED).
+* [x] Unit test `EmailParserServiceTest` (retry 503→sukses, `isExpense=false` → NotExpense, retry habis → gagal).
+* [x] Unit test `MerchantDiscardRuleTest`.
+* [x] Model `EmailImportResponse`/`EmailImportsResponse` + `@RegisterReflectionForBinding`.
+* [x] `@EnableScheduling` di `ExpenseTrackerApplication`.
+* [x] Unit test `EmailParserServiceTest` (3 format, nominal ID/US, tanggal, fallback).
+
+### Frontend
+
+* [x] Tipe `EmailImport`, service `emailImports.ts`, hook `useEmailImports`.
+* [x] Halaman `InboxPage` (`/inbox`) + `ImportEmailModal` (pilih budget/tanggal/nominal).
+* [x] `ImportEmailModal`: saat backend balas 409, tampilkan konfirmasi "Kemungkinan Duplikat" dengan tombol "Tetap Import" (kirim `force=true`).
+* [x] Tombol "Coba lagi" pada kartu `FAILED` + hook `useRetryEmailImport`.
+* [x] Menu "Inbox Email" di `AppLayout`, route di `App.tsx`, filter status (termasuk "Semua"), tombol Refresh.
+* [x] Badge status untuk semua status (Perlu Review/Selesai/Dibuang/Gagal).
+
+### Infra / Docs
+
+* [x] PRD: halaman `/inbox`, section fitur, endpoint API, env `INBOX_*`.
+* [ ] Deploy: set `INBOX_ENABLED=true` di `backend/.env` VPS lalu `./deploy-vps.sh`.
+* [ ] Uji manual: `/email-imports/poll` → muncul di Inbox → import → expense & saldo terpotong.

@@ -49,6 +49,15 @@ public class ExpenseRepository {
                 invoiceId);
     }
 
+    /** Expense aktif dengan nominal persis sama pada satu periode (untuk deteksi duplikat). */
+    public List<ExpenseData> findByPeriodAndAmount(String period, long amount) {
+        return jdbcTemplate.query(
+                SELECT_COLS + "WHERE e.period = ? AND e.amount = ? AND e.deleted = FALSE "
+                        + "ORDER BY e.date_time DESC, e.id",
+                this::mapRow,
+                period, amount);
+    }
+
     public List<String> getPeriods() {
         return jdbcTemplate.query(
                 "SELECT period FROM expenses WHERE deleted = FALSE GROUP BY period ORDER BY MAX(period_start) DESC",

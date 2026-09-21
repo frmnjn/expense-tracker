@@ -9,6 +9,8 @@ import com.expensetracker.model.BudgetCreateRequest;
 import com.expensetracker.model.BudgetOption;
 import com.expensetracker.model.BudgetUpdateRequest;
 import com.expensetracker.model.BudgetSummary;
+import com.expensetracker.model.EmailImportResponse;
+import com.expensetracker.model.EmailImportsResponse;
 import com.expensetracker.model.ExpenseRequest;
 import com.expensetracker.model.ExpenseResponse;
 import com.expensetracker.model.ExpensesResponse;
@@ -26,8 +28,10 @@ import com.expensetracker.model.TrendResponse;
 import org.springframework.aot.hint.annotation.RegisterReflectionForBinding;
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
+@EnableScheduling
 @RegisterReflectionForBinding({
         ApiResponse.class,
         AiAnalysisResponse.class,
@@ -44,6 +48,9 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
         ExpenseResponse.class,
         ExpenseResponse[].class,
         ExpensesResponse.class,
+        EmailImportResponse.class,
+        EmailImportResponse[].class,
+        EmailImportsResponse.class,
         InvoiceDetailResponse.class,
         InvoiceResponse.class,
         InvoiceResponse[].class,
