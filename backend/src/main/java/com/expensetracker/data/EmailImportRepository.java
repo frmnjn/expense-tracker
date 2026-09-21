@@ -46,13 +46,13 @@ public class EmailImportRepository {
 
     public List<EmailImportData> findByStatus(String status) {
         return jdbcTemplate.query(
-                "SELECT " + COLUMNS + " FROM email_imports WHERE status = ? ORDER BY created_at DESC, id",
+                "SELECT " + COLUMNS + " FROM email_imports WHERE status = ? ORDER BY received_at DESC, id",
                 this::mapRow, status);
     }
 
     public List<EmailImportData> findAll() {
         return jdbcTemplate.query(
-                "SELECT " + COLUMNS + " FROM email_imports ORDER BY created_at DESC, id",
+                "SELECT " + COLUMNS + " FROM email_imports ORDER BY received_at DESC, id",
                 this::mapRow);
     }
 
