@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   ActionIcon,
   Box,
@@ -62,20 +62,46 @@ function ReviewModal({
   invoiceId: string
   onClose: () => void
   onSubmitted: () => void
-}) {
-  const { data, isPending } = useInvoiceDetail(invoiceId)
+}) {  const { data, isPending } = useInvoiceDetail(invoiceId)
   const { data: options } = useOptions()
   const batch = useCreateExpenseBatch()
   const toast = useToast()
   const isMobile = useMediaQuery('(max-width: 48em)')
   const [items, setItems] = useState<EditItem[]>([])
   const [groupNames, setGroupNames] = useState<Record<string, string>>({})
+  const [flashKey, setFlashKey] = useState<string | null>(null)
+  const itemRefs = useRef<Record<string, HTMLElement | null>>({})
+  const summaryRef = useRef<HTMLDivElement | null>(null)
+  const [flashSummary, setFlashSummary] = useState(false)
+  const [showBack, setShowBack] = useState(false)
+
+  const indexById = useMemo(() => {
+    const map = new Map<string, number>()
+    items.forEach((it, i) => map.set(it.key, i))
+    return map
+  }, [items])
 
   const budgetNames = useMemo(() => (options?.budgets ?? []).map((b) => b.name), [options])
   const budgetOptions = useMemo(() => budgetNames.map((n) => ({ value: n, label: n })), [budgetNames])
 
   const analysis = data?.status === 'TO_REVIEW' ? data.analysis : undefined
   const storeName = analysis?.storeName?.trim() || 'Belanja'
+
+  // Munculkan tombol "kembali ke ringkasan" saat section ringkasan tergulung ke atas.
+  // Baris tombol di header selalu dirender (tinggi header konstan), jadi perubahan
+  // showBack tidak menggeser layout dan tidak memicu kedip.
+  useEffect(() => {
+    const summary = summaryRef.current
+    if (!summary) return
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry) setShowBack(!entry.isIntersecting)
+      },
+      { threshold: 0 },
+    )
+    observer.observe(summary)
+    return () => observer.disconnect()
+  }, [analysis])
 
   // Konversi mata uang: bila currency bukan IDR, tampilkan info kurs & nilau asli.
   const currency = analysis?.currency?.trim() || DEFAULT_CURRENCY
@@ -120,6 +146,18 @@ function ReviewModal({
   }
 
   const removeItem = (key: string) => setItems((prev) => prev.filter((it) => it.key !== key))
+
+  const jumpToItem = (key: string) => {
+    itemRefs.current[key]?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    setFlashKey(key)
+    window.setTimeout(() => setFlashKey((k) => (k === key ? null : k)), 1500)
+  }
+
+  const scrollToSummary = () => {
+    summaryRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    setFlashSummary(true)
+    window.setTimeout(() => setFlashSummary(false), 1500)
+  }
 
   const groups = useMemo(() => {
     const map = new Map<string, EditItem[]>()
@@ -198,7 +236,27 @@ function ReviewModal({
     <Modal
       opened
       onClose={onClose}
-      title="Review Hasil Analisis"
+      title={
+        analysis ? (
+          <Stack gap={4}>
+            <Text fw={600}>Review Hasil Analisis</Text>
+            <Button
+              size="compact-xs"
+              variant="light"
+              onClick={scrollToSummary}
+              style={{
+                visibility: showBack ? 'visible' : 'hidden',
+                opacity: showBack ? 1 : 0,
+                pointerEvents: showBack ? 'auto' : 'none',
+              }}
+            >
+              ↑ Pengeluaran per budget
+            </Button>
+          </Stack>
+        ) : (
+          'Review Hasil Analisis'
+        )
+      }
       centered
       fullScreen={isMobile}
       size="md"
@@ -292,9 +350,19 @@ function ReviewModal({
             </Paper>
           )}
 
-          <Text size="sm" fw={600}>
-            Pengeluaran per budget
-          </Text>
+          <Box ref={summaryRef}>
+            <Text
+              size="sm"
+              fw={600}
+              style={
+                flashSummary
+                  ? { background: 'rgba(255, 193, 7, 0.12)', borderRadius: 4, padding: '2px 4px' }
+                  : undefined
+              }
+            >
+              Pengeluaran per budget
+            </Text>
+          </Box>
           {groups.length === 0 && (
             <Text size="sm" c="dimmed">
               Belum ada item dengan budget. Assign budget tiap item di bawah.
@@ -320,9 +388,19 @@ function ReviewModal({
                     setGroupNames((prev) => ({ ...prev, [budget]: e.currentTarget.value }))
                   }
                 />
-                <Text size="xs" c="dimmed" mt={6}>
-                  {list.map((it) => it.name.trim()).filter(Boolean).join(', ') || '—'}
-                </Text>
+                <Group gap={6} mt={6}>
+                  {list.map((it) => (
+                    <Text
+                      key={it.key}
+                      size="xs"
+                      c="blue"
+                      style={{ cursor: 'pointer', textDecoration: 'underline' }}
+                      onClick={() => jumpToItem(it.key)}
+                    >
+                      {it.name.trim() || `Item ${(indexById.get(it.key) ?? 0) + 1}`}
+                    </Text>
+                  ))}
+                </Group>
               </Paper>
             )
           })}
@@ -332,7 +410,20 @@ function ReviewModal({
           </Text>
           {items.map((it, idx) =>
             isMobile ? (
-              <Paper key={it.key} withBorder p="sm" radius="md">
+              <Paper
+                key={it.key}
+                ref={(el) => {
+                  itemRefs.current[it.key] = el
+                }}
+                withBorder
+                p="sm"
+                radius="md"
+                style={
+                  flashKey === it.key
+                    ? { borderColor: 'var(--mantine-color-yellow-6)', background: 'rgba(255, 193, 7, 0.12)' }
+                    : undefined
+                }
+              >
                 <Group justify="space-between" align="center" mb="xs">
                   <Text size="sm" fw={600}>
                     Item {idx + 1}
@@ -374,7 +465,20 @@ function ReviewModal({
                 </Stack>
               </Paper>
             ) : (
-              <Group key={it.key} wrap="nowrap" align="flex-end" gap="xs">
+              <Group
+                key={it.key}
+                ref={(el) => {
+                  itemRefs.current[it.key] = el
+                }}
+                wrap="nowrap"
+                align="flex-end"
+                gap="xs"
+                style={
+                  flashKey === it.key
+                    ? { borderColor: 'var(--mantine-color-yellow-6)', background: 'rgba(255, 193, 7, 0.12)' }
+                    : undefined
+                }
+              >
                 <TextInput
                   size="xs"
                   placeholder="Nama"
