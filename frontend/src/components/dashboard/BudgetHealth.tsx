@@ -119,7 +119,7 @@ export function BudgetHealth({
                     </Group>
                     <Text size="xs" c="dimmed" truncate>
                       {negative
-                        ? `${formatCurrency(Math.abs(b.balance))} melebihi`
+                        ? `-${formatCurrency(Math.abs(b.balance))}`
                         : `${formatCurrency(b.balance)} tersisa`}
                       {info ? ` · ${info.count} transaksi` : ''}
                     </Text>
