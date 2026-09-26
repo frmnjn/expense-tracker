@@ -416,6 +416,10 @@ public class ExpenseService {
         return invoiceService.getInvoicePhotoPath(expense.invoiceId());
     }
 
+    public ExpenseResponse getExpense(String id) {
+        return toResponse(requireExpense(id));
+    }
+
     private ExpenseData requireExpense(String id) {
         if (id == null || id.isBlank()) {
             throw new ValidationException("Expense id is required");

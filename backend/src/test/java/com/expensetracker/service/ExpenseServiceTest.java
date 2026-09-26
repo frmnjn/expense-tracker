@@ -68,6 +68,24 @@ class ExpenseServiceTest {
     }
 
     @Test
+    void getExpense_existingId_shouldReturnResponse() {
+        when(expenseRepository.findById("id123")).thenReturn(expenseData());
+
+        var response = expenseService.getExpense("id123");
+
+        assertEquals("id123", response.id());
+        assertEquals("Makan Siang", response.name());
+        assertEquals(35000L, response.amount());
+    }
+
+    @Test
+    void getExpense_unknownId_shouldThrow() {
+        when(expenseRepository.findById("nope")).thenReturn(null);
+
+        assertThrows(ValidationException.class, () -> expenseService.getExpense("nope"));
+    }
+
+    @Test
     void createExpense_validRequest_shouldInsertAndDecrementBudget() {
         when(budgetRepository.findIdByName("Daily")).thenReturn(1L);
         assertDoesNotThrow(() -> expenseService.createExpense(validRequest()));

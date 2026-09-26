@@ -6,6 +6,7 @@ import type {
   BatchExpenseRequest,
   BudgetCreateRequest,
   BudgetUpdateRequest,
+  Expense,
   ExpenseRequest,
   ExpensesResponse,
   InvoiceDetail,
@@ -138,6 +139,11 @@ export async function getExpenses(period: string): Promise<ExpensesResponse> {
     params: { period },
   })
   return response.data.data ?? { expenses: [] }
+}
+
+export async function getExpense(id: string): Promise<Expense | null> {
+  const response = await apiClient.get<ApiResponse<Expense>>(`/expenses/${id}`)
+  return response.data.data ?? null
 }
 
 export async function getSummary(period: string): Promise<SummaryResponse> {

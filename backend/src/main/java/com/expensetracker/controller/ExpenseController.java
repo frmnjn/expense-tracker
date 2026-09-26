@@ -143,6 +143,21 @@ public class ExpenseController {
         }
     }
 
+    @GetMapping("/expenses/{id}")
+    public ResponseEntity<ApiResponse> getExpense(@PathVariable String id) {
+        try {
+            return ResponseEntity.ok(ApiResponse.ok(expenseService.getExpense(id)));
+        } catch (ValidationException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            LOGGER.error("internal error getting expense", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Internal server error"));
+        }
+    }
+
     @GetMapping("/summary")
     public ResponseEntity<ApiResponse> getSummary(@RequestParam("period") String period) {
         try {

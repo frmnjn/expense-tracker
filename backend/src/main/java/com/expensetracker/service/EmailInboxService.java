@@ -184,7 +184,7 @@ public class EmailInboxService {
 
             String id = UUID.randomUUID().toString();
             try {
-                ParsedTransaction parsed = emailParserService.parse(sender, body);
+                ParsedTransaction parsed = emailParserService.parse(sender, subject, body);
                 if (merchantDiscardRule.shouldDiscard(parsed.merchant())) {
                     emailImportRepository.insert(id, messageId, sender, subject, receivedAt,
                             parsed.transactionAt(), parsed.merchant(), parsed.amount(),

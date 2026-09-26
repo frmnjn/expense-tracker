@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   deleteExpense,
+  getExpense,
   getExpenses,
   getPeriods,
   getSummary,
@@ -21,6 +22,14 @@ export function useExpenses(period: string | null) {
     queryKey: ['expenses', period],
     queryFn: () => getExpenses(period ?? ''),
     enabled: !!period,
+  })
+}
+
+export function useExpense(id: string | null | undefined) {
+  return useQuery({
+    queryKey: ['expense', id],
+    queryFn: () => getExpense(id ?? ''),
+    enabled: !!id,
   })
 }
 
