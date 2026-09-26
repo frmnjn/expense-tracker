@@ -15,6 +15,7 @@ import dayjs from 'dayjs'
 import { useDiscardEmail, useEmailImports, usePollEmails, useRetryEmailImport } from '../hooks/useEmailImports'
 import { AppPagination } from '../components/AppPagination'
 import ImportEmailModal from '../components/ImportEmailModal'
+import EmailRincianModal from '../components/EmailRincianModal'
 import { useToast } from '../components/Toast'
 import { getErrorMessage } from '../utils/error'
 import { formatCurrency } from '../utils/currency'
@@ -38,6 +39,7 @@ const STATUS_BADGE: Record<string, { label: string; color: string }> = {
 function InboxPage() {
   const [status, setStatus] = useState('ALL')
   const [importing, setImporting] = useState<EmailImport | null>(null)
+  const [detail, setDetail] = useState<EmailImport | null>(null)
   const { data, isPending } = useEmailImports(status)
   const poll = usePollEmails()
   const discard = useDiscardEmail()
@@ -193,6 +195,13 @@ function InboxPage() {
                             </Button>
                           </Group>
                         )}
+                        {item.expenseId && (
+                          <Group justify="flex-end" gap="xs">
+                            <Button size="xs" variant="light" onClick={() => setDetail(item)}>
+                              Rincian
+                            </Button>
+                          </Group>
+                        )}
                       </Stack>
                     </Paper>
                   ))}
@@ -204,6 +213,7 @@ function InboxPage() {
       </Stack>
 
       {importing && <ImportEmailModal key={importing.id} item={importing} onClose={() => setImporting(null)} />}
+      {detail && <EmailRincianModal key={detail.id} item={detail} onClose={() => setDetail(null)} />}
     </Container>
   )
 }

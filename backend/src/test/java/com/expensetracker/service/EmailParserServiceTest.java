@@ -106,6 +106,136 @@ class EmailParserServiceTest {
     }
 
     @Test
+    void parsesBcaCreditCardMultilineFromNewSender() {
+        String html = """
+                <html><body><table>
+                <tr><td>Nomor Kartu</td>
+                <td>:</td>
+                <td>455633XXXX1552</td>
+                </tr>
+                <tr><td>Merchant / ATM</td>
+                <td>:&nbsp;</td>
+                <td><span>SHOPEE.CO.ID</span></td>
+                </tr>
+                <tr><td>Pada Tanggal</td>
+                <td>:</td>
+                <td><span>25-09-2026 13:09:49 WIB</span></td></tr>
+                <tr><td>Sejumlah</td>
+                <td>:</td>
+                <td><span>Rp94.074,00</span></td></tr>
+                </table></body></html>
+                """;
+        ParsedTransaction result = parser().parse(
+                "kartukreditbca@bca.co.id", "Credit Card Transaction Notification", html);
+
+        assertEquals("SHOPEE.CO.ID", result.merchant());
+        assertEquals(94_074L, result.amount());
+        assertEquals(LocalDateTime.of(2026, 9, 25, 13, 9, 49), result.transactionAt());
+        assertEquals("REGEX", result.parseMethod());
+    }
+
+    @Test
+    void parsesBcaJournalTransferVaMultiline() {
+        String html = """
+                <html><body><table>
+                <tr><td>Status</td>
+                <td>:</td>
+                <td>Berhasil</td></tr>
+                <tr><td>Tanggal Transaksi</td>
+                <td>:</td>
+                <td>25 Sep 2026 12:19:32</td></tr>
+                <tr><td>Jenis Transaksi</td>
+                <td>:</td>
+                <td>Transfer ke BCA Virtual Account</td></tr>
+                <tr><td>Nama Perusahaan/Produk</td>
+                <td>:</td>
+                <td>PT FINNET INDONESIA / BY.U</td></tr>
+                <tr><td>Total Tagihan</td>
+                <td>:</td>
+                <td>IDR 100,000.00</td></tr>
+                <tr><td>Total Bayar</td>
+                <td>:</td>
+                <td>IDR 100,000.00</td></tr>
+                </table></body></html>
+                """;
+        ParsedTransaction result = parser().parse(
+                "bca@bca.co.id", "Internet Transaction Journal", html);
+
+        assertEquals("PT FINNET INDONESIA / BY.U", result.merchant());
+        assertEquals(100_000L, result.amount());
+        assertEquals(LocalDateTime.of(2026, 9, 25, 12, 19, 32), result.transactionAt());
+        assertEquals("REGEX", result.parseMethod());
+    }
+
+    @Test
+    void parsesBcaJournalBifastViaNominal() {
+        String html = """
+                <html><body><table>
+                <tr><td>Status</td>
+                <td>:</td>
+                <td>Berhasil</td></tr>
+                <tr><td>Tanggal Transaksi</td>
+                <td>:</td>
+                <td>25 Sep 2026 12:16:44</td></tr>
+                <tr><td>Nama Penerima</td>
+                <td>:</td>
+                <td>FIRMAN BUDI SAFRIZAL</td></tr>
+                <tr><td>Nominal</td>
+                <td>:</td>
+                <td>IDR 500,000.00</td></tr>
+                </table></body></html>
+                """;
+        ParsedTransaction result = parser().parse(
+                "bca@bca.co.id", "Internet Transaction Journal", html);
+
+        assertEquals("FIRMAN BUDI SAFRIZAL", result.merchant());
+        assertEquals(500_000L, result.amount());
+        assertEquals("REGEX", result.parseMethod());
+    }
+
+    private static final String JAGO_PAYMENT = """
+            <html><body><div>Hello Rene,</div>
+            <div>Transaction Summary</div>
+            <div>From</div>
+            <div>106335389859</div>
+            <div>To</div>
+            <div>KETOPRAK BANG JACKK</div>
+            <div>9360000801838616977</div>
+            <div>Amount</div>
+            <div>Rp 45.000</div>
+            <div>Transaction Date</div>
+            <div>26 September 2026, 07:34 WIB</div>
+            <div>Transaction Status</div>
+            <div>Successful</div>
+            <div>Tip Amount</div>
+            <div>Rp 0</div>
+            </body></html>
+            """;
+
+    @Test
+    void parsesJagoPayment() {
+        ParsedTransaction result = parser().parse(
+                "noreply@jago.com", "You have made a payment to KETOPRAK BANG JACKK?", JAGO_PAYMENT);
+
+        assertEquals("KETOPRAK BANG JACKK", result.merchant());
+        assertEquals(45_000L, result.amount());
+        assertEquals(LocalDateTime.of(2026, 9, 26, 7, 34), result.transactionAt());
+        assertEquals("REGEX", result.parseMethod());
+    }
+
+    @Test
+    void jagoPocketTransferIsNotExpense() {
+        assertThrows(NotExpenseException.class, () -> parser().parse(
+                "noreply@jago.com", "Money moved between your Pockets", JAGO_PAYMENT));
+    }
+
+    @Test
+    void parsesDateTimeWithComma() {
+        assertEquals(LocalDateTime.of(2026, 9, 26, 7, 34),
+                EmailParserService.parseDateTime("26 September 2026, 07:34 WIB"));
+    }
+
+    @Test
     void rejectsUnknownFormatWithoutAi() {
         assertThrows(ValidationException.class, () -> parser().parse("someone@example.com", "<p>hello</p>"));
     }

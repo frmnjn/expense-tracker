@@ -65,8 +65,12 @@ public class EmailParserService {
     }
 
     public ParsedTransaction parse(String sender, String html) {
+        return parse(sender, "", html);
+    }
+
+    public ParsedTransaction parse(String sender, String subject, String html) {
         String text = HtmlText.toText(html);
-        ParsedTransaction parsed = parseByRegex(sender, text);
+        ParsedTransaction parsed = parseByRegex(sender, subject, text);
         if (parsed != null) {
             return parsed;
         }
@@ -76,9 +80,9 @@ public class EmailParserService {
         throw new ValidationException("Format email belum dikenali");
     }
 
-    private ParsedTransaction parseByRegex(String sender, String text) {
+    private ParsedTransaction parseByRegex(String sender, String subject, String text) {
         String domain = domainOf(sender);
-        if (domain.endsWith("klikbca.com")) {
+        if (domain.endsWith("klikbca.com") || isBcaCreditCard(sender, subject, text)) {
             return parseBcaCreditCard(text);
         }
         if (domain.endsWith("bca.co.id")) {
@@ -87,21 +91,46 @@ public class EmailParserService {
         if (domain.endsWith("danamon.co.id")) {
             return parseDanamonQris(text);
         }
+        if (domain.endsWith("jago.com")) {
+            return parseJago(subject, text);
+        }
         return null;
     }
 
-    /** BCA Credit Card Transaction Notification. */
+    /** Kartu kredit BCA kini dikirim dari kartukreditbca@bca.co.id (dulu klikbca.com). */
+    private static boolean isBcaCreditCard(String sender, String subject, String text) {
+        if (sender != null && sender.toLowerCase(Locale.ROOT).contains("kartukredit")) {
+            return true;
+        }
+        if (subject != null && subject.toLowerCase(Locale.ROOT).contains("credit card")) {
+            return true;
+        }
+        return text.toLowerCase(Locale.ROOT).contains("kartu kredit bca");
+    }
+
+    /** BCA Credit Card Transaction Notification (regex existing dulu, V2 fallback). */
     private ParsedTransaction parseBcaCreditCard(String text) {
         String merchant = field(text, "Merchant\\s*/\\s*ATM");
         Long amount = parseAmount(field(text, "Sejumlah"));
+        if (merchant != null && amount != null && amount > 0) {
+            return new ParsedTransaction(merchant, amount,
+                    parseDateTime(field(text, "Pada\\s+Tanggal")), null, "REGEX");
+        }
+        return parseBcaCreditCardV2(text);
+    }
+
+    /** Fallback: label & value terpisah baris (template HTML pretty-printed). */
+    private ParsedTransaction parseBcaCreditCardV2(String text) {
+        String merchant = fieldMultiline(text, "Merchant\\s*/\\s*ATM");
+        Long amount = parseAmount(fieldMultiline(text, "Sejumlah"));
         if (merchant == null || amount == null || amount <= 0) {
             return null;
         }
         return new ParsedTransaction(merchant, amount,
-                parseDateTime(field(text, "Pada\\s+Tanggal")), null, "REGEX");
+                parseDateTime(fieldMultiline(text, "Pada\\s+Tanggal")), null, "REGEX");
     }
 
-    /** BCA Internet Transaction Journal (myBCA / QRIS). */
+    /** BCA Internet Transaction Journal / myBCA (regex existing dulu, V2 fallback). */
     private ParsedTransaction parseBcaInternetJournal(String text) {
         String status = field(text, "Status");
         if (status != null && !status.toLowerCase(Locale.ROOT).contains("berhasil")) {
@@ -109,11 +138,33 @@ public class EmailParserService {
         }
         String merchant = field(text, "Pembayaran\\s+Ke");
         Long amount = parseAmount(field(text, "Total\\s+Bayar"));
+        if (merchant != null && amount != null && amount > 0) {
+            return new ParsedTransaction(merchant, amount,
+                    parseDateTime(field(text, "Tanggal\\s+Transaksi")), null, "REGEX");
+        }
+        return parseBcaInternetJournalV2(text);
+    }
+
+    /** Fallback: label multiline + varian Transfer/VA (tanpa label "Pembayaran Ke"). */
+    private ParsedTransaction parseBcaInternetJournalV2(String text) {
+        String status = fieldMultiline(text, "Status");
+        if (status != null && !status.toLowerCase(Locale.ROOT).contains("berhasil")) {
+            return null;
+        }
+        String merchant = firstNonNull(
+                fieldMultiline(text, "Pembayaran\\s+Ke"),
+                fieldMultiline(text, "Nama\\s+Perusahaan\\s*/\\s*Produk"),
+                fieldMultiline(text, "Nama\\s+Penerima"),
+                fieldMultiline(text, "Rekening\\s+Tujuan"));
+        Long amount = parseAmount(firstNonNull(
+                fieldMultiline(text, "Total\\s+Bayar"),
+                fieldMultiline(text, "Nominal"),
+                fieldMultiline(text, "Total\\s+Tagihan")));
         if (merchant == null || amount == null || amount <= 0) {
             return null;
         }
         return new ParsedTransaction(merchant, amount,
-                parseDateTime(field(text, "Tanggal\\s+Transaksi")), null, "REGEX");
+                parseDateTime(fieldMultiline(text, "Tanggal\\s+Transaksi")), null, "REGEX");
     }
 
     /** D-Bank PRO QRIS Berhasil. */
@@ -135,6 +186,61 @@ public class EmailParserService {
     private static String field(String text, String labelRegex) {
         Matcher m = Pattern.compile("(?im)^\\s*" + labelRegex + "\\s*:?\\s*(.+?)\\s*$").matcher(text);
         return m.find() ? m.group(1).trim() : null;
+    }
+
+    /**
+     * Fallback bila label & value terpisah baris (mis. "Merchant / ATM" lalu
+     * ":" lalu value di baris berikut — akibat HTML pretty-printed). Regex
+     * existing (sebaris) dicoba dulu; ":" sendirian tidak dihitung sebagai value.
+     */
+    private static String fieldMultiline(String text, String labelRegex) {
+        String inline = field(text, labelRegex);
+        if (inline != null && !inline.replace(":", "").isBlank()) {
+            return inline;
+        }
+        Pattern label = Pattern.compile("^\\s*" + labelRegex + "\\s*:?\\s*$",
+                Pattern.CASE_INSENSITIVE | Pattern.UNICODE_CASE);
+        String[] lines = text.split("\n");
+        for (int i = 0; i < lines.length; i++) {
+            if (label.matcher(lines[i].trim()).matches()) {
+                for (int j = i + 1; j < Math.min(i + 3, lines.length); j++) {
+                    String next = lines[j].trim().replaceFirst("^:\\s*", "").trim();
+                    if (!next.isEmpty() && !next.equals(":")) {
+                        return next;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    @SafeVarargs
+    private static <T> T firstNonNull(T... values) {
+        for (T v : values) {
+            if (v != null) {
+                return v;
+            }
+        }
+        return null;
+    }
+
+    /** Bank Jago: payment notification (Inggris, line-based). */
+    private ParsedTransaction parseJago(String subject, String text) {
+        String combined = ((subject == null ? "" : subject) + "\n" + text).toLowerCase(Locale.ROOT);
+        if (combined.contains("between your pockets")) {
+            throw new NotExpenseException("Transfer antar Pocket sendiri");
+        }
+        String status = fieldMultiline(text, "Transaction\\s+Status");
+        if (status != null && !status.toLowerCase(Locale.ROOT).contains("success")) {
+            return null;
+        }
+        String merchant = fieldMultiline(text, "To\\b");
+        Long amount = parseAmount(fieldMultiline(text, "Amount"));
+        if (merchant == null || amount == null || amount <= 0) {
+            return null;
+        }
+        return new ParsedTransaction(merchant, amount,
+                parseDateTime(fieldMultiline(text, "Transaction\\s+Date")), null, "REGEX");
     }
 
     private static String domainOf(String sender) {
@@ -222,7 +328,9 @@ public class EmailParserService {
                 formatter("dd MMM yyyy HH:mm:ss"),
                 formatter("dd MMM yyyy HH:mm"),
                 formatter("dd MMMM yyyy HH:mm:ss"),
-                formatter("dd MMMM yyyy HH:mm"));
+                formatter("dd MMMM yyyy HH:mm"),
+                formatter("dd MMMM yyyy, HH:mm:ss"),
+                formatter("dd MMMM yyyy, HH:mm"));
         for (DateTimeFormatter f : formatters) {
             try {
                 return LocalDateTime.parse(value, f);
