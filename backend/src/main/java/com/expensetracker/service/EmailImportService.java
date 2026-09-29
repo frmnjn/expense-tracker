@@ -71,7 +71,20 @@ public class EmailImportService {
             checkDuplicate(request);
         }
         String expenseId = expenseService.createExpense(request);
-        emailImportRepository.markImported(data.id(), expenseId);
+        emailImportRepository.markImported(data.id(), expenseId, request.name(), request.amount(),
+                parseTransactionAt(request.dateTime()));
+    }
+
+    /** Tanggal yang diimport (sudah divalidasi createExpense); null bila tak terparse. */
+    private static LocalDateTime parseTransactionAt(String dateTime) {
+        if (dateTime == null || dateTime.isBlank()) {
+            return null;
+        }
+        try {
+            return PeriodSheetName.parseLenient(dateTime);
+        } catch (DateTimeParseException e) {
+            return null;
+        }
     }
 
     /**

@@ -74,7 +74,7 @@ class EmailImportServiceTest {
                 () -> service.importToExpense("e1", request(57_500L), false));
 
         verify(expenseService, never()).createExpense(any());
-        verify(emailImportRepository, never()).markImported(anyString(), anyString());
+        verify(emailImportRepository, never()).markImported(anyString(), anyString(), anyString(), any(), any());
     }
 
     @Test
@@ -85,7 +85,8 @@ class EmailImportServiceTest {
         service.importToExpense("e1", request(57_500L), true);
 
         verify(expenseRepository, never()).findByPeriodAndAmount(anyString(), anyLong());
-        verify(emailImportRepository).markImported("e1", "exp-1");
+        verify(emailImportRepository).markImported("e1", "exp-1", "TOTAL BUAH SEGAR", 57_500L,
+                LocalDateTime.of(2026, 9, 20, 12, 0));
     }
 
     @Test
@@ -96,7 +97,22 @@ class EmailImportServiceTest {
 
         service.importToExpense("e1", request(57_500L), false);
 
-        verify(emailImportRepository).markImported("e1", "exp-2");
+        verify(emailImportRepository).markImported("e1", "exp-2", "TOTAL BUAH SEGAR", 57_500L,
+                LocalDateTime.of(2026, 9, 20, 12, 0));
+    }
+
+    @Test
+    void importSyncsEditedNameAmountAndDateToEmailRow() {
+        when(emailImportRepository.findById("e1")).thenReturn(importRow("PENDING_REVIEW"));
+        when(expenseRepository.findByPeriodAndAmount(anyString(), eq(50_000L))).thenReturn(List.of());
+        when(expenseService.createExpense(any())).thenReturn("exp-3");
+        ExpenseRequest edited = new ExpenseRequest("2026-09-21 08:00", "Buah Segar Pondok", "Belanja",
+                50_000L, null, null);
+
+        service.importToExpense("e1", edited, false);
+
+        verify(emailImportRepository).markImported("e1", "exp-3", "Buah Segar Pondok", 50_000L,
+                LocalDateTime.of(2026, 9, 21, 8, 0));
     }
 
     @Test
