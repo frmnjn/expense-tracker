@@ -63,10 +63,14 @@ public class EmailImportRepository {
         return rows.isEmpty() ? null : rows.get(0);
     }
 
-    public void markImported(String id, String expenseId) {
+    /** Tandai IMPORTED; merchant/amount/tanggal ikut nilai yang diimport (bisa diedit user). */
+    public void markImported(String id, String expenseId, String merchant, Long amount,
+                             LocalDateTime transactionAt) {
         jdbcTemplate.update(
-                "UPDATE email_imports SET status = 'IMPORTED', expense_id = ?, error_message = NULL WHERE id = ?",
-                expenseId, id);
+                "UPDATE email_imports SET status = 'IMPORTED', expense_id = ?, error_message = NULL, "
+                        + "merchant = ?, amount = ?, transaction_at = ? WHERE id = ?",
+                expenseId, merchant, amount,
+                transactionAt == null ? null : Timestamp.valueOf(transactionAt), id);
     }
 
     public void markDiscarded(String id) {
