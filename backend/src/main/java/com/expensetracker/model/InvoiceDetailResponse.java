@@ -15,5 +15,6 @@ public record InvoiceDetailResponse(
         @JsonProperty("analysis") AiAnalysisResponse analysis,
         @JsonProperty("retryCount") Integer retryCount,
         @JsonProperty("retryMax") Integer retryMax,
+        @JsonProperty("provider") String provider,
         @JsonProperty("expenses") List<ExpenseResponse> expenses) {
 }

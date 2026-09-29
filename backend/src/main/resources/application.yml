@@ -27,6 +27,10 @@ ai:
   timeout: ${AI_TIMEOUT:600}
   max-attempts: ${AI_MAX_ATTEMPTS:50}
   retry-delay-ms: ${AI_RETRY_DELAY_MS:2000}
+  retry-after-cap-ms: ${AI_RETRY_AFTER_CAP_MS:120000}
+  deepseek-api-key: ${DEEPSEEK_API_KEY:}
+  deepseek-model: ${AI_DEEPSEEK_MODEL:deepseek-flash}
+  deepseek-base-url: ${AI_DEEPSEEK_BASE_URL:https://api.deepseek.com}
   fx-api: ${AI_FX_API:https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@%DATE%/v1/currencies/%CUR%.json}
   fx-timeout-ms: ${AI_FX_TIMEOUT_MS:8000}
 

@@ -11,5 +11,6 @@ public record InvoiceResponse(
         @JsonProperty("type") String type,
         @JsonProperty("name") String name,
         @JsonProperty("retryCount") Integer retryCount,
-        @JsonProperty("retryMax") Integer retryMax) {
+        @JsonProperty("retryMax") Integer retryMax,
+        @JsonProperty("provider") String provider) {
 }

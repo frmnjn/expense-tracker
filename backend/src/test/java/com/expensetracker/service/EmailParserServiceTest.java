@@ -20,16 +20,19 @@ class EmailParserServiceTest {
     private BudgetRepository budgetRepository;
 
     private EmailParserService parser() {
-        return new EmailParserService(budgetRepository, new ObjectMapper(), "", "gemini-3.5-flash-lite", 60, 2, 0);
+        return new EmailParserService(budgetRepository, new ObjectMapper(), "", "gemini-3.5-flash-lite", 60, 2, 0,
+                "", "deepseek-flash", "https://api.deepseek.com", 120000);
     }
 
-    /** Subclass yang menimpa callGemini agar tidak memanggil HTTP sungguhan. */
+    /** Subclass yang menimpa callGemini/callDeepSeekText agar tidak memanggil HTTP sungguhan. */
     private static class TestService extends EmailParserService {
         String[] responses;
         int call = 0;
+        String deepseekResponse = null;
 
         TestService(String... responses) {
-            super(null, new ObjectMapper(), "test-key", "gemini-3.5-flash-lite", 60, 2, 0);
+            super(null, new ObjectMapper(), "test-key", "gemini-3.5-flash-lite", 60, 2, 0,
+                    "dsk-key", "deepseek-flash", "https://api.deepseek.com", 120000);
             this.responses = responses;
         }
 
@@ -41,6 +44,14 @@ class EmailParserServiceTest {
                 throw new RetryableException(response.substring(6));
             }
             return response;
+        }
+
+        @Override
+        protected String callDeepSeekText(String text) throws Exception {
+            if (deepseekResponse == null) {
+                throw new RetryableException("DeepSeek returned HTTP 503");
+            }
+            return deepseekResponse;
         }
     }
 
@@ -296,6 +307,19 @@ class EmailParserServiceTest {
         TestService service = new TestService("THROW:Gemini returned HTTP 503");
 
         assertThrows(ValidationException.class, () -> service.parse("unknown@example.com", "<p>x</p>"));
+        assertEquals(2, service.call);
+    }
+
+    @Test
+    void aiFallsBackToDeepSeekAfterGeminiExhausted() {
+        TestService service = new TestService("THROW:Gemini returned HTTP 503");
+        service.deepseekResponse = AI_SUCCESS;
+
+        ParsedTransaction result = service.parse("unknown@example.com", "<p>transfer</p>");
+
+        assertEquals("TOTAL BUAH SEGAR", result.merchant());
+        assertEquals(57_500L, result.amount());
+        assertEquals("AI", result.parseMethod());
         assertEquals(2, service.call);
     }
 }

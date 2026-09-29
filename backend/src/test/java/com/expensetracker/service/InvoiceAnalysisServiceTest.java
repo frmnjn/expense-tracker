@@ -3,6 +3,8 @@ package com.expensetracker.service;
 import com.expensetracker.data.BudgetRepository;
 import com.expensetracker.data.InvoiceData;
 import com.expensetracker.data.InvoiceRepository;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.pdmodel.PDPage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -11,9 +13,13 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 import tools.jackson.databind.ObjectMapper;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.net.http.HttpHeaders;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -39,9 +45,13 @@ class InvoiceAnalysisServiceTest {
         String[] responses = new String[0];
         int call = 0;
         Double rate = null;
+        String deepseekResponse = null;
+        byte[] lastDeepSeekBytes = null;
+        String lastDeepSeekMime = null;
 
         TestService(InvoiceRepository repo, BudgetRepository budgetRepo) {
-            super(repo, budgetRepo, new ObjectMapper(), "key", "gemini-test", 600L, 50, 0L, "", 8000L);
+            super(repo, budgetRepo, new ObjectMapper(), "key", "gemini-test", 600L, 50, 0L, "", 8000L,
+                    "dsk-key", "deepseek-flash", "https://api.deepseek.com", 120000L);
         }
 
         @Override
@@ -58,6 +68,16 @@ class InvoiceAnalysisServiceTest {
                 throw new IOException("connection reset");
             }
             return r;
+        }
+
+        @Override
+        protected String callDeepSeek(byte[] bytes, String mime, String prompt) throws Exception {
+            lastDeepSeekBytes = bytes;
+            lastDeepSeekMime = mime;
+            if (deepseekResponse == null) {
+                throw new RetryableException("DeepSeek returned HTTP 503");
+            }
+            return deepseekResponse;
         }
 
         @Override
@@ -171,5 +191,70 @@ class InvoiceAnalysisServiceTest {
         assertEquals(10000L, out.total());
         assertEquals(10000L, out.items().get(0).amount());
         assertEquals(null, out.exchangeRate());
+    }
+
+    @Test
+    void analyze_geminiExhausted_fallsBackToDeepSeekOnce() throws Exception {
+        String id = "inv-fallback";
+        stubInvoice(id);
+        service.responses = new String[50];
+        for (int i = 0; i < 50; i++) {
+            service.responses[i] = "503";
+        }
+        service.deepseekResponse =
+                "{\"storeName\":\"Indomaret\",\"total\":1000,\"dateTime\":\"2026-09-05 13:31:00\","
+                        + "\"items\":[{\"name\":\"Air\",\"amount\":1000,\"suggestedBudget\":\"Makan\"}]}";
+
+        service.analyzeForTest(id);
+
+        verify(invoiceRepository).setProvider(id, "GEMINI");
+        verify(invoiceRepository).setProvider(id, "DEEPSEEK");
+        verify(invoiceRepository).initRetry(eq(id), eq(1));
+        verify(invoiceRepository).updateAnalysis(eq(id), eq(InvoiceStatus.TO_REVIEW.value()), anyString());
+        assertEquals(50, service.call);
+    }
+
+    @Test
+    void analyze_geminiExhausted_deepSeekAlsoFails_shouldUpdateError() throws Exception {
+        String id = "inv-fallback-fail";
+        stubInvoice(id);
+        service.responses = new String[50];
+        for (int i = 0; i < 50; i++) {
+            service.responses[i] = "503";
+        }
+        service.deepseekResponse = null;
+
+        service.analyzeForTest(id);
+
+        verify(invoiceRepository, never()).updateAnalysis(anyString(), anyString(), anyString());
+        verify(invoiceRepository).updateError(eq(id), anyString());
+    }
+
+    @Test
+    void retryAfterMillis_readsHeaderThenBody() {
+        HttpHeaders headers = HttpHeaders.of(Map.of("Retry-After", List.of("42")), (k, v) -> true);
+
+        assertEquals(42000L, InvoiceAnalysisService.retryAfterMillis(headers, ""));
+        assertEquals(42900L, InvoiceAnalysisService.retryAfterMillis(null, "Please retry in 42.9s"));
+        assertEquals(0L, InvoiceAnalysisService.retryAfterMillis(null, "no hint here"));
+    }
+
+    @Test
+    void pdfFirstPageToPng_rendersPng() throws Exception {
+        byte[] png = service.pdfFirstPageToPng(samplePdf());
+
+        assertEquals((byte) 0x89, png[0]);
+        assertEquals('P', png[1]);
+        assertEquals('N', png[2]);
+        assertEquals('G', png[3]);
+    }
+
+    private static byte[] samplePdf() throws IOException {
+        try (PDDocument document = new PDDocument();
+             ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            document.addPage(new PDPage());
+            document.save(out);
+            return out.toByteArray();
+        }
     }
 }
