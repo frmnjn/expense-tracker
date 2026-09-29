@@ -52,7 +52,8 @@ public class EmailImportRepository {
 
     public List<EmailImportData> findAll() {
         return jdbcTemplate.query(
-                "SELECT " + COLUMNS + " FROM email_imports ORDER BY received_at DESC, id",
+                "SELECT " + COLUMNS + " FROM email_imports "
+                        + "ORDER BY (status = 'PENDING_REVIEW') DESC, received_at DESC, id",
                 this::mapRow);
     }
 
