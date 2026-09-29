@@ -14,11 +14,17 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 import jakarta.annotation.PreDestroy;
+import org.apache.pdfbox.Loader;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.rendering.PDFRenderer;
 import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
+import java.net.http.HttpHeaders;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.file.Files;
@@ -32,10 +38,14 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import javax.imageio.ImageIO;
 
 /**
- * Menganalisis invoice (gambar/PDF) via Google Gemini secara async.
- * Status invoice: ANALYZING -> TO_REVIEW (sukses) / ERROR (gagal, bisa retry).
+ * Menganalisis invoice (gambar/PDF) secara async. Provider utama Google Gemini
+ * (di-retry hingga maxAttempts); bila semua attempt habis, fallback ke DeepSeek
+ * sekali. Status invoice: ANALYZING -> TO_REVIEW (sukses) / ERROR (gagal, bisa retry).
  * Analisis tidak memperlambat request upload; dijalankan di thread pool.
  */
 @Service
@@ -43,6 +53,10 @@ public class InvoiceAnalysisService implements ApplicationRunner {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(InvoiceAnalysisService.class);
     private static final String GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta";
+    private static final String PROVIDER_GEMINI = "GEMINI";
+    private static final String PROVIDER_DEEPSEEK = "DEEPSEEK";
+    private static final Pattern RETRY_IN = Pattern.compile("retry in ([0-9]+(?:\\.[0-9]+)?)s",
+            Pattern.CASE_INSENSITIVE);
 
     private final InvoiceRepository invoiceRepository;
     private final BudgetRepository budgetRepository;
@@ -55,6 +69,10 @@ public class InvoiceAnalysisService implements ApplicationRunner {
     private final Duration timeout;
     private final int maxAttempts;
     private final long retryDelayMs;
+    private final long retryAfterCapMs;
+    private final String deepseekApiKey;
+    private final String deepseekModel;
+    private final String deepseekBaseUrl;
     private final String fxApi;
     private final Duration fxTimeout;
 
@@ -70,7 +88,11 @@ public class InvoiceAnalysisService implements ApplicationRunner {
                                   @Value("${ai.max-attempts:50}") int maxAttempts,
                                   @Value("${ai.retry-delay-ms:2000}") long retryDelayMs,
                                   @Value("${ai.fx-api:}") String fxApi,
-                                  @Value("${ai.fx-timeout-ms:8000}") long fxTimeoutMs) {
+                                  @Value("${ai.fx-timeout-ms:8000}") long fxTimeoutMs,
+                                  @Value("${ai.deepseek-api-key:}") String deepseekApiKey,
+                                  @Value("${ai.deepseek-model:deepseek-flash}") String deepseekModel,
+                                  @Value("${ai.deepseek-base-url:https://api.deepseek.com}") String deepseekBaseUrl,
+                                  @Value("${ai.retry-after-cap-ms:120000}") long retryAfterCapMs) {
         this.invoiceRepository = invoiceRepository;
         this.budgetRepository = budgetRepository;
         this.objectMapper = objectMapper;
@@ -79,11 +101,20 @@ public class InvoiceAnalysisService implements ApplicationRunner {
         this.timeout = Duration.ofSeconds(timeoutSeconds);
         this.maxAttempts = maxAttempts < 1 ? 1 : maxAttempts;
         this.retryDelayMs = retryDelayMs < 0 ? 0 : retryDelayMs;
+        this.retryAfterCapMs = retryAfterCapMs < 0 ? 0 : retryAfterCapMs;
+        this.deepseekApiKey = deepseekApiKey == null ? "" : deepseekApiKey.trim();
+        this.deepseekModel = deepseekModel == null || deepseekModel.isBlank() ? "deepseek-flash" : deepseekModel;
+        this.deepseekBaseUrl = normalizeBaseUrl(deepseekBaseUrl);
         this.fxApi = fxApi == null ? "" : fxApi.trim();
         this.fxTimeout = Duration.ofMillis(fxTimeoutMs < 1 ? 8000 : fxTimeoutMs);
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(10))
                 .build();
+    }
+
+    private static String normalizeBaseUrl(String url) {
+        String value = url == null || url.isBlank() ? "https://api.deepseek.com" : url.trim();
+        return value.endsWith("/") ? value.substring(0, value.length() - 1) : value;
     }
 
     public void trigger(String invoiceId) {
@@ -119,8 +150,18 @@ public class InvoiceAnalysisService implements ApplicationRunner {
             byte[] bytes = Files.readAllBytes(resolved);
             String mime = mimeTypeOf(photoPath);
             String prompt = buildPrompt();
+
+            invoiceRepository.setProvider(invoiceId, PROVIDER_GEMINI);
             invoiceRepository.initRetry(invoiceId, maxAttempts);
-            String raw = callGeminiWithRetry(invoiceId, bytes, mime, prompt);
+            String raw;
+            try {
+                raw = callGeminiWithRetry(invoiceId, bytes, mime, prompt);
+            } catch (RetryableException | IOException geminiFailure) {
+                LOGGER.warn("Gemini exhausted for {}: {}; falling back to DeepSeek",
+                        invoiceId, geminiFailure.getMessage());
+                raw = callDeepSeekFallback(invoiceId, bytes, mime, prompt);
+            }
+
             AiAnalysisResponse analysis = objectMapper.readValue(raw, AiAnalysisResponse.class);
             if (!hasPurchases(analysis)) {
                 invoiceRepository.markNotInvoice(invoiceId, "Bukan struk invoice");
@@ -256,13 +297,14 @@ public class InvoiceAnalysisService implements ApplicationRunner {
             try {
                 return callGemini(bytes, mime, prompt);
             } catch (RetryableException | IOException e) {
+                long suggested = e instanceof RetryableException retryable ? retryable.retryAfterMillis() : 0;
                 invoiceRepository.incrementRetry(invoiceId);
                 if (attempt >= maxAttempts) {
                     throw e;
                 }
-                LOGGER.warn("attempt {}/{} failed for invoice {}: {}; retrying in {}ms",
-                        attempt + 1, maxAttempts, invoiceId, e.getMessage(), retryDelayMs);
-                sleepRetry();
+                LOGGER.warn("attempt {}/{} failed for invoice {}: {}; retrying",
+                        attempt + 1, maxAttempts, invoiceId, e.getMessage());
+                sleepRetry(suggested);
             } catch (Exception e) {
                 // Error permanen (mis. 4xx non-transien, JSON tidak valid) — jangan retry.
                 LOGGER.warn("non-retryable failure for invoice {}: {}", invoiceId, e.getMessage());
@@ -272,9 +314,77 @@ public class InvoiceAnalysisService implements ApplicationRunner {
         throw new IllegalStateException("Gemini analysis exhausted all attempts");
     }
 
-    private void sleepRetry() throws InterruptedException {
-        if (retryDelayMs > 0) {
-            Thread.sleep(retryDelayMs);
+    /**
+     * Fallback sekali ke DeepSeek setelah semua attempt Gemini habis. Counter retry
+     * di-reset (1 attempt) dan provider ditandai DEEPSEEK. Untuk PDF, halaman
+     * pertama dirender ke PNG karena DeepSeek tidak menerima input PDF.
+     */
+    private String callDeepSeekFallback(String invoiceId, byte[] bytes, String mime, String prompt) throws Exception {
+        if (deepseekApiKey.isBlank()) {
+            throw new IllegalStateException("Gemini gagal dan DEEPSEEK_API_KEY belum dikonfigurasi");
+        }
+        invoiceRepository.setProvider(invoiceId, PROVIDER_DEEPSEEK);
+        invoiceRepository.initRetry(invoiceId, 1);
+        byte[] sendBytes = bytes;
+        String sendMime = mime;
+        if ("application/pdf".equals(mime)) {
+            sendBytes = pdfFirstPageToPng(bytes);
+            sendMime = "image/png";
+        }
+        try {
+            return callDeepSeek(sendBytes, sendMime, prompt);
+        } catch (RetryableException e) {
+            invoiceRepository.incrementRetry(invoiceId);
+            throw e;
+        }
+    }
+
+    /** Render halaman pertama PDF ke PNG (200 DPI) untuk dikirim ke provider vision non-PDF. */
+    byte[] pdfFirstPageToPng(byte[] pdf) throws IOException {
+        try (PDDocument document = Loader.loadPDF(pdf)) {
+            if (document.getNumberOfPages() == 0) {
+                throw new IOException("PDF has no pages");
+            }
+            BufferedImage image = new PDFRenderer(document).renderImageWithDPI(0, 200);
+            ByteArrayOutputStream out = new ByteArrayOutputStream();
+            ImageIO.write(image, "png", out);
+            return out.toByteArray();
+        }
+    }
+
+    private void sleepRetry(long suggestedMillis) throws InterruptedException {
+        long delay = Math.max(retryDelayMs, suggestedMillis);
+        if (retryAfterCapMs > 0) {
+            delay = Math.min(delay, retryAfterCapMs);
+        }
+        if (delay > 0) {
+            LOGGER.info("sleeping {}ms before next attempt", delay);
+            Thread.sleep(delay);
+        }
+    }
+
+    /** Ambil jeda dari header Retry-After (detik) atau pesan body ("retry in Xs"). */
+    static long retryAfterMillis(HttpHeaders headers, String body) {
+        if (headers != null) {
+            long fromHeader = headers.firstValue("Retry-After").map(InvoiceAnalysisService::parseSeconds).orElse(0L);
+            if (fromHeader > 0) {
+                return fromHeader;
+            }
+        }
+        if (body != null) {
+            Matcher matcher = RETRY_IN.matcher(body);
+            if (matcher.find()) {
+                return parseSeconds(matcher.group(1));
+            }
+        }
+        return 0L;
+    }
+
+    private static long parseSeconds(String value) {
+        try {
+            return Math.round(Double.parseDouble(value.trim()) * 1000);
+        } catch (Exception e) {
+            return 0L;
         }
     }
 
@@ -360,7 +470,8 @@ public class InvoiceAnalysisService implements ApplicationRunner {
             int code = response.statusCode();
             // 429 (rate limit) dan 5xx (failover sesaat) bersifat transien -> retry.
             if (code == 429 || code >= 500) {
-                throw new RetryableException("Gemini returned HTTP " + code);
+                throw new RetryableException("Gemini returned HTTP " + code,
+                        retryAfterMillis(response.headers(), response.body()));
             }
             throw new IllegalStateException("Gemini returned HTTP " + code);
         }
@@ -368,6 +479,42 @@ public class InvoiceAnalysisService implements ApplicationRunner {
         JsonNode text = root.path("candidates").path(0).path("content").path("parts").path(0).path("text");
         if (text.isMissingNode() || text.asText().isBlank()) {
             throw new IllegalStateException("Gemini returned no analysis");
+        }
+        return text.asText();
+    }
+
+    /** Panggilan DeepSeek (OpenAI-compatible) untuk gambar; 1 attempt saja. */
+    protected String callDeepSeek(byte[] bytes, String mime, String prompt) throws Exception {
+        String dataUrl = "data:" + mime + ";base64," + Base64.getEncoder().encodeToString(bytes);
+        Map<String, Object> body = Map.of(
+                "model", deepseekModel,
+                "messages", List.of(Map.of("role", "user", "content", List.of(
+                        Map.of("type", "text", "text", prompt),
+                        Map.of("type", "image_url", "image_url", Map.of("url", dataUrl))))),
+                "response_format", Map.of("type", "json_object"),
+                "thinking", Map.of("type", "disabled"),
+                "max_tokens", 8192);
+        String json = objectMapper.writeValueAsString(body);
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(deepseekBaseUrl + "/chat/completions"))
+                .timeout(timeout)
+                .header("Content-Type", "application/json")
+                .header("Authorization", "Bearer " + deepseekApiKey)
+                .POST(HttpRequest.BodyPublishers.ofString(json))
+                .build();
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        int code = response.statusCode();
+        if (code < 200 || code >= 300) {
+            if (code == 429 || code >= 500) {
+                throw new RetryableException("DeepSeek returned HTTP " + code,
+                        retryAfterMillis(response.headers(), response.body()));
+            }
+            throw new IllegalStateException("DeepSeek returned HTTP " + code);
+        }
+        JsonNode root = objectMapper.readTree(response.body());
+        JsonNode text = root.path("choices").path(0).path("message").path("content");
+        if (text.isMissingNode() || text.asText().isBlank()) {
+            throw new IllegalStateException("DeepSeek returned no analysis");
         }
         return text.asText();
     }

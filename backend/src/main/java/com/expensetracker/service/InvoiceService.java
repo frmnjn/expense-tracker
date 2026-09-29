@@ -107,6 +107,7 @@ public class InvoiceService {
                 parsed,
                 analysis == null ? invoice.retryCount() : analysis.retryCount(),
                 analysis == null ? invoice.retryMax() : analysis.retryMax(),
+                analysis == null ? invoice.aiProvider() : analysis.aiProvider(),
                 InvoiceStatus.SUBMITTED.value().equals(status)
                         ? expenseRepository.findByInvoiceId(id).stream().map(this::toExpenseResponse).toList()
                         : null);
@@ -242,7 +243,7 @@ public class InvoiceService {
 
     private InvoiceResponse toResponse(InvoiceData invoice) {
         return new InvoiceResponse(invoice.id(), invoice.createdAt(), invoice.status(), typeOf(invoice),
-                invoice.originalName(), invoice.retryCount(), invoice.retryMax());
+                invoice.originalName(), invoice.retryCount(), invoice.retryMax(), invoice.aiProvider());
     }
 
     private static String extensionOf(String filename) {

@@ -11,6 +11,7 @@ import tools.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
+import java.net.http.HttpHeaders;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.time.Duration;
@@ -27,7 +28,7 @@ import java.util.regex.Pattern;
  * Mengekstrak detail transaksi dari isi email notifikasi bank. Strategi
  * hibrida: regex per format bank (BCA kartu kredit, BCA myBCA, D-Bank QRIS)
  * lebih dulu; bila field penting tidak terbaca, fallback ke Gemini (bila
- * GEMINI_API_KEY tersedia). Tidak mengubah layanan analisa struk.
+ * GEMINI_API_KEY tersedia), lalu DeepSeek sekali bila Gemini habis attempt.
  */
 @Service
 public class EmailParserService {
@@ -35,6 +36,8 @@ public class EmailParserService {
     private static final Logger LOGGER = LoggerFactory.getLogger(EmailParserService.class);
     private static final String GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta";
     private static final int MAX_AI_INPUT = 6000;
+    private static final Pattern RETRY_IN = Pattern.compile("retry in ([0-9]+(?:\\.[0-9]+)?)s",
+            Pattern.CASE_INSENSITIVE);
 
     private static final Pattern AMOUNT = Pattern.compile("[-0-9.,]+");
 
@@ -46,6 +49,10 @@ public class EmailParserService {
     private final Duration timeout;
     private final int maxAttempts;
     private final long retryDelayMs;
+    private final long retryAfterCapMs;
+    private final String deepseekApiKey;
+    private final String deepseekModel;
+    private final String deepseekBaseUrl;
 
     public EmailParserService(BudgetRepository budgetRepository,
                               ObjectMapper objectMapper,
@@ -53,7 +60,11 @@ public class EmailParserService {
                               @Value("${ai.model:gemini-3.5-flash-lite}") String model,
                               @Value("${ai.timeout:600}") long timeoutSeconds,
                               @Value("${ai.max-attempts:50}") int maxAttempts,
-                              @Value("${ai.retry-delay-ms:2000}") long retryDelayMs) {
+                              @Value("${ai.retry-delay-ms:2000}") long retryDelayMs,
+                              @Value("${ai.deepseek-api-key:}") String deepseekApiKey,
+                              @Value("${ai.deepseek-model:deepseek-flash}") String deepseekModel,
+                              @Value("${ai.deepseek-base-url:https://api.deepseek.com}") String deepseekBaseUrl,
+                              @Value("${ai.retry-after-cap-ms:120000}") long retryAfterCapMs) {
         this.budgetRepository = budgetRepository;
         this.objectMapper = objectMapper;
         this.apiKey = apiKey == null ? "" : apiKey.trim();
@@ -61,6 +72,12 @@ public class EmailParserService {
         this.timeout = Duration.ofSeconds(timeoutSeconds);
         this.maxAttempts = maxAttempts < 1 ? 1 : maxAttempts;
         this.retryDelayMs = retryDelayMs < 0 ? 0 : retryDelayMs;
+        this.retryAfterCapMs = retryAfterCapMs < 0 ? 0 : retryAfterCapMs;
+        this.deepseekApiKey = deepseekApiKey == null ? "" : deepseekApiKey.trim();
+        this.deepseekModel = deepseekModel == null || deepseekModel.isBlank() ? "deepseek-flash" : deepseekModel;
+        String base = deepseekBaseUrl == null || deepseekBaseUrl.isBlank()
+                ? "https://api.deepseek.com" : deepseekBaseUrl.trim();
+        this.deepseekBaseUrl = base.endsWith("/") ? base.substring(0, base.length() - 1) : base;
         this.httpClient = HttpClient.newBuilder().connectTimeout(Duration.ofSeconds(10)).build();
     }
 
@@ -350,7 +367,14 @@ public class EmailParserService {
 
     private ParsedTransaction parseWithAi(String text) {
         try {
-            String raw = callGeminiWithRetry(text);
+            String raw;
+            try {
+                raw = callGeminiWithRetry(text);
+            } catch (RetryableException | IOException geminiFailure) {
+                LOGGER.warn("Gemini exhausted for email parse: {}; falling back to DeepSeek",
+                        geminiFailure.getMessage());
+                raw = callDeepSeekText(text);
+            }
             JsonNode json = objectMapper.readTree(raw);
             boolean isExpense = json.path("isExpense").asBoolean(false);
             if (!isExpense) {
@@ -381,17 +405,51 @@ public class EmailParserService {
             try {
                 return callGemini(text);
             } catch (RetryableException | IOException e) {
+                long suggested = e instanceof RetryableException retryable ? retryable.retryAfterMillis() : 0;
                 if (attempt >= maxAttempts) {
                     throw e;
                 }
-                LOGGER.warn("email AI attempt {}/{} failed: {}; retrying in {}ms",
-                        attempt, maxAttempts, e.getMessage(), retryDelayMs);
-                if (retryDelayMs > 0) {
-                    Thread.sleep(retryDelayMs);
-                }
+                LOGGER.warn("email AI attempt {}/{} failed: {}; retrying", attempt, maxAttempts, e.getMessage());
+                sleepRetry(suggested);
             }
         }
         throw new IllegalStateException("Gemini exhausted all attempts");
+    }
+
+    private void sleepRetry(long suggestedMillis) throws InterruptedException {
+        long delay = Math.max(retryDelayMs, suggestedMillis);
+        if (retryAfterCapMs > 0) {
+            delay = Math.min(delay, retryAfterCapMs);
+        }
+        if (delay > 0) {
+            Thread.sleep(delay);
+        }
+    }
+
+    /** Ambil jeda dari header Retry-After (detik) atau pesan body ("retry in Xs"). */
+    static long retryAfterMillis(HttpHeaders headers, String body) {
+        if (headers != null) {
+            long fromHeader = headers.firstValue("Retry-After")
+                    .map(EmailParserService::parseSeconds).orElse(0L);
+            if (fromHeader > 0) {
+                return fromHeader;
+            }
+        }
+        if (body != null) {
+            Matcher matcher = RETRY_IN.matcher(body);
+            if (matcher.find()) {
+                return parseSeconds(matcher.group(1));
+            }
+        }
+        return 0L;
+    }
+
+    private static long parseSeconds(String value) {
+        try {
+            return Math.round(Double.parseDouble(value.trim()) * 1000);
+        } catch (Exception e) {
+            return 0L;
+        }
     }
 
     protected String callGemini(String text) throws Exception {
@@ -411,7 +469,8 @@ public class EmailParserService {
             int code = response.statusCode();
             // 429 (rate limit) & 5xx (failover sesaat) transien -> retry.
             if (code == 429 || code >= 500) {
-                throw new RetryableException("Gemini returned HTTP " + code);
+                throw new RetryableException("Gemini returned HTTP " + code,
+                        retryAfterMillis(response.headers(), response.body()));
             }
             throw new IllegalStateException("Gemini returned HTTP " + code);
         }
@@ -419,6 +478,43 @@ public class EmailParserService {
         JsonNode result = root.path("candidates").path(0).path("content").path("parts").path(0).path("text");
         if (result.isMissingNode() || result.asText().isBlank()) {
             throw new IllegalStateException("Gemini returned no analysis");
+        }
+        return result.asText();
+    }
+
+    /** Fallback sekali ke DeepSeek (teks) setelah semua attempt Gemini habis. */
+    protected String callDeepSeekText(String text) throws Exception {
+        if (deepseekApiKey.isBlank()) {
+            throw new IllegalStateException("Gemini gagal dan DEEPSEEK_API_KEY belum dikonfigurasi");
+        }
+        String input = text.length() > MAX_AI_INPUT ? text.substring(0, MAX_AI_INPUT) : text;
+        Map<String, Object> body = Map.of(
+                "model", deepseekModel,
+                "messages", List.of(Map.of("role", "user", "content", buildAiPrompt() + "\n\n" + input)),
+                "response_format", Map.of("type", "json_object"),
+                "thinking", Map.of("type", "disabled"),
+                "max_tokens", 2048);
+        String json = objectMapper.writeValueAsString(body);
+        HttpRequest request = HttpRequest.newBuilder()
+                .uri(URI.create(deepseekBaseUrl + "/chat/completions"))
+                .timeout(timeout)
+                .header("Content-Type", "application/json")
+                .header("Authorization", "Bearer " + deepseekApiKey)
+                .POST(HttpRequest.BodyPublishers.ofString(json))
+                .build();
+        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+        int code = response.statusCode();
+        if (code < 200 || code >= 300) {
+            if (code == 429 || code >= 500) {
+                throw new RetryableException("DeepSeek returned HTTP " + code,
+                        retryAfterMillis(response.headers(), response.body()));
+            }
+            throw new IllegalStateException("DeepSeek returned HTTP " + code);
+        }
+        JsonNode root = objectMapper.readTree(response.body());
+        JsonNode result = root.path("choices").path(0).path("message").path("content");
+        if (result.isMissingNode() || result.asText().isBlank()) {
+            throw new IllegalStateException("DeepSeek returned no analysis");
         }
         return result.asText();
     }

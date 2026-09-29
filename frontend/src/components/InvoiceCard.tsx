@@ -32,8 +32,15 @@ export function InvoiceCard({
   const meta = STATUS_META[invoice.status] ?? { label: invoice.status, color: 'gray' }
   const retryCount = invoice.retryCount ?? 0
   const retryMax = invoice.retryMax ?? 0
+  const providerLabel =
+    invoice.provider === 'DEEPSEEK' ? 'DeepSeek' : invoice.provider === 'GEMINI' ? 'Gemini' : ''
   const isRetrying = retryMax > 0 && retryCount > 0
-  const retryLabel = retryCount > 0 ? ` · retry ${retryCount}×` : ''
+  const retryLabel = retryCount > 0
+    ? ` · ${providerLabel ? `${providerLabel} ` : ''}retry ${retryCount}×`
+    : providerLabel
+      ? ` · ${providerLabel}`
+      : ''
+  const retryProgress = `${providerLabel ? `${providerLabel} ` : ''}${retryCount}/${retryMax}`
 
   return (
     <Paper withBorder p="sm" radius="md" style={{ borderLeft: `4px solid var(--mantine-color-${meta.color}-6)` }}>
@@ -64,7 +71,7 @@ export function InvoiceCard({
               <Group gap={8} wrap="nowrap">
                 {retryMax > 0 && (
                   <Text size="xs" c={isRetrying ? 'orange' : 'dimmed'}>
-                    {retryCount}/{retryMax}
+                    {retryProgress}
                   </Text>
                 )}
                 <Loader size="xs" />
@@ -108,7 +115,7 @@ export function InvoiceCard({
                 </Button>
                 {isRetrying && (
                   <Text size="xs" c="dimmed">
-                    {retryCount}/{retryMax}
+                    {retryProgress}
                   </Text>
                 )}
               </Group>

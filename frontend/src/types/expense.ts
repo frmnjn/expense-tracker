@@ -102,6 +102,7 @@ export interface Invoice {
   name?: string
   retryCount?: number
   retryMax?: number
+  provider?: string
 }
 
 export interface InvoicesResponse {
@@ -134,6 +135,7 @@ export interface InvoiceDetail {
   analysis?: AiAnalysis
   retryCount?: number
   retryMax?: number
+  provider?: string
   expenses?: Expense[]
 }
 

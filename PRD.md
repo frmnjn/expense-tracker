@@ -154,7 +154,8 @@ Detail teknis:
 * Satu struk dipakai sebagai `invoice_id` pada **semua** expense hasil split (satu foto untuk banyak catatan).
 * Deskripsi auto-generate bisa melebihi 255 karakter; di-truncate di frontend, dan DB `description` = `TEXT`.
 * Pengurutan riwayat pakai `date_time DESC, created_at ASC` (created_at mikrodetik) agar urutan batch scan stabil & urut sesuai urutan item.
-* Konfigurasi AI: `GEMINI_API_KEY`, `AI_MODEL` (default `gemini-3.5-flash-lite`), `AI_TIMEOUT`.
+* **Retry AI & fallback provider**: analisa di-retry untuk error transien (HTTP 429/5xx) memakai `ai.max-attempts`/`ai.retry-delay-ms` (default 50×, 2 detik), dengan jeda menghormati `Retry-After` provider (dibatasi `ai.retry-after-cap-ms`). Bila semua attempt Gemini habis, fallback **sekali** ke DeepSeek (`DEEPSEEK_API_KEY`, model `AI_DEEPSEEK_MODEL`). Invoice menyimpan `ai_provider` (GEMINI/DEEPSEEK) dan counter retry di-reset saat berpindah provider; frontend menampilkan label provider (mis. "Gemini retry 12×", "DeepSeek 1/1"). Untuk PDF, halaman pertama dirender ke PNG sebelum dikirim ke DeepSeek (DeepSeek tidak menerima PDF).
+* Konfigurasi AI: `GEMINI_API_KEY`, `AI_MODEL` (default `gemini-3.5-flash-lite`), `AI_TIMEOUT`, `DEEPSEEK_API_KEY`, `AI_DEEPSEEK_MODEL` (default `deepseek-flash`), `AI_DEEPSEEK_BASE_URL`.
 
 ### Dashboard
 
@@ -227,7 +228,7 @@ Transaksi dari email notifikasi bank dibaca **backend** via **IMAP Gmail** (App 
 * Anti-loop: email difilter berdasarkan **whitelist domain pengirim** (`INBOX_SENDERS`), jadi email notifikasi milik aplikasi sendiri tidak ikut diproses.
 * Import expense memakai jalur yang sama dengan pencatatan manual (`ExpenseService.createExpense`) sehingga saldo budget & notifikasi tetap konsisten.
 * **Deteksi duplikat**: saat import, bila sudah ada expense aktif dengan **nominal persis sama** di **periode yang sama**, import ditolak dengan konfirmasi (HTTP 409). User tetap bisa melanjutkan dengan `force=true` (nominal sama bisa saja transaksi berbeda).
-* **Retry AI**: fallback Gemini di-retry untuk error transien (HTTP 429/5xx) memakai `ai.max-attempts`/`ai.retry-delay-ms` (default 50×, 2 detik), sama seperti Scan Struk.
+* **Retry AI**: fallback Gemini di-retry untuk error transien (HTTP 429/5xx) memakai `ai.max-attempts`/`ai.retry-delay-ms` (default 50×, 2 detik, menghormati `Retry-After`), sama seperti Scan Struk. Bila semua attempt habis, fallback sekali ke DeepSeek.
 * **Status**: email transaksi → `PENDING_REVIEW`; bukan transaksi pengeluaran (mis. promo) → `DISCARDED`; gagal parse/error teknis → `FAILED`.
 * **Retry manual**: baris `FAILED` bisa diproses ulang lewat `POST /email-imports/{id}/retry` (email diambil ulang dari IMAP berdasarkan Message-ID, lalu parse lagi).
 * **Custom discard rule**: merchant yang cocok dengan keyword di `INBOX_DISCARD_MERCHANTS` otomatis ditandai `DISCARDED` (case-insensitive, toleran spasi/tanda baca — mis. `superindo` menangkap `SUPERINDO CNE` & `SUPER INDO`).
