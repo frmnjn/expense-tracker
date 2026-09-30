@@ -17,6 +17,7 @@ export function SpendingByBudget({
 
   const Row = ({ name, amount, categories }: { name: string; amount: number; categories?: CategorySummary[] }) => {
     const share = total > 0 ? (amount / total) * 100 : 0
+    const hasRealCategory = (categories ?? []).some((c) => c.category !== 'Uncategorized')
     return (
       <div>
         <Group justify="space-between" mb={6} wrap="nowrap">
@@ -42,7 +43,7 @@ export function SpendingByBudget({
             />
           </Box>
         )}
-        {categories && categories.length > 0 && (
+        {hasRealCategory && categories && (
           <Stack gap={2} mt={4}>
             {categories.map((c) => (
               <Group key={c.category} justify="space-between" wrap="nowrap" gap="xs">
