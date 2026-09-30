@@ -10,7 +10,7 @@ export interface EmailImport {
   suggestedBudget?: string
   suggestedCategory?: string
   parseMethod: string
-  status: 'PENDING_REVIEW' | 'IMPORTED' | 'DISCARDED' | 'FAILED' | string
+  status: 'PENDING_REVIEW' | 'IMPORTED' | 'DISCARDED' | 'FAILED' | 'SCANNED' | string
   errorMessage?: string
   expenseId?: string
 }

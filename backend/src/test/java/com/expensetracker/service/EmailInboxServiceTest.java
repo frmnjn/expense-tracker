@@ -87,7 +87,7 @@ class EmailInboxServiceTest {
         verify(invoiceAnalysisService).trigger("inv-1");
         verify(emailImportRepository).insert(anyString(), anyString(), anyString(), anyString(), any(),
                 isNull(), isNull(), isNull(), anyString(), isNull(), isNull(), eq("SCAN"),
-                eq(EmailImportStatus.DISCARDED.value()), anyString());
+                eq(EmailImportStatus.SCANNED.value()), anyString());
         verify(emailParserService, never()).parse(anyString(), anyString(), anyString());
         org.junit.jupiter.api.Assertions.assertTrue(stored);
     }

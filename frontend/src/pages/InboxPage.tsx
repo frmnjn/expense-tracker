@@ -12,6 +12,7 @@ import {
   Title,
 } from '@mantine/core'
 import dayjs from 'dayjs'
+import { useNavigate } from 'react-router-dom'
 import { useDiscardEmail, useEmailImports, usePollEmails, useRetryEmailImport } from '../hooks/useEmailImports'
 import { AppPagination } from '../components/AppPagination'
 import ImportEmailModal from '../components/ImportEmailModal'
@@ -24,6 +25,7 @@ import type { EmailImport } from '../types/emailImport'
 const STATUS_OPTIONS = [
   { value: 'ALL', label: 'Semua' },
   { value: 'PENDING_REVIEW', label: 'Perlu Review' },
+  { value: 'SCANNED', label: 'Auto-scan' },
   { value: 'FAILED', label: 'Gagal' },
   { value: 'IMPORTED', label: 'Selesai' },
   { value: 'DISCARDED', label: 'Dibuang' },
@@ -34,12 +36,14 @@ const STATUS_BADGE: Record<string, { label: string; color: string }> = {
   IMPORTED: { label: 'Selesai', color: 'green' },
   DISCARDED: { label: 'Dibuang', color: 'gray' },
   FAILED: { label: 'Gagal', color: 'red' },
+  SCANNED: { label: 'Auto-scan', color: 'teal' },
 }
 
 function InboxPage() {
   const [status, setStatus] = useState('ALL')
   const [importing, setImporting] = useState<EmailImport | null>(null)
   const [detail, setDetail] = useState<EmailImport | null>(null)
+  const navigate = useNavigate()
   const { data, isPending } = useEmailImports(status)
   const poll = usePollEmails()
   const discard = useDiscardEmail()
@@ -148,7 +152,7 @@ function InboxPage() {
                               ? dayjs(item.transactionAt).format('DD MMM YYYY HH:mm')
                               : dayjs(item.receivedAt).format('DD MMM YYYY HH:mm')}
                           </Badge>
-                          <Badge size="sm" variant="light" color={item.parseMethod === 'AI' ? 'grape' : 'gray'}>
+                          <Badge size="sm" variant="light" color={item.parseMethod === 'AI' ? 'grape' : item.parseMethod === 'SCAN' ? 'teal' : 'gray'}>
                             {item.parseMethod}
                           </Badge>
                           <Badge
@@ -192,6 +196,13 @@ function InboxPage() {
                             </Button>
                             <Button size="xs" variant="light" onClick={() => handleRetry(item)} loading={retry.isPending}>
                               Coba lagi
+                            </Button>
+                          </Group>
+                        )}
+                        {item.status === 'SCANNED' && (
+                          <Group justify="flex-end" gap="xs">
+                            <Button size="xs" variant="light" color="teal" onClick={() => navigate('/scan')}>
+                              Lihat di Scan
                             </Button>
                           </Group>
                         )}

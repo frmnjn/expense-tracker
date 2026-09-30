@@ -4,7 +4,8 @@ public enum EmailImportStatus {
     PENDING_REVIEW,
     IMPORTED,
     DISCARDED,
-    FAILED;
+    FAILED,
+    SCANNED;
 
     public String value() {
         return name();
