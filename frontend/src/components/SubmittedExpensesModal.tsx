@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Badge, Box, Button, Divider, Group, Loader, Modal, Paper, Stack, Text } from '@mantine/core'
+import { Box, Button, Divider, Group, Loader, Modal, Paper, Stack, Text } from '@mantine/core'
 import { useMediaQuery } from '@mantine/hooks'
 import { useInvoiceDetail } from '../hooks/useScan'
 import { getInvoicePhotoUrl } from '../services/expense'
@@ -63,9 +63,14 @@ function SubmittedExpensesModal({ invoiceId, type, onClose }: { invoiceId: strin
               <Group justify="space-between" align="flex-start" wrap="nowrap" gap="sm">
                 <Stack gap={4} style={{ flex: 1, minWidth: 0 }}>
                   <Text size="sm" fw={600} title={exp.name}>{exp.name}</Text>
-                  <Badge size="sm" variant="light" color="gray" style={{ alignSelf: 'flex-start' }}>
-                    {exp.budget}
-                  </Badge>
+                  <Text size="xs" c="dimmed">
+                    Budget: <Text span fw={600}>{exp.budget}</Text>
+                  </Text>
+                  {exp.category ? (
+                    <Text size="xs" c="dimmed">
+                      Category: <Text span fw={600}>{exp.category}</Text>
+                    </Text>
+                  ) : null}
                 </Stack>
                 <Text size="sm" fw={700} style={{ whiteSpace: 'nowrap' }}>{formatCurrency(exp.amount)}</Text>
               </Group>
