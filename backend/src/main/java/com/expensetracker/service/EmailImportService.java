@@ -153,18 +153,18 @@ public class EmailImportService {
             ParsedTransaction parsed = emailParserService.parse(fetched.sender(), fetched.body());
             if (merchantDiscardRule.shouldDiscard(parsed.merchant())) {
                 emailImportRepository.updateParsed(id, parsed.transactionAt(), parsed.merchant(),
-                        parsed.amount(), parsed.suggestedBudget(), parsed.parseMethod(),
+                        parsed.amount(), parsed.suggestedBudget(), parsed.suggestedCategory(), parsed.parseMethod(),
                         EmailImportStatus.DISCARDED.value(), "Auto-discard: merchant " + parsed.merchant());
             } else {
                 emailImportRepository.updateParsed(id, parsed.transactionAt(), parsed.merchant(),
-                        parsed.amount(), parsed.suggestedBudget(), parsed.parseMethod(),
+                        parsed.amount(), parsed.suggestedBudget(), parsed.suggestedCategory(), parsed.parseMethod(),
                         EmailImportStatus.PENDING_REVIEW.value(), null);
             }
         } catch (NotExpenseException e) {
-            emailImportRepository.updateParsed(id, null, null, null, null, "AI",
+            emailImportRepository.updateParsed(id, null, null, null, null, null, "AI",
                     EmailImportStatus.DISCARDED.value(), e.getMessage());
         } catch (ValidationException e) {
-            emailImportRepository.updateParsed(id, null, null, null, null, "REGEX",
+            emailImportRepository.updateParsed(id, null, null, null, null, null, "REGEX",
                     EmailImportStatus.FAILED.value(), e.getMessage());
         }
     }

@@ -64,12 +64,23 @@ function HistoryPage() {
 
   const [search, setSearch] = useState('')
   const [budgetFilter, setBudgetFilter] = useState<string | null>(null)
+  const [categoryFilter, setCategoryFilter] = useState<string | null>(null)
   const [sortBy, setSortBy] = useState<string>('waktu-desc')
   const [filterOpened, setFilterOpened] = useState(false)
   const [viewingPhoto, setViewingPhoto] = useState<Expense | null>(null)
 
-  const hasActiveFilters = budgetFilter !== null || sortBy !== 'waktu-desc'
-  const activeFilterCount = (budgetFilter ? 1 : 0) + (sortBy !== 'waktu-desc' ? 1 : 0)
+  const categoryFilterOptions = useMemo(
+    () =>
+      (options?.budgets.find((b) => b.name === budgetFilter)?.categories ?? []).map((c) => ({
+        value: c.name,
+        label: c.name,
+      })),
+    [options, budgetFilter],
+  )
+
+  const hasActiveFilters = budgetFilter !== null || categoryFilter !== null || sortBy !== 'waktu-desc'
+  const activeFilterCount =
+    (budgetFilter ? 1 : 0) + (categoryFilter ? 1 : 0) + (sortBy !== 'waktu-desc' ? 1 : 0)
 
   const visibleExpenses = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -79,6 +90,9 @@ function HistoryPage() {
     }
     if (budgetFilter) {
       list = list.filter((e) => e.budget === budgetFilter)
+    }
+    if (categoryFilter) {
+      list = list.filter((e) => (e.category ?? '') === categoryFilter)
     }
     const sorted = [...list]
     switch (sortBy) {
@@ -95,7 +109,7 @@ function HistoryPage() {
         sorted.sort((a, b) => b.dateTime.localeCompare(a.dateTime))
     }
     return sorted
-  }, [expensesData, search, budgetFilter, sortBy])
+  }, [expensesData, search, budgetFilter, categoryFilter, sortBy])
 
   const [editing, setEditing] = useState<Expense | null>(null)
   const [deleting, setDeleting] = useState<Expense | null>(null)
@@ -190,9 +204,23 @@ function HistoryPage() {
                     variant="light"
                     color="blue"
                     rightSection={<span>✕</span>}
-                    onClick={() => setBudgetFilter(null)}
+                    onClick={() => {
+                      setBudgetFilter(null)
+                      setCategoryFilter(null)
+                    }}
                   >
                     Budget: {budgetFilter}
+                  </Button>
+                )}
+                {categoryFilter && (
+                  <Button
+                    size="xs"
+                    variant="light"
+                    color="cyan"
+                    rightSection={<span>✕</span>}
+                    onClick={() => setCategoryFilter(null)}
+                  >
+                    Category: {categoryFilter}
                   </Button>
                 )}
                 {sortBy !== 'waktu-desc' && (
@@ -216,7 +244,7 @@ function HistoryPage() {
         ) : (
           <AppPagination
             data={visibleExpenses}
-            key={`${search}|${budgetFilter}|${sortBy}|${period}`}
+            key={`${search}|${budgetFilter}|${categoryFilter}|${sortBy}|${period}`}
           >
             {(pageExpenses) => (
               <Paper withBorder p={{ base: 'sm', sm: 'lg' }} radius="xl" pos="relative">
@@ -270,7 +298,10 @@ function HistoryPage() {
                   <Table.Tr key={expense.id}>
                     <Table.Td>{dayjs(expense.dateTime).format(DATE_TIME_FORMAT)}</Table.Td>
                     <Table.Td>{expense.name}</Table.Td>
-                    <Table.Td>{expense.budget}</Table.Td>
+                    <Table.Td>
+                      {expense.budget}
+                      {expense.category ? ` / ${expense.category}` : ''}
+                    </Table.Td>
                     <Table.Td ta="right">{formatCurrency(expense.amount)}</Table.Td>
                     <Table.Td ta="right">
                       <Group gap="xs" justify="flex-end" wrap="nowrap">
@@ -325,9 +356,24 @@ function HistoryPage() {
               placeholder="Semua budget"
               data={budgetOptions}
               value={budgetFilter}
-              onChange={setBudgetFilter}
+              onChange={(value) => {
+                setBudgetFilter(value)
+                setCategoryFilter(null)
+              }}
               clearable
               searchable
+              size="md"
+              comboboxProps={{ withinPortal: false }}
+            />
+            <Select
+              label="Category"
+              placeholder={budgetFilter ? 'Semua category' : 'Pilih budget dulu'}
+              data={categoryFilterOptions}
+              value={categoryFilter}
+              onChange={setCategoryFilter}
+              clearable
+              searchable
+              disabled={!budgetFilter || categoryFilterOptions.length === 0}
               size="md"
               comboboxProps={{ withinPortal: false }}
             />
@@ -463,6 +509,7 @@ function EditExpenseForm({
   const [dateTime, setDateTime] = useState(expense.dateTime)
   const [name, setName] = useState(expense.name)
   const [budget, setBudget] = useState<string | null>(expense.budget)
+  const [category, setCategory] = useState<string | null>(expense.category ?? null)
   const [amount, setAmount] = useState<string | number>(expense.amount)
   const [description, setDescription] = useState(expense.description ?? '')
   const [photo, setPhoto] = useState<PhotoSelection | null>(null)
@@ -471,6 +518,15 @@ function EditExpenseForm({
   const budgetOptions = useMemo(
     () => (options?.budgets ?? []).map((b) => ({ value: b.name, label: b.name })),
     [options],
+  )
+
+  const categoryOptions = useMemo(
+    () =>
+      (options?.budgets.find((b) => b.name === budget)?.categories ?? []).map((c) => ({
+        value: c.name,
+        label: c.name,
+      })),
+    [options, budget],
   )
 
   const submitDisabled = name.trim() === '' || !budget || Number(amount) <= 0 || updateExpense.isPending
@@ -494,6 +550,7 @@ function EditExpenseForm({
           dateTime,
           name: name.trim(),
           budget: budget ?? '',
+          category: category ?? undefined,
           amount: Number(amount),
           description: description.trim() === '' ? undefined : description.trim(),
           invoiceId: photo?.kind === 'existing' ? photo.invoiceId : undefined,
@@ -537,7 +594,19 @@ function EditExpenseForm({
 
       <TextInput label="Waktu" value={dateTime} onChange={(e) => setDateTime(e.currentTarget.value)} required size="md" />
         <TextInput label="Nama" value={name} onChange={(e) => setName(e.currentTarget.value)} maxLength={255} required size="md" />
-        <Select label="Budget" data={budgetOptions} value={budget} onChange={setBudget} searchable required size="md" comboboxProps={{ withinPortal: false }} />
+        <Select label="Budget" data={budgetOptions} value={budget} onChange={(v) => { setBudget(v); setCategory(null) }} searchable required size="md" comboboxProps={{ withinPortal: false }} />
+        <Select
+          label="Category"
+          placeholder={budget ? 'Uncategorized' : 'Pilih budget dulu'}
+          data={categoryOptions}
+          value={category}
+          onChange={setCategory}
+          searchable
+          clearable
+          disabled={!budget || categoryOptions.length === 0}
+          size="md"
+          comboboxProps={{ withinPortal: false }}
+        />
         <NumberInput
           label="Nominal"
           value={amount}

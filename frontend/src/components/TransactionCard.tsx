@@ -31,7 +31,7 @@ export function TransactionCard({
           {dayjs(expense.dateTime).format(DATE_TIME_FORMAT)}
         </Text>
         <Badge size="sm" variant="light" color="gray">
-          {expense.budget}
+          {expense.category ? `${expense.budget} / ${expense.category}` : expense.budget}
         </Badge>
       </Group>
       <Divider mt="sm" mb="xs" />

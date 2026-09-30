@@ -146,7 +146,7 @@ class EmailImportServiceTest {
         service.retry("e1");
 
         verify(emailImportRepository).updateParsed(eq("e1"), any(), eq("TOTAL BUAH SEGAR"), eq(57_500L),
-                eq("Belanja"), eq("AI"), eq("PENDING_REVIEW"), isNull());
+                eq("Belanja"), isNull(), eq("AI"), eq("PENDING_REVIEW"), isNull());
     }
 
     @Test
@@ -159,7 +159,7 @@ class EmailImportServiceTest {
 
         service.retry("e1");
 
-        verify(emailImportRepository).updateParsed(eq("e1"), isNull(), isNull(), isNull(), isNull(),
+        verify(emailImportRepository).updateParsed(eq("e1"), isNull(), isNull(), isNull(), isNull(), isNull(),
                 eq("AI"), eq("DISCARDED"), eq("Bukan transaksi pengeluaran"));
     }
 
@@ -175,7 +175,7 @@ class EmailImportServiceTest {
         service.retry("e1");
 
         verify(emailImportRepository).updateParsed(eq("e1"), any(), eq("SUPERINDO CNE"), eq(85_490L),
-                isNull(), eq("REGEX"), eq("DISCARDED"), eq("Auto-discard: merchant SUPERINDO CNE"));
+                isNull(), isNull(), eq("REGEX"), eq("DISCARDED"), eq("Auto-discard: merchant SUPERINDO CNE"));
     }
 
     @Test

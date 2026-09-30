@@ -6,6 +6,8 @@ import com.expensetracker.data.InvoiceData;
 import com.expensetracker.data.InvoiceRepository;
 import com.expensetracker.model.AiAnalysisResponse;
 import com.expensetracker.model.AiInvoiceItem;
+import com.expensetracker.model.BudgetOption;
+import com.expensetracker.model.CategoryOption;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -216,7 +218,7 @@ public class InvoiceAnalysisService implements ApplicationRunner {
 
     private AiInvoiceItem toIdrItem(AiInvoiceItem item, double rate) {
         Long amount = item.amount() == null ? null : Math.round(item.amount() * rate);
-        return new AiInvoiceItem(item.name(), amount, item.suggestedBudget());
+        return new AiInvoiceItem(item.name(), amount, item.suggestedBudget(), item.suggestedCategory());
     }
 
     private static String exchangeDateOf(String cleanedDate) {
@@ -519,20 +521,34 @@ public class InvoiceAnalysisService implements ApplicationRunner {
         return text.asText();
     }
 
+    private static String budgetLine(BudgetOption budget) {
+        String line = "- " + budget.name();
+        if (budget.description() != null && !budget.description().isBlank()) {
+            line += ": " + budget.description();
+        }
+        return line;
+    }
+
+    private static String categoryLine(CategoryOption category) {
+        String line = category.name();
+        if (category.description() != null && !category.description().isBlank()) {
+            line += ": " + category.description();
+        }
+        return line;
+    }
+
     private String buildPrompt() {
-        List<String> budgets = budgetRepository.getOptions().stream()
-                .map(o -> {
-                    String line = "- " + o.name();
-                    if (o.description() != null && !o.description().isBlank()) {
-                        line += ": " + o.description();
-                    }
-                    return line;
-                })
-                .sorted()
-                .toList();
-        String budgetList = budgets.isEmpty()
+        List<BudgetOption> options = budgetRepository.getOptions();
+        List<String> lines = new java.util.ArrayList<>();
+        for (BudgetOption budget : options) {
+            lines.add(budgetLine(budget));
+            for (CategoryOption category : budget.categories()) {
+                lines.add("    * " + categoryLine(category));
+            }
+        }
+        String budgetList = lines.isEmpty()
                 ? "(tidak ada budget terdaftar)"
-                : String.join("\n", budgets);
+                : String.join("\n", lines);
         return "Kamu adalah asisten pencatat keuangan. Baca struk/invoice berikut dan ekstrak item belanjanya.\n"
                 + "Berikan output HANYA JSON tanpa teks lain, dengan struktur:\n"
                 + "{\"storeName\":\"nama toko\",\"total\":<jumlah total integer dalam IDR>,"
@@ -543,9 +559,12 @@ public class InvoiceAnalysisService implements ApplicationRunner {
                 + "\"currency\":\"kode mata uang struk (IDR default)\","
                 + "\"originalTotal\":<nilai total asli dalam mata uang struk (desimal; null bila IDR)>,"
                 + "\"items\":[{\"name\":\"nama barang\",\"amount\":<harga integer dalam MATA UANG ASLI struk>,"
-                + "\"suggestedBudget\":\"<nama budget>\"}]}\n"
-                + "Daftar budget tersedia (pilih yang paling cocok per item; isi string kosong jika ragu):\n"
+                + "\"suggestedBudget\":\"<nama budget>\",\"suggestedCategory\":\"<nama category>\"}]}\n"
+                + "Daftar budget (induk) beserta category (sub) yang tersedia:\n"
                 + budgetList + "\n"
+                + "Untuk tiap item isi \"suggestedBudget\" = nama BUDGET dan \"suggestedCategory\" = nama CATEGORY "
+                + "yang paling cocok (category harus milik budget yang dipilih). Bila ragu atau tidak ada category "
+                + "yang cocok, isi \"suggestedCategory\" dengan string kosong — JANGAN menulis \"uncategorized\".\n"
                 + "Deteksi mata uang struk, isi \"currency\" dengan kode mata uang asli (IDR default). "
                 + "SELURUH jumlah (total dan setiap item) diisi dalam MATA UANG ASLI struk — JANGAN konversi ke "
                 + "IDR (konversi dilakukan sistem belakangan). Nilai \"originalTotal\" sama dengan total struk (desimal "

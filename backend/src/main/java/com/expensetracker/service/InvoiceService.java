@@ -114,7 +114,7 @@ public class InvoiceService {
     }
 
     private ExpenseResponse toExpenseResponse(ExpenseData e) {
-        return new ExpenseResponse(e.id(), e.dateTime(), e.name(), e.budgetName(), e.amount(),
+        return new ExpenseResponse(e.id(), e.dateTime(), e.name(), e.budgetName(), e.categoryName(), e.amount(),
                 e.description(), e.hasPhoto(), e.photoType(), e.photoName());
     }
 

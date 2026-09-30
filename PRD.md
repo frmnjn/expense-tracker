@@ -75,7 +75,8 @@ Tabel:
 | Tabel | Kolom |
 | ----- | ----- |
 | `budgets` | `id` PK, `name` UNIQUE, `balance`, `is_active`, `alert_threshold` (0 = nonaktif), `description` (nullable, dipakai AI saat menyarankan budget) |
-| `expenses` | `id` PK, `period`, `period_start`, `date_time`, `budget_id` FK→`budgets`, `name`, `amount`, `description` (TEXT), `deleted`, `invoice_id` FK→`invoices` (nullable), `created_at` (DATETIME(6), untuk pengurutan deterministik) |
+| `categories` | `id` PK, `budget_id` FK→`budgets`, `name`, `description` (nullable, dipakai AI), `is_active`, `created_at`; UNIQUE(`budget_id`, `name`) |
+| `expenses` | `id` PK, `period`, `period_start`, `date_time`, `budget_id` FK→`budgets`, `category_id` FK→`categories` (nullable, NULL = "Uncategorized"), `name`, `amount`, `description` (TEXT), `deleted`, `invoice_id` FK→`invoices` (nullable), `created_at` (DATETIME(6), untuk pengurutan deterministik) |
 | `invoices` | `id` PK, `period`, `period_start`, `photo_path`, `deleted`, `status` (`ANALYZING`/`TO_REVIEW`/`SUBMITTED`/`ERROR`), `analysis_json`, `error_message`, `scan_flow` |
 | `idempotency_keys` | `id_key` PK, `response_json`, `created_at` |
 | `top_ups` | `id` PK, `date_time`, `budget_id` FK→`budgets`, `amount`, `description` (TEXT) |
@@ -99,6 +100,10 @@ Migration saat ini:
 * `V15__invoice_status_uppercase.sql` — normalisasi status invoice ke `UPPERCASE` (default `SUBMITTED`).
 * `V16__invoice_original_name.sql` — kolom `invoices.original_name` (nama file asli upload).
 * `V17__budget_description.sql` — kolom `budgets.description` (deskripsi budget, dipakai AI saat menyarankan budget).
+* `V18__invoice_ai_retry.sql` — kolom `invoices.retry_count`, `invoices.retry_max` (progres retry AI).
+* `V19__email_imports.sql` — tabel `email_imports` (antrian transaksi hasil polling IMAP).
+* `V20__invoice_ai_provider.sql` — kolom `invoices.ai_provider` (GEMINI/DEEPSEEK).
+* `V21__categories.sql` — tabel `categories` (sub-kategori per budget), kolom `expenses.category_id`, kolom `email_imports.suggested_category`.
 
 Index yang ada: `budgets` PK(id) + UNIQUE(name); `expenses` PK(id), `budget_id` FK, `deleted`, `invoice_id`, komposit `(period, deleted)`; `invoices` PK(id) + `period`; `top_ups` PK(id) + `budget_id`; `idempotency_keys` PK(id_key) + `created_at`.
 
@@ -111,6 +116,8 @@ Periode (format `YYYY-MON-MON`, contoh `2026-JAN-FEB`) dihitung dari `date_time`
 Penghapusan expense dilakukan dengan **soft delete** (`deleted = TRUE`); baris tetap ada di DB dan disaring saat ditampilkan.
 
 `budgets.balance` adalah saldo running dan boleh bernilai negatif.
+
+`categories` adalah sub-kategori **opsional** di bawah budget (mis. `Household Makan` → `Groceries`, `Eating Out`). **Saldo tetap di budget**; category hanya klasifikasi. `expenses.category_id` nullable — `NULL` berarti **"Uncategorized"** (bukan baris khusus). Nama category unik per budget (boleh sama antar budget). Menghapus category = soft delete (`is_active = FALSE`) agar riwayat tetap valid. AI (scan & inbox) menyarankan `suggestedBudget` + `suggestedCategory`; yang kosong = Uncategorized.
 
 ---
 
@@ -144,7 +151,7 @@ Alur:
 
 1. **Upload** struk (foto kamera/galeri, atau PDF) → invoice dibuat dengan status `ANALYZING`, AI menganalisis **async** di background.
 2. **Menunggu AI** → status berubah otomatis (polling ~3 detik) menjadi `TO_REVIEW` saat selesai, atau `ERROR` (mis. bukan struk) dengan tombol "Coba lagi".
-3. **Review** (modal): daftar item hasil AI (nama, nominal, **saran budget** dari daftar budget aktif). User mengoreksi: ganti nama/nominal, ganti/pilih budget tiap item, tambah/hapus item. Item diskon/promo dibaca sebagai nominal negatif (mengurangi total group).
+3. **Review** (modal): daftar item hasil AI (nama, nominal, **saran budget** + **saran category**). User mengoreksi: ganti nama/nominal, ganti/pilih budget & category tiap item, tambah/hapus item. Category opsional (kosong = "Uncategorized"). Item diskon/promo dibaca sebagai nominal negatif (mengurangi total group).
 4. **Group per budget** otomatis: item di-budget yang sama dijumlah → 1 expense per budget; nama default "Belanja {toko}", deskripsi berisi daftar item. Tampil warning bila jumlah item ≠ total struk.
 5. **Buat N Pengeluaran** → `POST /expenses/batch` (satu transaksi) → semua expense dibuat, saldo tiap budget di-adjust, invoice ditandai `SUBMITTED`.
 
@@ -254,18 +261,35 @@ Pengecekan status.
 
 ### GET /options
 
-Daftar budget aktif beserta saldonya.
+Daftar budget aktif beserta saldonya + daftar category tiap budget.
 
 ```json
 {
   "success": true,
   "data": {
     "budgets": [
-      { "name": "Daily", "balance": 500000 }
+      {
+        "name": "Daily",
+        "balance": 500000,
+        "alertThreshold": 0,
+        "description": "Makan harian",
+        "categories": [
+          { "id": 1, "name": "Groceries", "description": "Bahan makanan" },
+          { "id": 2, "name": "Eating Out", "description": "Makan di luar" }
+        ]
+      }
     ]
   }
 }
 ```
+
+### Category endpoints
+
+* `GET /categories?budget=<nama>` — daftar category aktif pada satu budget.
+* `POST /categories` — body `{ budgetName, name, description? }`; nama unik per budget.
+* `PUT /categories/{id}` — body `{ name, description? }`.
+* `DELETE /categories/{id}` — soft delete.
+* Expense (`POST/PUT /expenses`, `POST /expenses/batch`) menerima field opsional `category` (nama category milik budget terpilih); jika kosong → `category_id = NULL` (Uncategorized).
 
 ### GET /periods
 
@@ -368,7 +392,7 @@ Membuat invoice **alur Scan AI** dari file upload (multipart `file` + `date` `yy
 
 ### GET /invoices/{id}
 
-Detail sebuah invoice: `{ id, type, status, errorMessage?, analysis? }`. Saat status `TO_REVIEW`, `analysis` berisi hasil AI `{ storeName, total, items: [{ name, amount, suggestedBudget }] }`.
+Detail sebuah invoice: `{ id, type, status, errorMessage?, analysis? }`. Saat status `TO_REVIEW`, `analysis` berisi hasil AI `{ storeName, total, items: [{ name, amount, suggestedBudget, suggestedCategory }] }`.
 
 ### POST /invoices/{id}/retry
 

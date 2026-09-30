@@ -14,6 +14,7 @@ public record EmailImportResponse(
         @JsonProperty("amount") Long amount,
         @JsonProperty("description") String description,
         @JsonProperty("suggestedBudget") String suggestedBudget,
+        @JsonProperty("suggestedCategory") String suggestedCategory,
         @JsonProperty("parseMethod") String parseMethod,
         @JsonProperty("status") String status,
         @JsonProperty("errorMessage") String errorMessage,

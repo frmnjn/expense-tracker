@@ -19,6 +19,7 @@ import dayjs from 'dayjs'
 import { useInvoiceDetail, useCreateExpenseBatch } from '../hooks/useScan'
 import { useOptions } from '../hooks/useOptions'
 import { getInvoicePhotoUrl } from '../services/expense'
+import type { BudgetOption } from '../types/expense'
 import { formatCurrency } from '../utils/currency'
 import { getErrorMessage } from '../utils/error'
 import { InvoiceThumb } from './InvoiceThumb'
@@ -29,19 +30,33 @@ interface EditItem {
   name: string
   amount: number
   budget: string | null
+  category: string | null
 }
 
 const MAX_DESC = 1000
 
 const DEFAULT_CURRENCY = 'IDR'
 
-function toEditItems(analysis: { items: { name: string; amount: number; suggestedBudget?: string }[] } | undefined, budgetNames: string[]): EditItem[] {
-  return (analysis?.items ?? []).map((it, i) => ({
-    key: `${Date.now()}-${i}`,
-    name: it.name ?? '',
-    amount: Number(it.amount) || 0,
-    budget: it.suggestedBudget && budgetNames.includes(it.suggestedBudget) ? it.suggestedBudget : null,
-  }))
+const groupKey = (budget: string, category: string | null) => `${budget}|||${category ?? ''}`
+
+function toEditItems(
+  analysis: { items: { name: string; amount: number; suggestedBudget?: string; suggestedCategory?: string }[] } | undefined,
+  budgets: BudgetOption[],
+): EditItem[] {
+  return (analysis?.items ?? []).map((it, i) => {
+    const budget = budgets.find((b) => b.name === it.suggestedBudget)
+    const category =
+      budget && it.suggestedCategory && budget.categories.some((c) => c.name === it.suggestedCategory)
+        ? it.suggestedCategory
+        : null
+    return {
+      key: `${Date.now()}-${i}`,
+      name: it.name ?? '',
+      amount: Number(it.amount) || 0,
+      budget: budget ? budget.name : null,
+      category,
+    }
+  })
 }
 
 /** Format angka desimal id-ID (koma), tanpa simbol, tanpa pembulatan. */
@@ -81,8 +96,12 @@ function ReviewModal({
     return map
   }, [items])
 
-  const budgetNames = useMemo(() => (options?.budgets ?? []).map((b) => b.name), [options])
+  const budgets = useMemo(() => options?.budgets ?? [], [options])
+  const budgetNames = useMemo(() => budgets.map((b) => b.name), [budgets])
   const budgetOptions = useMemo(() => budgetNames.map((n) => ({ value: n, label: n })), [budgetNames])
+
+  const categoryOptionsOf = (budget: string | null) =>
+    (budgets.find((b) => b.name === budget)?.categories ?? []).map((c) => ({ value: c.name, label: c.name }))
 
   const analysis = data?.status === 'TO_REVIEW' ? data.analysis : undefined
   const storeName = analysis?.storeName?.trim() || 'Belanja'
@@ -131,18 +150,18 @@ function ReviewModal({
 
   useEffect(() => {
     if (analysis) {
-      setItems(toEditItems(analysis, budgetNames))
+      setItems(toEditItems(analysis, budgets))
       setGroupNames({})
     }
     // reset item saat invoice berubah
-  }, [analysis, budgetNames, invoiceId])
+  }, [analysis, budgets, invoiceId])
 
   const updateItem = (key: string, patch: Partial<EditItem>) => {
     setItems((prev) => prev.map((it) => (it.key === key ? { ...it, ...patch } : it)))
   }
 
   const addItem = () => {
-    setItems((prev) => [...prev, { key: `${Date.now()}-${prev.length}`, name: '', amount: 0, budget: null }])
+    setItems((prev) => [...prev, { key: `${Date.now()}-${prev.length}`, name: '', amount: 0, budget: null, category: null }])
   }
 
   const removeItem = (key: string) => setItems((prev) => prev.filter((it) => it.key !== key))
@@ -160,10 +179,16 @@ function ReviewModal({
   }
 
   const groups = useMemo(() => {
-    const map = new Map<string, EditItem[]>()
+    const map = new Map<string, { budget: string; category: string | null; items: EditItem[] }>()
     for (const it of items) {
       if (!it.budget) continue
-      map.set(it.budget, [...(map.get(it.budget) ?? []), it])
+      const key = groupKey(it.budget, it.category)
+      const existing = map.get(key)
+      if (existing) {
+        existing.items.push(it)
+      } else {
+        map.set(key, { budget: it.budget, category: it.category, items: [it] })
+      }
     }
     return Array.from(map.entries())
   }, [items])
@@ -181,15 +206,18 @@ function ReviewModal({
       if (!it.budget) list.push(`${label}: budget belum dipilih`)
       if (Number(it.amount) === 0) list.push(`${label}: nominal masih 0`)
     })
-    for (const [budget, groupItems] of groups) {
-      const sum = groupItems.reduce((s, it) => s + Number(it.amount), 0)
-      if (sum <= 0) list.push(`Budget ${budget}: totalnya harus lebih dari 0`)
+    for (const [, group] of groups) {
+      const sum = group.items.reduce((s, it) => s + Number(it.amount), 0)
+      if (sum <= 0) {
+        const label = group.category ? `${group.budget} / ${group.category}` : group.budget
+        list.push(`Budget ${label}: totalnya harus lebih dari 0`)
+      }
     }
     return list
   }, [items, groups])
   const invalid = problems.length > 0
 
-  const groupName = (budget: string) => groupNames[budget] ?? storeName
+  const groupName = (key: string) => groupNames[key] ?? storeName
 
   const buildDescription = (list: EditItem[]): string => {
     const full = list
@@ -208,12 +236,13 @@ function ReviewModal({
 
   const handleSubmit = () => {
     if (invalid || batch.isPending) return
-    const groupsPayload = groups.map(([budget, list]) => {
-      const amount = list.reduce((s, it) => s + Number(it.amount), 0)
-      const description = buildDescription(list)
+    const groupsPayload = groups.map(([key, group]) => {
+      const amount = group.items.reduce((s, it) => s + Number(it.amount), 0)
+      const description = buildDescription(group.items)
       return {
-        name: groupName(budget).trim() || storeName,
-        budget,
+        name: groupName(key).trim() || storeName,
+        budget: group.budget,
+        category: group.category ?? undefined,
         amount,
         description,
       }
@@ -368,13 +397,14 @@ function ReviewModal({
               Belum ada item dengan budget. Assign budget tiap item di bawah.
             </Text>
           )}
-          {groups.map(([budget, list]) => {
-            const amount = list.reduce((s, it) => s + Number(it.amount), 0)
+          {groups.map(([key, group]) => {
+            const amount = group.items.reduce((s, it) => s + Number(it.amount), 0)
+            const title = group.category ? `${group.budget} / ${group.category}` : group.budget
             return (
-              <Paper key={budget} withBorder p="sm" radius="md">
+              <Paper key={key} withBorder p="sm" radius="md">
                 <Group justify="space-between" mb={4}>
                   <Text size="sm" fw={600}>
-                    {budget}
+                    {title}
                   </Text>
                   <Text size="sm" fw={700}>
                     {formatCurrency(amount)}
@@ -383,13 +413,13 @@ function ReviewModal({
                 <TextInput
                   size="xs"
                   label="Nama pengeluaran"
-                  value={groupName(budget)}
+                  value={groupName(key)}
                   onChange={(e) =>
-                    setGroupNames((prev) => ({ ...prev, [budget]: e.currentTarget.value }))
+                    setGroupNames((prev) => ({ ...prev, [key]: e.currentTarget.value }))
                   }
                 />
                 <Group gap={6} mt={6}>
-                  {list.map((it) => (
+                  {group.items.map((it) => (
                     <Text
                       key={it.key}
                       size="xs"
@@ -457,8 +487,21 @@ function ReviewModal({
                     placeholder="Budget"
                     data={budgetOptions}
                     value={it.budget}
-                    onChange={(v) => updateItem(it.key, { budget: v })}
+                    onChange={(v) => updateItem(it.key, { budget: v, category: null })}
                     searchable
+                    maxDropdownHeight={220}
+                    comboboxProps={{ withinPortal: false }}
+                  />
+                  <Select
+                    size="xs"
+                    label="Category"
+                    placeholder={it.budget ? 'Uncategorized' : 'Pilih budget dulu'}
+                    data={categoryOptionsOf(it.budget)}
+                    value={it.category}
+                    onChange={(v) => updateItem(it.key, { category: v })}
+                    searchable
+                    clearable
+                    disabled={!it.budget || categoryOptionsOf(it.budget).length === 0}
                     maxDropdownHeight={220}
                     comboboxProps={{ withinPortal: false }}
                   />
@@ -502,9 +545,21 @@ function ReviewModal({
                   placeholder="Budget"
                   data={budgetOptions}
                   value={it.budget}
-                  onChange={(v) => updateItem(it.key, { budget: v })}
+                  onChange={(v) => updateItem(it.key, { budget: v, category: null })}
                   searchable
                   style={{ flex: 1.2 }}
+                />
+                <Select
+                  size="xs"
+                  placeholder="Category"
+                  data={categoryOptionsOf(it.budget)}
+                  value={it.category}
+                  onChange={(v) => updateItem(it.key, { category: v })}
+                  searchable
+                  clearable
+                  disabled={!it.budget || categoryOptionsOf(it.budget).length === 0}
+                  style={{ flex: 1.2 }}
+                  comboboxProps={{ withinPortal: false }}
                 />
                 <ActionIcon color="red" variant="subtle" onClick={() => removeItem(it.key)} aria-label="Hapus item">
                   ✕

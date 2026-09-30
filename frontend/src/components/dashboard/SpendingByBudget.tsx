@@ -1,6 +1,6 @@
 import { Box, Group, Skeleton, Stack, Text } from '@mantine/core'
 import { formatCurrency } from '../../utils/currency'
-import type { BudgetSummary } from '../../types/expense'
+import type { BudgetSummary, CategorySummary } from '../../types/expense'
 import { DashboardSection } from './DashboardSection'
 
 const MAX_ROWS = 5
@@ -19,7 +19,7 @@ export function SpendingByBudget({
   const rows = byBudget.slice(0, MAX_ROWS)
   const restAmount = byBudget.slice(MAX_ROWS).reduce((s, b) => s + b.amount, 0)
 
-  const Row = ({ name, amount }: { name: string; amount: number }) => {
+  const Row = ({ name, amount, categories }: { name: string; amount: number; categories?: CategorySummary[] }) => {
     const share = total > 0 ? (amount / total) * 100 : 0
     return (
       <div>
@@ -46,6 +46,11 @@ export function SpendingByBudget({
             />
           </Box>
         )}
+        {categories && categories.length > 0 && (
+          <Text size="xs" c="dimmed" mt={4} truncate title={categories.map((c) => `${c.category}: ${formatCurrency(c.amount)}`).join(', ')}>
+            {categories.map((c) => `${c.category} ${formatCurrency(c.amount)}`).join(' · ')}
+          </Text>
+        )}
       </div>
     )
   }
@@ -69,7 +74,7 @@ export function SpendingByBudget({
       ) : (
         <Stack gap="lg">
           {rows.map((b) => (
-            <Row key={b.budget} name={b.budget} amount={b.amount} />
+            <Row key={b.budget} name={b.budget} amount={b.amount} categories={b.categories} />
           ))}
           {restAmount > 0 && <Row name="Lainnya" amount={restAmount} />}
         </Stack>

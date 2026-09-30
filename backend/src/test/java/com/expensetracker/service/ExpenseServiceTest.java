@@ -1,6 +1,8 @@
 package com.expensetracker.service;
 
 import com.expensetracker.data.BudgetRepository;
+import com.expensetracker.data.CategoryData;
+import com.expensetracker.data.CategoryRepository;
 import com.expensetracker.data.ExpenseData;
 import com.expensetracker.data.ExpenseRepository;
 import com.expensetracker.data.InvoiceData;
@@ -9,6 +11,8 @@ import com.expensetracker.model.BatchExpenseItem;
 import com.expensetracker.model.BatchExpenseRequest;
 import com.expensetracker.model.BudgetCreateRequest;
 import com.expensetracker.model.BudgetUpdateRequest;
+import com.expensetracker.model.CategoryCreateRequest;
+import com.expensetracker.model.CategoryUpdateRequest;
 import com.expensetracker.model.ExpenseRequest;
 import com.expensetracker.model.TopUpRequest;
 import org.junit.jupiter.api.BeforeEach;
@@ -25,6 +29,7 @@ import java.util.List;
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -42,6 +47,8 @@ class ExpenseServiceTest {
     @Mock
     private BudgetRepository budgetRepository;
     @Mock
+    private CategoryRepository categoryRepository;
+    @Mock
     private ExpenseRepository expenseRepository;
     @Mock
     private TopUpRepository topUpRepository;
@@ -54,7 +61,7 @@ class ExpenseServiceTest {
 
     @BeforeEach
     void setUp() {
-        expenseService = new ExpenseService(budgetRepository, expenseRepository, topUpRepository,
+        expenseService = new ExpenseService(budgetRepository, categoryRepository, expenseRepository, topUpRepository,
                 invoiceService, notificationService);
     }
 
@@ -90,7 +97,7 @@ class ExpenseServiceTest {
         when(budgetRepository.findIdByName("Daily")).thenReturn(1L);
         assertDoesNotThrow(() -> expenseService.createExpense(validRequest()));
         verify(expenseRepository).insert(anyString(), eq("2026-JUL-AUG"), eq(LocalDate.of(2026, 7, 25)),
-                eq(LocalDateTime.of(2026, 8, 6, 14, 30)), eq(1L), eq("Makan Siang"), eq(35000L), eq(null));
+                eq(LocalDateTime.of(2026, 8, 6, 14, 30)), eq(1L), eq(null), eq("Makan Siang"), eq(35000L), eq(null));
         verify(budgetRepository).adjustBalance("Daily", -35000L);
     }
 
@@ -100,7 +107,7 @@ class ExpenseServiceTest {
         ExpenseRequest request = new ExpenseRequest("2026-08-25 08:00", "Makan Siang", "Daily", 35000L, null, null);
         assertDoesNotThrow(() -> expenseService.createExpense(request));
         verify(expenseRepository).insert(anyString(), eq("2026-AUG-SEP"), eq(LocalDate.of(2026, 8, 25)),
-                eq(LocalDateTime.of(2026, 8, 25, 8, 0)), anyLong(), anyString(), anyLong(), any());
+                eq(LocalDateTime.of(2026, 8, 25, 8, 0)), anyLong(), any(), anyString(), anyLong(), any());
     }
 
     @Test
@@ -108,7 +115,7 @@ class ExpenseServiceTest {
         ExpenseRequest request = new ExpenseRequest(null, "Makan Siang", "Daily", 35000L, null, null);
         ValidationException ex = assertThrows(ValidationException.class, () -> expenseService.createExpense(request));
         assertEquals("DateTime is required", ex.getMessage());
-        verify(expenseRepository, never()).insert(any(), any(), any(), any(), anyLong(), any(), anyLong(), any());
+        verify(expenseRepository, never()).insert(any(), any(), any(), any(), anyLong(), any(), any(), anyLong(), any());
         verify(budgetRepository, never()).adjustBalance(any(), anyLong());
     }
 
@@ -170,7 +177,7 @@ class ExpenseServiceTest {
         assertDoesNotThrow(() -> expenseService.updateExpense("id123", request));
         verify(budgetRepository).adjustBalance("Daily", 15000L);
         verify(expenseRepository).update(eq("id123"), eq(LocalDate.of(2026, 7, 25)),
-                eq(LocalDateTime.of(2026, 8, 6, 14, 30)), eq(1L), eq("Makan Siang"), eq(20000L), eq(null));
+                eq(LocalDateTime.of(2026, 8, 6, 14, 30)), eq(1L), eq(null), eq("Makan Siang"), eq(20000L), eq(null));
     }
 
     @Test
@@ -509,7 +516,8 @@ class ExpenseServiceTest {
         int count = expenseService.createExpenseBatch(request);
         assertEquals(2, count);
         verify(expenseRepository, times(2)).insert(anyString(), eq("2026-JUL-AUG"),
-                eq(LocalDate.of(2026, 7, 25)), eq(LocalDateTime.of(2026, 8, 6, 14, 30)), anyLong(), anyString(), anyLong(), any());
+                eq(LocalDate.of(2026, 7, 25)), eq(LocalDateTime.of(2026, 8, 6, 14, 30)), anyLong(), any(), anyString(),
+                anyLong(), any());
         verify(expenseRepository, times(2)).attachInvoice(anyString(), eq("inv-1"));
         verify(budgetRepository).adjustBalance("Alana", -50000L);
         verify(budgetRepository).adjustBalance("Household", -15000L);
@@ -526,7 +534,8 @@ class ExpenseServiceTest {
         assertDoesNotThrow(() -> expenseService.createExpenseBatch(request));
         verify(invoiceService).updatePeriod("inv-9", LocalDate.of(2026, 8, 6));
         verify(expenseRepository).insert(anyString(), eq("2026-JUL-AUG"),
-                eq(LocalDate.of(2026, 7, 25)), eq(LocalDateTime.of(2026, 8, 6, 14, 30)), eq(2L), eq("Kopi"), eq(15000L), eq(null));
+                eq(LocalDate.of(2026, 7, 25)), eq(LocalDateTime.of(2026, 8, 6, 14, 30)), eq(2L), eq(null), eq("Kopi"),
+                eq(15000L), eq(null));
     }
 
     @Test
@@ -544,7 +553,7 @@ class ExpenseServiceTest {
         ValidationException ex = assertThrows(ValidationException.class,
                 () -> expenseService.createExpenseBatch(request));
         assertEquals("Amount must be greater than 0", ex.getMessage());
-        verify(expenseRepository, never()).insert(any(), any(), any(), any(), anyLong(), any(), anyLong(), any());
+        verify(expenseRepository, never()).insert(any(), any(), any(), any(), anyLong(), any(), any(), anyLong(), any());
     }
 
     @Test
@@ -554,5 +563,56 @@ class ExpenseServiceTest {
         assertDoesNotThrow(() -> expenseService.createTopUp(
                 new TopUpRequest("2026-08-07 10:00", "Daily", 50000L, "Gaji")));
         verify(notificationService).sendTopUp("Daily", 50000L, 150000L);
+    }
+
+    @Test
+    void createExpense_withCategory_shouldResolveCategoryId() {
+        when(budgetRepository.findIdByName("Daily")).thenReturn(1L);
+        when(categoryRepository.findIdByBudgetAndName(1L, "Coffee")).thenReturn(9L);
+        ExpenseRequest request = new ExpenseRequest("2026-08-06 14:30", "Kopi", "Daily", "Coffee", 35000L, null, null);
+        assertDoesNotThrow(() -> expenseService.createExpense(request));
+        verify(expenseRepository).insert(anyString(), eq("2026-JUL-AUG"), eq(LocalDate.of(2026, 7, 25)),
+                eq(LocalDateTime.of(2026, 8, 6, 14, 30)), eq(1L), eq(9L), eq("Kopi"), eq(35000L), eq(null));
+    }
+
+    @Test
+    void createExpense_categoryNotInBudget_shouldReject() {
+        when(budgetRepository.findIdByName("Daily")).thenReturn(1L);
+        when(categoryRepository.findIdByBudgetAndName(1L, "Nope")).thenReturn(null);
+        ExpenseRequest request = new ExpenseRequest("2026-08-06 14:30", "Kopi", "Daily", "Nope", 35000L, null, null);
+        ValidationException ex = assertThrows(ValidationException.class, () -> expenseService.createExpense(request));
+        assertTrue(ex.getMessage().contains("Category not found"));
+    }
+
+    @Test
+    void getSummary_shouldBreakdownByCategoryIncludingUncategorized() {
+        when(expenseRepository.getExpenses("2026-JUL-AUG")).thenReturn(List.of(
+                new ExpenseData("1", "2026-JUL-AUG", "2026-08-01 09:00", "a", "Daily", 1000L, null, false, false, null,
+                        null, null, "Coffee"),
+                new ExpenseData("2", "2026-JUL-AUG", "2026-08-02 09:00", "b", "Daily", 2000L, null, false, false, null,
+                        null, null, null)));
+        var summary = expenseService.getSummary("2026-JUL-AUG");
+        var daily = summary.byBudget().stream().filter(b -> b.budget().equals("Daily")).findFirst().orElseThrow();
+        assertEquals(2, daily.categories().size());
+        var coffee = daily.categories().stream()
+                .filter(c -> c.category().equals("Coffee")).findFirst().orElseThrow();
+        assertEquals(1000L, coffee.amount());
+        var uncategorized = daily.categories().stream()
+                .filter(c -> c.category().equals("Uncategorized")).findFirst().orElseThrow();
+        assertEquals(2000L, uncategorized.amount());
+    }
+
+    @Test
+    void createCategory_duplicate_shouldReject() {
+        when(budgetRepository.findIdByName("Daily")).thenReturn(1L);
+        doThrow(new IllegalStateException("dup")).when(categoryRepository).create(1L, "Coffee", null);
+        assertThrows(ValidationException.class,
+                () -> expenseService.createCategory(new CategoryCreateRequest("Daily", "Coffee", null)));
+    }
+
+    @Test
+    void deleteCategory_notFound_shouldReject() {
+        when(categoryRepository.findById(5L)).thenReturn(null);
+        assertThrows(ValidationException.class, () -> expenseService.deleteCategory(5L));
     }
 }

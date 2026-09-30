@@ -7,6 +7,7 @@ import TopUpHistoryModal from '../components/TopUpHistoryModal'
 import AddBudgetModal from '../components/AddBudgetModal'
 import EditBudgetModal from '../components/EditBudgetModal'
 import DeleteBudgetModal from '../components/DeleteBudgetModal'
+import ManageCategoriesModal from '../components/ManageCategoriesModal'
 import { SpendingSummary } from '../components/dashboard/SpendingSummary'
 import { BudgetHealth } from '../components/dashboard/BudgetHealth'
 import { SpendingTrend } from '../components/dashboard/SpendingTrend'
@@ -24,6 +25,7 @@ function DashboardPage() {
   const [selectedTopUpHistoryBudget, setSelectedTopUpHistoryBudget] = useState<string | null>(null)
   const [addBudgetOpened, setAddBudgetOpened] = useState(false)
   const [deleteBudgetName, setDeleteBudgetName] = useState<string | null>(null)
+  const [manageCategoriesBudget, setManageCategoriesBudget] = useState<string | null>(null)
   const [editBudget, setEditBudget] = useState<{ name: string; balance: number | undefined; alertThreshold: number | undefined; description: string | undefined } | null>(null)
 
   useEffect(() => {
@@ -131,6 +133,7 @@ function DashboardPage() {
             onAddBudget={() => setAddBudgetOpened(true)}
             onTopUp={(name) => setSelectedTopUpBudget(name)}
             onHistory={(name) => setSelectedTopUpHistoryBudget(name)}
+            onManageCategories={(name) => setManageCategoriesBudget(name)}
             onEdit={setEditBudget}
             onDelete={(name) => setDeleteBudgetName(name)}
           />
@@ -184,6 +187,12 @@ function DashboardPage() {
           onClose={() => setEditBudget(null)}
         />
         <DeleteBudgetModal name={deleteBudgetName} onClose={() => setDeleteBudgetName(null)} />
+        {manageCategoriesBudget && (
+          <ManageCategoriesModal
+            budget={manageCategoriesBudget}
+            onClose={() => setManageCategoriesBudget(null)}
+          />
+        )}
       </Stack>
     </Container>
   )

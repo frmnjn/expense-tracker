@@ -11,7 +11,7 @@ import {
   Text,
 } from '@mantine/core'
 import { formatCurrency } from '../../utils/currency'
-import type { BudgetSummary } from '../../types/expense'
+import type { BudgetSummary, CategoryOption } from '../../types/expense'
 import { DashboardSection } from './DashboardSection'
 
 export interface BudgetCardData {
@@ -19,6 +19,7 @@ export interface BudgetCardData {
   balance: number
   alertThreshold: number
   description?: string
+  categories: CategoryOption[]
 }
 
 export function BudgetHealth({
@@ -29,6 +30,7 @@ export function BudgetHealth({
   onAddBudget,
   onTopUp,
   onHistory,
+  onManageCategories,
   onEdit,
   onDelete,
 }: {
@@ -39,6 +41,7 @@ export function BudgetHealth({
   onAddBudget: () => void
   onTopUp: (name: string) => void
   onHistory: (name: string) => void
+  onManageCategories: (name: string) => void
   onEdit: (budget: { name: string; balance: number | undefined; alertThreshold: number | undefined; description: string | undefined }) => void
   onDelete: (name: string) => void
 }) {
@@ -128,6 +131,11 @@ export function BudgetHealth({
                         di bawah ambang {formatCurrency(b.alertThreshold)}
                       </Text>
                     )}
+                    {info && info.categories && info.categories.length > 0 && (
+                      <Text size="xs" c="dimmed" truncate title={info.categories.map((c) => `${c.category}: ${formatCurrency(c.amount)}`).join(', ')}>
+                        {info.categories.map((c) => `${c.category} ${formatCurrency(c.amount)}`).join(' · ')}
+                      </Text>
+                    )}
                   </div>
                   <Menu shadow="md" width={200} position="bottom-end">
                     <Menu.Target>
@@ -141,6 +149,9 @@ export function BudgetHealth({
                       </Menu.Item>
                       <Menu.Item leftSection="📋" onClick={() => onHistory(b.name)}>
                         Riwayat top-up
+                      </Menu.Item>
+                      <Menu.Item leftSection="🏷" onClick={() => onManageCategories(b.name)}>
+                        Kelola Category
                       </Menu.Item>
                       <Menu.Item leftSection="✎" onClick={() => onEdit({ name: b.name, balance: b.balance, alertThreshold: b.alertThreshold, description: b.description })}>
                         Edit budget

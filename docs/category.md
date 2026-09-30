@@ -299,31 +299,31 @@ Frontend:
 ## 14. Checklist implementasi
 
 ### Tahap 1 — Data & Backend
-- [ ] `V21__categories.sql`
-- [ ] `CategoryRepository` + `CategoryData`
-- [ ] Model: `CategoryOption`, `CategoryCreateRequest`, `CategoryUpdateRequest`, `CategorySummary`
-- [ ] `BudgetOption` + `categories`
-- [ ] `ExpenseData`/`ExpenseRequest`/`ExpenseResponse`/`BatchExpenseItem` + category
-- [ ] `ExpenseRepository` join + insert/update category + `sumByCategoryForPeriod`
-- [ ] `ExpenseService` CRUD category + validasi + summary breakdown
-- [ ] `ExpenseController` endpoint category
-- [ ] Unit test backend
+- [x] `V21__categories.sql`
+- [x] `CategoryRepository` + `CategoryData`
+- [x] Model: `CategoryOption`, `CategoryCreateRequest`, `CategoryUpdateRequest`, `CategorySummary`
+- [x] `BudgetOption` + `categories`
+- [x] `ExpenseData`/`ExpenseRequest`/`ExpenseResponse`/`BatchExpenseItem` + category
+- [x] `ExpenseRepository` join + insert/update `category_id` (breakdown per category dihitung in-memory di `ExpenseService.getSummary`)
+- [x] `ExpenseService` CRUD category + validasi + summary breakdown
+- [x] `ExpenseController` endpoint category
+- [x] Unit test backend
 
 ### Tahap 2 — AI
-- [ ] `AiInvoiceItem` + `suggestedCategory`
-- [ ] Prompt `InvoiceAnalysisService` + `EmailParserService` (hierarki + category)
-- [ ] `ParsedTransaction` + `suggestedCategory`
-- [ ] Test AI
+- [x] `AiInvoiceItem` + `suggestedCategory`
+- [x] Prompt `InvoiceAnalysisService` + `EmailParserService` (hierarki + category)
+- [x] `ParsedTransaction` + `suggestedCategory` (+ persist `email_imports.suggested_category`)
+- [x] Test AI
 
 ### Tahap 3 — Frontend
-- [ ] `types/expense.ts`, `services/expense.ts`, hooks
-- [ ] Cascading select (ExpenseForm, ReviewModal, ImportEmailModal, HistoryPage)
-- [ ] `ManageCategoriesModal` + aksi di `BudgetHealth`
-- [ ] Breakdown/drill-down dashboard (incl. Uncategorized)
-- [ ] lint + build
+- [x] `types/expense.ts`, `services/expense.ts`, hooks
+- [x] Cascading select (ExpenseForm, ReviewModal, ImportEmailModal, HistoryPage)
+- [x] `ManageCategoriesModal` + aksi di `BudgetHealth`
+- [x] Breakdown/drill-down dashboard (incl. Uncategorized)
+- [x] lint + build
 
 ### Tahap 4 — Docs & rilis
-- [ ] Update `PRD.md`
-- [ ] `mvn test` + build backend
-- [ ] `npm run lint && npm run build`
+- [x] Update `PRD.md`
+- [x] `mvn test` + build backend
+- [x] `npm run lint && npm run build`
 - [ ] Deploy (`docker-compose.prod.yml`) + verifikasi health
