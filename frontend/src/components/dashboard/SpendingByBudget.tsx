@@ -47,9 +47,18 @@ export function SpendingByBudget({
           </Box>
         )}
         {categories && categories.length > 0 && (
-          <Text size="xs" c="dimmed" mt={4} truncate title={categories.map((c) => `${c.category}: ${formatCurrency(c.amount)}`).join(', ')}>
-            {categories.map((c) => `${c.category} ${formatCurrency(c.amount)}`).join(' · ')}
-          </Text>
+          <Stack gap={2} mt={4}>
+            {categories.map((c) => (
+              <Group key={c.category} justify="space-between" wrap="nowrap" gap="xs">
+                <Text size="xs" c="dimmed" truncate>
+                  {c.category}
+                </Text>
+                <Text size="xs" c="dimmed" ff="monospace" style={{ whiteSpace: 'nowrap' }}>
+                  {formatCurrency(c.amount)}
+                </Text>
+              </Group>
+            ))}
+          </Stack>
         )}
       </div>
     )
