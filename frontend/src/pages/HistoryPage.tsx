@@ -33,6 +33,8 @@ import type { Expense } from '../types/expense'
 
 const DATE_TIME_FORMAT = 'YYYY-MM-DD HH:mm'
 
+const UNCATEGORIZED = '__uncategorized__'
+
 const SORT_LABELS: Record<string, string> = {
   'waktu-desc': 'Waktu terbaru',
   'waktu-asc': 'Waktu terlama',
@@ -70,11 +72,13 @@ function HistoryPage() {
   const [viewingPhoto, setViewingPhoto] = useState<Expense | null>(null)
 
   const categoryFilterOptions = useMemo(
-    () =>
-      (options?.budgets.find((b) => b.name === budgetFilter)?.categories ?? []).map((c) => ({
+    () => [
+      { value: UNCATEGORIZED, label: 'Uncategorized' },
+      ...(options?.budgets.find((b) => b.name === budgetFilter)?.categories ?? []).map((c) => ({
         value: c.name,
         label: c.name,
       })),
+    ],
     [options, budgetFilter],
   )
 
@@ -92,7 +96,11 @@ function HistoryPage() {
       list = list.filter((e) => e.budget === budgetFilter)
     }
     if (categoryFilter) {
-      list = list.filter((e) => (e.category ?? '') === categoryFilter)
+      if (categoryFilter === UNCATEGORIZED) {
+        list = list.filter((e) => !e.category)
+      } else {
+        list = list.filter((e) => e.category === categoryFilter)
+      }
     }
     const sorted = [...list]
     switch (sortBy) {
@@ -220,7 +228,7 @@ function HistoryPage() {
                     rightSection={<span>✕</span>}
                     onClick={() => setCategoryFilter(null)}
                   >
-                    Category: {categoryFilter}
+                    Category: {categoryFilter === UNCATEGORIZED ? 'Uncategorized' : categoryFilter}
                   </Button>
                 )}
                 {sortBy !== 'waktu-desc' && (
