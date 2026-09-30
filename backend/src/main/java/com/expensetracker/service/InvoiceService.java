@@ -145,6 +145,35 @@ public class InvoiceService {
         return id;
     }
 
+    /** Membuat invoice scan dari byte[] (mis. attachment email e-receipt). */
+    public String createInvoiceForAi(String period, LocalDate periodStart, byte[] content, String originalName) {
+        String id = storeInvoiceBytes(period, periodStart, content, originalName);
+        invoiceRepository.updateStatus(id, InvoiceStatus.ANALYZING.value());
+        invoiceRepository.setScanFlow(id);
+        return id;
+    }
+
+    private String storeInvoiceBytes(String period, LocalDate periodStart, byte[] content, String originalName) {
+        if (content == null || content.length == 0) {
+            throw new ValidationException("Attachment is empty");
+        }
+        String ext = extensionOf(originalName);
+        if (!ALLOWED_EXTENSIONS.contains(ext)) {
+            throw new ValidationException("Only jpg, png, and pdf are allowed");
+        }
+        String invoiceId = UUID.randomUUID().toString();
+        String filename = invoiceId + "." + ext;
+        try {
+            Path target = Path.of(uploadDir).resolve(filename).normalize();
+            Files.createDirectories(target.getParent());
+            Files.write(target, content);
+        } catch (IOException e) {
+            throw new IllegalStateException("Failed to save attachment", e);
+        }
+        invoiceRepository.insert(invoiceId, period, periodStart, filename, originalName);
+        return invoiceId;
+    }
+
     private String storeInvoice(String period, LocalDate periodStart, MultipartFile file) {
         if (file == null || file.isEmpty()) {
             throw new ValidationException("Photo is required");

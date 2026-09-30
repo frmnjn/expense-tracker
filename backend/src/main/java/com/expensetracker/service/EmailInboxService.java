@@ -20,7 +20,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
+import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Arrays;
@@ -28,6 +30,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Locale;
 import java.util.Properties;
+import java.util.Set;
 import java.util.UUID;
 
 /**
@@ -40,9 +43,14 @@ public class EmailInboxService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(EmailInboxService.class);
 
+    private static final Set<String> ALLOWED_ATTACHMENT_EXTENSIONS = Set.of("pdf", "jpg", "jpeg", "png");
+    private static final long MAX_ATTACHMENT_BYTES = 10L * 1024 * 1024;
+
     private final EmailImportRepository emailImportRepository;
     private final EmailParserService emailParserService;
     private final MerchantDiscardRule merchantDiscardRule;
+    private final InvoiceService invoiceService;
+    private final InvoiceAnalysisService invoiceAnalysisService;
 
     private final boolean enabled;
     private final String host;
@@ -51,12 +59,15 @@ public class EmailInboxService {
     private final String appPassword;
     private final String folderName;
     private final List<String> allowedSenders;
+    private final List<String> scanSenders;
     private final int lookbackDays;
     private final int maxPerPoll;
 
     public EmailInboxService(EmailImportRepository emailImportRepository,
                              EmailParserService emailParserService,
                              MerchantDiscardRule merchantDiscardRule,
+                             InvoiceService invoiceService,
+                             InvoiceAnalysisService invoiceAnalysisService,
                              @Value("${inbox.enabled:false}") boolean enabled,
                              @Value("${inbox.host:imap.gmail.com}") String host,
                              @Value("${inbox.port:993}") int port,
@@ -64,23 +75,31 @@ public class EmailInboxService {
                              @Value("${inbox.app-password:}") String appPassword,
                              @Value("${inbox.folder:INBOX}") String folderName,
                              @Value("${inbox.senders:}") String senders,
+                             @Value("${inbox.scan-senders:}") String scanSenders,
                              @Value("${inbox.lookback-days:3}") int lookbackDays,
                              @Value("${inbox.max-per-poll:50}") int maxPerPoll) {
         this.emailImportRepository = emailImportRepository;
         this.emailParserService = emailParserService;
         this.merchantDiscardRule = merchantDiscardRule;
+        this.invoiceService = invoiceService;
+        this.invoiceAnalysisService = invoiceAnalysisService;
         this.enabled = enabled;
         this.host = host;
         this.port = port;
         this.user = user == null ? "" : user.trim();
         this.appPassword = appPassword == null ? "" : appPassword.trim();
         this.folderName = folderName == null || folderName.isBlank() ? "INBOX" : folderName;
-        this.allowedSenders = Arrays.stream(senders == null ? new String[0] : senders.split(","))
+        this.allowedSenders = parseSenders(senders);
+        this.scanSenders = parseSenders(scanSenders);
+        this.lookbackDays = Math.max(1, lookbackDays);
+        this.maxPerPoll = Math.max(1, maxPerPoll);
+    }
+
+    private static List<String> parseSenders(String senders) {
+        return Arrays.stream(senders == null ? new String[0] : senders.split(","))
                 .map(s -> s.trim().toLowerCase(Locale.ROOT))
                 .filter(s -> !s.isBlank())
                 .toList();
-        this.lookbackDays = Math.max(1, lookbackDays);
-        this.maxPerPoll = Math.max(1, maxPerPoll);
     }
 
     public boolean isEnabled() {
@@ -168,7 +187,7 @@ public class EmailInboxService {
         }
     }
 
-    private boolean storeMessage(Message message) {
+    boolean storeMessage(Message message) {
         try {
             String sender = senderOf(message);
             if (!isAllowedSender(sender)) {
@@ -183,6 +202,31 @@ public class EmailInboxService {
             String body = extractBody(message);
 
             String id = UUID.randomUUID().toString();
+
+            // Email dari sender khusus (mis. e-receipt Superindo) yang punya lampiran
+            // langsung dikirim ke alur Scan Struk, bukan diparse sebagai transaksi.
+            if (isScanSender(sender)) {
+                EmailAttachment attachment = extractAttachment(message);
+                if (attachment != null) {
+                    try {
+                        String period = PeriodSheetName.forDate(receivedAt.toLocalDate());
+                        LocalDate periodStart = PeriodSheetName.periodStart(receivedAt.toLocalDate());
+                        String invoiceId = invoiceService.createInvoiceForAi(period, periodStart,
+                                attachment.content(), attachment.filename());
+                        invoiceAnalysisService.trigger(invoiceId);
+                        emailImportRepository.insert(id, messageId, sender, subject, receivedAt,
+                                null, null, null, subject, null, null, "SCAN",
+                                EmailImportStatus.DISCARDED.value(),
+                                "Auto-scan: " + attachment.filename() + " dikirim ke Scan Struk");
+                        LOGGER.info("email auto-scanned: sender={} file={} invoice={}",
+                                sender, attachment.filename(), invoiceId);
+                        return true;
+                    } catch (Exception e) {
+                        LOGGER.warn("auto-scan failed for {}: {}; fallback ke alur biasa", sender, e.getMessage());
+                    }
+                }
+            }
+
             try {
                 ParsedTransaction parsed = emailParserService.parse(sender, subject, body);
                 if (merchantDiscardRule.shouldDiscard(parsed.merchant())) {
@@ -218,12 +262,20 @@ public class EmailInboxService {
     }
 
     private boolean isAllowedSender(String sender) {
-        if (allowedSenders.isEmpty() || sender == null || sender.isBlank()) {
+        return matchesSender(sender, allowedSenders) || matchesSender(sender, scanSenders);
+    }
+
+    private boolean isScanSender(String sender) {
+        return matchesSender(sender, scanSenders);
+    }
+
+    private static boolean matchesSender(String sender, List<String> patterns) {
+        if (patterns.isEmpty() || sender == null || sender.isBlank()) {
             return false;
         }
         String address = sender.toLowerCase(Locale.ROOT);
         String domain = address.contains("@") ? address.substring(address.lastIndexOf('@') + 1) : address;
-        for (String allowed : allowedSenders) {
+        for (String allowed : patterns) {
             if (allowed.contains("@")) {
                 if (address.equals(allowed)) {
                     return true;
@@ -287,6 +339,41 @@ public class EmailInboxService {
             }
         }
         return null;
+    }
+
+    /** Ambil attachment pertama yang didukung (pdf/jpg/jpeg/png) dari email. */
+    static EmailAttachment extractAttachment(Part part) throws Exception {
+        if (part.isMimeType("multipart/*")) {
+            Multipart multipart = (Multipart) part.getContent();
+            for (int i = 0; i < multipart.getCount(); i++) {
+                EmailAttachment found = extractAttachment(multipart.getBodyPart(i));
+                if (found != null) {
+                    return found;
+                }
+            }
+            return null;
+        }
+        String filename = part.getFileName();
+        if (filename == null || filename.isBlank()) {
+            return null;
+        }
+        if (!ALLOWED_ATTACHMENT_EXTENSIONS.contains(extensionOf(filename))) {
+            return null;
+        }
+        try (InputStream in = part.getInputStream()) {
+            byte[] bytes = in.readAllBytes();
+            if (bytes.length == 0 || bytes.length > MAX_ATTACHMENT_BYTES) {
+                return null;
+            }
+            return new EmailAttachment(bytes, filename, part.getContentType());
+        }
+    }
+
+    private static String extensionOf(String filename) {
+        if (filename == null || !filename.contains(".")) {
+            return "";
+        }
+        return filename.substring(filename.lastIndexOf('.') + 1).toLowerCase(Locale.ROOT);
     }
 
     private Session buildSession() {

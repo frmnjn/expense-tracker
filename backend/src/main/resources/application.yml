@@ -49,6 +49,7 @@ inbox:
   folder: ${INBOX_FOLDER:INBOX}
   poll-ms: ${INBOX_POLL_MS:300000}
   senders: ${INBOX_SENDERS:klikbca.com,bca.co.id,danamon.co.id}
+  scan-senders: ${INBOX_SCAN_SENDERS:superindo.co.id}
   lookback-days: ${INBOX_LOOKBACK_DAYS:3}
   max-per-poll: ${INBOX_MAX_PER_POLL:50}
   discard-merchants: ${INBOX_DISCARD_MERCHANTS:}
