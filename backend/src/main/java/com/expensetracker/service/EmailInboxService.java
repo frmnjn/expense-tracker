@@ -216,7 +216,7 @@ public class EmailInboxService {
                         invoiceAnalysisService.trigger(invoiceId);
                         emailImportRepository.insert(id, messageId, sender, subject, receivedAt,
                                 null, null, null, subject, null, null, "SCAN",
-                                EmailImportStatus.DISCARDED.value(),
+                                EmailImportStatus.SCANNED.value(),
                                 "Auto-scan: " + attachment.filename() + " dikirim ke Scan Struk");
                         LOGGER.info("email auto-scanned: sender={} file={} invoice={}",
                                 sender, attachment.filename(), invoiceId);
