@@ -3,8 +3,6 @@ import { formatCurrency } from '../../utils/currency'
 import type { BudgetSummary, CategorySummary } from '../../types/expense'
 import { DashboardSection } from './DashboardSection'
 
-const MAX_ROWS = 5
-
 export function SpendingByBudget({
   byBudget,
   total,
@@ -16,8 +14,6 @@ export function SpendingByBudget({
   isLoading: boolean
   isError: boolean
 }) {
-  const rows = byBudget.slice(0, MAX_ROWS)
-  const restAmount = byBudget.slice(MAX_ROWS).reduce((s, b) => s + b.amount, 0)
 
   const Row = ({ name, amount, categories }: { name: string; amount: number; categories?: CategorySummary[] }) => {
     const share = total > 0 ? (amount / total) * 100 : 0
@@ -82,10 +78,9 @@ export function SpendingByBudget({
         </Text>
       ) : (
         <Stack gap="lg">
-          {rows.map((b) => (
+          {byBudget.map((b) => (
             <Row key={b.budget} name={b.budget} amount={b.amount} categories={b.categories} />
           ))}
-          {restAmount > 0 && <Row name="Lainnya" amount={restAmount} />}
         </Stack>
       )}
     </DashboardSection>
