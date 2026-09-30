@@ -6,6 +6,9 @@ import type {
   BatchExpenseRequest,
   BudgetCreateRequest,
   BudgetUpdateRequest,
+  CategoriesResponse,
+  CategoryCreateRequest,
+  CategoryUpdateRequest,
   Expense,
   ExpenseRequest,
   ExpensesResponse,
@@ -33,6 +36,30 @@ export async function updateBudget(name: string, request: BudgetUpdateRequest): 
 
 export async function deleteBudget(name: string): Promise<ApiResponse<void>> {
   const response = await apiClient.delete<ApiResponse<void>>(`/budgets/${encodeURIComponent(name)}`)
+  return response.data
+}
+
+export async function getCategories(budget: string): Promise<CategoriesResponse> {
+  const response = await apiClient.get<ApiResponse<CategoriesResponse>>('/categories', {
+    params: { budget },
+  })
+  return response.data.data ?? { categories: [] }
+}
+
+export async function createCategory(request: CategoryCreateRequest): Promise<ApiResponse<void>> {
+  const response = await apiClient.post<ApiResponse<void>>('/categories', request, {
+    headers: { 'Idempotency-Key': newIdempotencyKey() },
+  })
+  return response.data
+}
+
+export async function updateCategory(id: number, request: CategoryUpdateRequest): Promise<ApiResponse<void>> {
+  const response = await apiClient.put<ApiResponse<void>>(`/categories/${id}`, request)
+  return response.data
+}
+
+export async function deleteCategory(id: number): Promise<ApiResponse<void>> {
+  const response = await apiClient.delete<ApiResponse<void>>(`/categories/${id}`)
   return response.data
 }
 

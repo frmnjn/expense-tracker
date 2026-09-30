@@ -14,7 +14,7 @@ public class EmailImportRepository {
 
     private static final String COLUMNS =
             "id, message_id, sender, subject, received_at, transaction_at, merchant, amount, description, "
-                    + "suggested_budget, parse_method, status, error_message, expense_id, created_at";
+                    + "suggested_budget, suggested_category, parse_method, status, error_message, expense_id, created_at";
 
     private final JdbcTemplate jdbcTemplate;
 
@@ -24,15 +24,15 @@ public class EmailImportRepository {
 
     public void insert(String id, String messageId, String sender, String subject,
                        LocalDateTime receivedAt, LocalDateTime transactionAt, String merchant,
-                       Long amount, String description, String suggestedBudget, String parseMethod,
-                       String status, String errorMessage) {
+                       Long amount, String description, String suggestedBudget, String suggestedCategory,
+                       String parseMethod, String status, String errorMessage) {
         jdbcTemplate.update(
                 "INSERT INTO email_imports (id, message_id, sender, subject, received_at, transaction_at, "
-                        + "merchant, amount, description, suggested_budget, parse_method, status, error_message, "
-                        + "expense_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?)",
+                        + "merchant, amount, description, suggested_budget, suggested_category, parse_method, status, error_message, "
+                        + "expense_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?)",
                 id, messageId, sender, subject,
                 Timestamp.valueOf(receivedAt), transactionAt == null ? null : Timestamp.valueOf(transactionAt),
-                merchant, amount, description, suggestedBudget, parseMethod, status, errorMessage,
+                merchant, amount, description, suggestedBudget, suggestedCategory, parseMethod, status, errorMessage,
                 Timestamp.valueOf(LocalDateTime.now()));
     }
 
@@ -86,13 +86,14 @@ public class EmailImportRepository {
 
     /** Isi ulang hasil parse (dipakai saat retry baris FAILED). */
     public void updateParsed(String id, LocalDateTime transactionAt, String merchant, Long amount,
-                             String suggestedBudget, String parseMethod, String status, String errorMessage) {
+                             String suggestedBudget, String suggestedCategory, String parseMethod, String status,
+                             String errorMessage) {
         String safe = errorMessage == null ? null : errorMessage.substring(0, Math.min(errorMessage.length(), 500));
         jdbcTemplate.update(
                 "UPDATE email_imports SET transaction_at = ?, merchant = ?, amount = ?, suggested_budget = ?, "
-                        + "parse_method = ?, status = ?, error_message = ? WHERE id = ?",
+                        + "suggested_category = ?, parse_method = ?, status = ?, error_message = ? WHERE id = ?",
                 transactionAt == null ? null : Timestamp.valueOf(transactionAt),
-                merchant, amount, suggestedBudget, parseMethod, status, safe, id);
+                merchant, amount, suggestedBudget, suggestedCategory, parseMethod, status, safe, id);
     }
 
     public void markFailed(String id, String message) {
@@ -114,6 +115,7 @@ public class EmailImportRepository {
                 rs.getObject("amount") == null ? null : rs.getLong("amount"),
                 rs.getString("description"),
                 rs.getString("suggested_budget"),
+                rs.getString("suggested_category"),
                 rs.getString("parse_method"),
                 rs.getString("status"),
                 rs.getString("error_message"),

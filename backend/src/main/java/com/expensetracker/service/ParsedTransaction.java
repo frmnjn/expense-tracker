@@ -11,5 +11,11 @@ public record ParsedTransaction(
         long amount,
         LocalDateTime transactionAt,
         String suggestedBudget,
+        String suggestedCategory,
         String parseMethod) {
+
+    public ParsedTransaction(String merchant, long amount, LocalDateTime transactionAt, String suggestedBudget,
+                             String parseMethod) {
+        this(merchant, amount, transactionAt, suggestedBudget, null, parseMethod);
+    }
 }

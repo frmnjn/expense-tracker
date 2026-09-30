@@ -1,6 +1,8 @@
 package com.expensetracker.service;
 
 import com.expensetracker.data.BudgetRepository;
+import com.expensetracker.model.BudgetOption;
+import com.expensetracker.model.CategoryOption;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -386,11 +388,13 @@ public class EmailParserService {
             }
             String merchant = json.path("merchant").asText("").trim();
             String budget = json.path("suggestedBudget").asText("").trim();
+            String category = json.path("suggestedCategory").asText("").trim();
             return new ParsedTransaction(
                     merchant.isBlank() ? "Transaksi email" : merchant,
                     amount,
                     parseDateTime(json.path("dateTime").asText("")),
                     budget.isBlank() ? null : budget,
+                    category.isBlank() ? null : category,
                     "AI");
         } catch (ValidationException e) {
             throw e;
@@ -520,21 +524,34 @@ public class EmailParserService {
     }
 
     private String buildAiPrompt() {
-        List<String> budgets = budgetRepository.getOptions().stream()
-                .map(o -> o.description() == null || o.description().isBlank()
-                        ? o.name()
-                        : o.name() + ": " + o.description())
-                .sorted()
-                .toList();
-        String budgetList = budgets.isEmpty() ? "(tidak ada budget terdaftar)" : String.join("\n", budgets);
+        List<BudgetOption> options = budgetRepository.getOptions();
+        List<String> lines = new java.util.ArrayList<>();
+        for (BudgetOption budget : options) {
+            String line = "- " + budget.name();
+            if (budget.description() != null && !budget.description().isBlank()) {
+                line += ": " + budget.description();
+            }
+            lines.add(line);
+            for (CategoryOption category : budget.categories()) {
+                String catLine = "    * " + category.name();
+                if (category.description() != null && !category.description().isBlank()) {
+                    catLine += ": " + category.description();
+                }
+                lines.add(catLine);
+            }
+        }
+        String budgetList = lines.isEmpty() ? "(tidak ada budget terdaftar)" : String.join("\n", lines);
         return "Kamu mengekstrak transaksi pengeluaran dari email notifikasi bank/e-wallet Indonesia.\n"
                 + "Balas HANYA JSON dengan struktur:\n"
                 + "{\"isExpense\":<true bila ini pembayaran/pengeluaran, false bila bukan (mis. transfer masuk/refund)>,\n"
                 + "\"merchant\":\"nama merchant/tujuan\",\n"
                 + "\"amount\":<nominal integer dalam Rupiah tanpa desimal>,\n"
                 + "\"dateTime\":\"waktu transaksi format YYYY-MM-DD HH:mm:ss\",\n"
-                + "\"suggestedBudget\":\"<nama budget paling cocok atau string kosong>\"}\n"
-                + "Daftar budget tersedia:\n" + budgetList + "\n"
+                + "\"suggestedBudget\":\"<nama budget paling cocok atau string kosong>\",\n"
+                + "\"suggestedCategory\":\"<nama category paling cocok atau string kosong>\"}\n"
+                + "Daftar budget (induk) beserta category (sub) yang tersedia:\n" + budgetList + "\n"
+                + "Isi \"suggestedCategory\" dengan category milik budget yang dipilih; bila ragu isi string kosong "
+                + "(jangan menulis \"uncategorized\"). "
                 + "Abaikan nominal saldo, biaya admin yang bukan bagian transaksi, dan nomor referensi.";
     }
 }

@@ -31,6 +31,7 @@ function ExpenseForm() {
   const [dateTime, setDateTime] = useState<string>(dayjs().format(DATE_TIME_SECONDS_FORMAT))
   const [name, setName] = useState('')
   const [budget, setBudget] = useState<string | null>(null)
+  const [category, setCategory] = useState<string | null>(null)
   const [amount, setAmount] = useState<string | number>('')
   const [description, setDescription] = useState('')
   const [photo, setPhoto] = useState<PhotoSelection | null>(null)
@@ -52,6 +53,7 @@ function ExpenseForm() {
   const resetForm = () => {
     setName('')
     setBudget(null)
+    setCategory(null)
     setAmount('')
     setDescription('')
     setPhoto(null)
@@ -66,6 +68,7 @@ function ExpenseForm() {
         dateTime: dayjs(displayValue).format(DATE_TIME_FORMAT),
         name: name.trim(),
         budget: budget ?? '',
+        category: category ?? undefined,
         amount: Number(amount),
         description: description.trim() === '' ? undefined : description.trim(),
         invoiceId: photo?.kind === 'existing' ? photo.invoiceId : undefined,
@@ -108,6 +111,15 @@ function ExpenseForm() {
   const budgetOptions = useMemo(
     () => (options?.budgets ?? []).map((value) => ({ value: value.name, label: value.name })),
     [options],
+  )
+
+  const categoryOptions = useMemo(
+    () =>
+      (options?.budgets.find((b) => b.name === budget)?.categories ?? []).map((c) => ({
+        value: c.name,
+        label: c.name,
+      })),
+    [options, budget],
   )
 
   const selectedBalance = budget ? balanceOf(budget) : undefined
@@ -158,7 +170,10 @@ function ExpenseForm() {
           placeholder={optionsLoading ? 'Memuat...' : 'Pilih budget'}
           data={budgetOptions}
           value={budget}
-          onChange={setBudget}
+          onChange={(value) => {
+            setBudget(value)
+            setCategory(null)
+          }}
           searchable
           required
           disabled={optionsLoading}
@@ -175,6 +190,19 @@ function ExpenseForm() {
               </Group>
             )
           }}
+        />
+
+        <Select
+          label="Category"
+          placeholder={budget ? 'Uncategorized' : 'Pilih budget dulu'}
+          data={categoryOptions}
+          value={category}
+          onChange={setCategory}
+          searchable
+          clearable
+          disabled={!budget || categoryOptions.length === 0}
+          size="md"
+          maxDropdownHeight={260}
         />
 
         <NumberInput

@@ -14,9 +14,11 @@ import java.util.List;
 public class ExpenseRepository {
 
     private static final String SELECT_COLS =
-            "SELECT e.id, e.period, e.date_time, e.name, b.name AS budget_name, e.amount, e.description, e.deleted, "
+            "SELECT e.id, e.period, e.date_time, e.name, b.name AS budget_name, c.name AS category_name, "
+                    + "e.amount, e.description, e.deleted, "
                     + "e.invoice_id, inv.photo_path AS inv_photo_path, inv.original_name AS inv_original_name "
                     + "FROM expenses e JOIN budgets b ON b.id = e.budget_id "
+                    + "LEFT JOIN categories c ON c.id = e.category_id "
                     + "LEFT JOIN invoices inv ON inv.id = e.invoice_id ";
 
     private final JdbcTemplate jdbcTemplate;
@@ -26,11 +28,12 @@ public class ExpenseRepository {
     }
 
     public void insert(String id, String period, LocalDate periodStart, LocalDateTime dateTime,
-                       long budgetId, String name, long amount, String description) {
+                       long budgetId, Long categoryId, String name, long amount, String description) {
         jdbcTemplate.update(
-                "INSERT INTO expenses (id, period, period_start, date_time, budget_id, name, amount, description, deleted) "
-                        + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, FALSE)",
-                id, period, periodStart, dateTime, budgetId, name, amount, description == null ? "" : description);
+                "INSERT INTO expenses (id, period, period_start, date_time, budget_id, category_id, name, amount, description, deleted) "
+                        + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, FALSE)",
+                id, period, periodStart, dateTime, budgetId, categoryId, name, amount,
+                description == null ? "" : description);
     }
 
     public List<ExpenseData> getExpenses(String period) {
@@ -73,12 +76,12 @@ public class ExpenseRepository {
     }
 
     public void update(String id, LocalDate periodStart, LocalDateTime dateTime,
-                       long budgetId, String name, long amount, String description) {
+                       long budgetId, Long categoryId, String name, long amount, String description) {
         jdbcTemplate.update(
-                "UPDATE expenses SET period = ?, period_start = ?, date_time = ?, budget_id = ?, name = ?, amount = ?, description = ? "
+                "UPDATE expenses SET period = ?, period_start = ?, date_time = ?, budget_id = ?, category_id = ?, name = ?, amount = ?, description = ? "
                         + "WHERE id = ?",
-                PeriodSheetName.forDate(dateTime.toLocalDate()), periodStart, dateTime, budgetId, name, amount,
-                description == null ? "" : description, id);
+                PeriodSheetName.forDate(dateTime.toLocalDate()), periodStart, dateTime, budgetId, categoryId, name,
+                amount, description == null ? "" : description, id);
     }
 
     public void softDelete(String id) {
@@ -129,6 +132,7 @@ public class ExpenseRepository {
                 invoiceId != null && !invoiceId.isBlank(),
                 invoiceId,
                 photoType,
-                rs.getString("inv_original_name"));
+                rs.getString("inv_original_name"),
+                rs.getString("category_name"));
     }
 }

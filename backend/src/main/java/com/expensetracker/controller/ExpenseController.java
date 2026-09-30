@@ -4,6 +4,8 @@ import com.expensetracker.model.ApiResponse;
 import com.expensetracker.model.BatchExpenseRequest;
 import com.expensetracker.model.BudgetCreateRequest;
 import com.expensetracker.model.BudgetUpdateRequest;
+import com.expensetracker.model.CategoryCreateRequest;
+import com.expensetracker.model.CategoryUpdateRequest;
 import com.expensetracker.model.ExpenseRequest;
 import com.expensetracker.model.TopUpRequest;
 import com.expensetracker.service.ExpenseService;
@@ -117,9 +119,79 @@ public class ExpenseController {
         }
     }
 
-    @GetMapping("/periods")
-    public ResponseEntity<ApiResponse> getPeriods() {
+    @GetMapping("/categories")
+    public ResponseEntity<ApiResponse> getCategories(@RequestParam("budget") String budget) {
         try {
+            return ResponseEntity.ok(ApiResponse.ok(expenseService.getCategories(budget)));
+        } catch (ValidationException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            LOGGER.error("internal error getting categories", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Internal server error"));
+        }
+    }
+
+    @PostMapping("/categories")
+    public ResponseEntity<ApiResponse> createCategory(@RequestBody CategoryCreateRequest request,
+                                                      @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
+        Optional<ApiResponse> cached = idempotencyService.find(idempotencyKey);
+        if (cached.isPresent()) {
+            return ResponseEntity.ok(cached.get());
+        }
+        try {
+            expenseService.createCategory(request);
+            ApiResponse response = ApiResponse.ok();
+            idempotencyService.save(idempotencyKey, response);
+            return ResponseEntity.ok(response);
+        } catch (ValidationException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            LOGGER.error("internal error creating category", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Internal server error"));
+        }
+    }
+
+    @PutMapping("/categories/{id}")
+    public ResponseEntity<ApiResponse> updateCategory(@PathVariable long id,
+                                                      @RequestBody CategoryUpdateRequest request) {
+        try {
+            expenseService.updateCategory(id, request);
+            return ResponseEntity.ok(ApiResponse.ok());
+        } catch (ValidationException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            LOGGER.error("internal error updating category", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Internal server error"));
+        }
+    }
+
+    @DeleteMapping("/categories/{id}")
+    public ResponseEntity<ApiResponse> deleteCategory(@PathVariable long id) {
+        try {
+            expenseService.deleteCategory(id);
+            return ResponseEntity.ok(ApiResponse.ok());
+        } catch (ValidationException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            LOGGER.error("internal error deleting category", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Internal server error"));
+        }
+    }
+
+    @GetMapping("/periods")
+    public ResponseEntity<ApiResponse> getPeriods() {        try {
             return ResponseEntity.ok(ApiResponse.ok(expenseService.getPeriods()));
         } catch (Exception e) {
             LOGGER.error("internal error getting periods", e);

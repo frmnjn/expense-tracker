@@ -123,7 +123,7 @@ public class EmailImportController {
     private static EmailImportResponse toResponse(EmailImportData data) {
         return new EmailImportResponse(
                 data.id(), data.sender(), data.subject(), data.receivedAt(), data.transactionAt(),
-                data.merchant(), data.amount(), data.description(), data.suggestedBudget(),
+                data.merchant(), data.amount(), data.description(), data.suggestedBudget(), data.suggestedCategory(),
                 data.parseMethod(), data.status(), data.errorMessage(), data.expenseId());
     }
 }

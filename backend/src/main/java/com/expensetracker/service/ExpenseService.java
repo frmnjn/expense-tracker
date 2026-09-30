@@ -1,6 +1,8 @@
 package com.expensetracker.service;
 
 import com.expensetracker.data.BudgetRepository;
+import com.expensetracker.data.CategoryData;
+import com.expensetracker.data.CategoryRepository;
 import com.expensetracker.data.ExpenseData;
 import com.expensetracker.data.ExpenseRepository;
 import com.expensetracker.data.InvoiceData;
@@ -10,6 +12,11 @@ import com.expensetracker.model.BatchExpenseRequest;
 import com.expensetracker.model.BudgetCreateRequest;
 import com.expensetracker.model.BudgetSummary;
 import com.expensetracker.model.BudgetUpdateRequest;
+import com.expensetracker.model.CategoryCreateRequest;
+import com.expensetracker.model.CategoryOption;
+import com.expensetracker.model.CategorySummary;
+import com.expensetracker.model.CategoryUpdateRequest;
+import com.expensetracker.model.CategoriesResponse;
 import com.expensetracker.model.ExpenseRequest;
 import com.expensetracker.model.ExpenseResponse;
 import com.expensetracker.model.ExpensesResponse;
@@ -41,17 +48,20 @@ public class ExpenseService {
     private static final int MAX_DESCRIPTION_LENGTH = 10000;
 
     private final BudgetRepository budgetRepository;
+    private final CategoryRepository categoryRepository;
     private final ExpenseRepository expenseRepository;
     private final TopUpRepository topUpRepository;
     private final InvoiceService invoiceService;
     private final NotificationService notificationService;
 
     public ExpenseService(BudgetRepository budgetRepository,
+                          CategoryRepository categoryRepository,
                           ExpenseRepository expenseRepository,
                           TopUpRepository topUpRepository,
                           InvoiceService invoiceService,
                           NotificationService notificationService) {
         this.budgetRepository = budgetRepository;
+        this.categoryRepository = categoryRepository;
         this.expenseRepository = expenseRepository;
         this.topUpRepository = topUpRepository;
         this.invoiceService = invoiceService;
@@ -135,11 +145,83 @@ public class ExpenseService {
         }
     }
 
+    public CategoriesResponse getCategories(String budgetName) {
+        Long budgetId = requireBudgetId(budgetName);
+        return new CategoriesResponse(categoryRepository.findByBudgetId(budgetId).stream()
+                .map(c -> new CategoryOption(c.id(), c.name(), c.description()))
+                .toList());
+    }
+
+    @Transactional
+    public void createCategory(CategoryCreateRequest request) {
+        if (request.budgetName() == null || request.budgetName().isBlank()) {
+            throw new ValidationException("Budget is required");
+        }
+        String name = requireCategoryName(request.name());
+        String description = requireDescription(request.description());
+        Long budgetId = requireBudgetId(request.budgetName());
+        try {
+            categoryRepository.create(budgetId, name, description);
+        } catch (IllegalStateException e) {
+            throw new ValidationException("Category already exists");
+        }
+    }
+
+    @Transactional
+    public void updateCategory(long id, CategoryUpdateRequest request) {
+        String name = requireCategoryName(request.name());
+        String description = requireDescription(request.description());
+        CategoryData existing = categoryRepository.findById(id);
+        if (existing == null || !existing.isActive()) {
+            throw new ValidationException("Category not found");
+        }
+        try {
+            if (!categoryRepository.update(id, name, description)) {
+                throw new ValidationException("Category not found");
+            }
+        } catch (IllegalStateException e) {
+            throw new ValidationException("Category already exists");
+        }
+    }
+
+    @Transactional
+    public void deleteCategory(long id) {
+        CategoryData existing = categoryRepository.findById(id);
+        if (existing == null || !existing.isActive()) {
+            throw new ValidationException("Category not found");
+        }
+        categoryRepository.softDelete(id);
+    }
+
+    private static String requireCategoryName(String value) {
+        if (value == null || value.isBlank()) {
+            throw new ValidationException("Name is required");
+        }
+        String trimmed = value.trim();
+        if (trimmed.length() > 255) {
+            throw new ValidationException("Name must be at most 255 characters");
+        }
+        return trimmed;
+    }
+
+    /** Resolve category_id; null bila categoryName kosong (Uncategorized). */
+    private Long requireCategoryId(Long budgetId, String categoryName) {
+        if (categoryName == null || categoryName.isBlank()) {
+            return null;
+        }
+        Long id = categoryRepository.findIdByBudgetAndName(budgetId, categoryName.trim());
+        if (id == null) {
+            throw new ValidationException("Category not found for budget: " + categoryName);
+        }
+        return id;
+    }
+
     @Transactional
     public String createExpense(ExpenseRequest request) {
         validate(request);
         LocalDateTime dateTime = PeriodSheetName.parseLenient(request.dateTime());
         Long budgetId = requireBudgetId(request.budget());
+        Long categoryId = requireCategoryId(budgetId, request.category());
         String id = UUID.randomUUID().toString();
         String period = PeriodSheetName.forDate(dateTime.toLocalDate());
         LocalDate periodStart = PeriodSheetName.periodStart(dateTime.toLocalDate());
@@ -149,6 +231,7 @@ public class ExpenseService {
                 periodStart,
                 dateTime,
                 budgetId,
+                categoryId,
                 request.name(),
                 request.amount(),
                 request.description());
@@ -207,8 +290,9 @@ public class ExpenseService {
 
         for (BatchExpenseItem item : request.groups()) {
             Long budgetId = requireBudgetId(item.budget());
+            Long categoryId = requireCategoryId(budgetId, item.category());
             String id = UUID.randomUUID().toString();
-            expenseRepository.insert(id, period, periodStart, dateTime, budgetId, item.name(),
+            expenseRepository.insert(id, period, periodStart, dateTime, budgetId, categoryId, item.name(),
                     item.amount(), item.description());
             if (request.invoiceId() != null && !request.invoiceId().isBlank()) {
                 expenseRepository.attachInvoice(id, request.invoiceId());
@@ -282,17 +366,37 @@ public class ExpenseService {
         long total = 0;
         Map<String, Long> amountByBudget = new LinkedHashMap<>();
         Map<String, Integer> countByBudget = new LinkedHashMap<>();
+        Map<String, Map<String, Long>> amountByCategory = new LinkedHashMap<>();
+        Map<String, Map<String, Integer>> countByCategory = new LinkedHashMap<>();
         for (ExpenseData expense : expenses) {
             total += expense.amount();
             amountByBudget.merge(expense.budgetName(), expense.amount(), Long::sum);
             countByBudget.merge(expense.budgetName(), 1, Integer::sum);
+            String category = expense.categoryName() == null || expense.categoryName().isBlank()
+                    ? "Uncategorized"
+                    : expense.categoryName();
+            amountByCategory.computeIfAbsent(expense.budgetName(), k -> new LinkedHashMap<>())
+                    .merge(category, expense.amount(), Long::sum);
+            countByCategory.computeIfAbsent(expense.budgetName(), k -> new LinkedHashMap<>())
+                    .merge(category, 1, Integer::sum);
         }
         List<BudgetSummary> list = amountByBudget.entrySet().stream()
                 .map(e -> new BudgetSummary(e.getKey(), e.getValue(),
-                        countByBudget.getOrDefault(e.getKey(), 0)))
+                        countByBudget.getOrDefault(e.getKey(), 0),
+                        buildCategorySummaries(amountByCategory.get(e.getKey()), countByCategory.get(e.getKey()))))
                 .sorted(Comparator.comparingLong(BudgetSummary::amount).reversed())
                 .toList();
         return new SummaryResponse(period, total, expenses.size(), list);
+    }
+
+    private static List<CategorySummary> buildCategorySummaries(Map<String, Long> amounts, Map<String, Integer> counts) {
+        if (amounts == null) {
+            return List.of();
+        }
+        return amounts.entrySet().stream()
+                .map(e -> new CategorySummary(e.getKey(), e.getValue(), counts.getOrDefault(e.getKey(), 0)))
+                .sorted(Comparator.comparingLong(CategorySummary::amount).reversed())
+                .toList();
     }
 
     public TopUpsResponse getTopUps() {
@@ -359,6 +463,7 @@ public class ExpenseService {
         ExpenseData current = requireExpense(id);
         LocalDateTime dateTime = PeriodSheetName.parseLenient(request.dateTime());
         Long newBudgetId = requireBudgetId(request.budget());
+        Long newCategoryId = requireCategoryId(newBudgetId, request.category());
 
         if (!current.budgetName().equals(request.budget())) {
             budgetRepository.adjustBalance(current.budgetName(), current.amount());
@@ -372,6 +477,7 @@ public class ExpenseService {
                 PeriodSheetName.periodStart(dateTime.toLocalDate()),
                 dateTime,
                 newBudgetId,
+                newCategoryId,
                 request.name(),
                 request.amount(),
                 request.description());
@@ -445,6 +551,7 @@ public class ExpenseService {
                 expense.dateTime(),
                 expense.name(),
                 expense.budgetName(),
+                expense.categoryName(),
                 expense.amount(),
                 expense.description(),
                 expense.hasPhoto(),

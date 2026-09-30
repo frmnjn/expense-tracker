@@ -8,6 +8,7 @@ export interface EmailImport {
   amount?: number
   description?: string
   suggestedBudget?: string
+  suggestedCategory?: string
   parseMethod: string
   status: 'PENDING_REVIEW' | 'IMPORTED' | 'DISCARDED' | 'FAILED' | string
   errorMessage?: string

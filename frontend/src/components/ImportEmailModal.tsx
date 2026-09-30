@@ -18,6 +18,7 @@ function ImportEmailModal({ item, onClose }: { item: EmailImport; onClose: () =>
   const [name, setName] = useState(item.merchant ?? '')
   const [amount, setAmount] = useState<string | number>(item.amount ?? '')
   const [budget, setBudget] = useState(item.suggestedBudget ?? '')
+  const [category, setCategory] = useState<string | null>(item.suggestedCategory ?? null)
   const [dateTime, setDateTime] = useState(
     item.transactionAt ? dayjs(item.transactionAt).format('YYYY-MM-DD HH:mm') : dayjs().format('YYYY-MM-DD HH:mm'),
   )
@@ -33,6 +34,11 @@ function ImportEmailModal({ item, onClose }: { item: EmailImport; onClose: () =>
     }
   }, [budget, budgets, item.suggestedBudget])
 
+  const categoryOptions = (budgets?.find((b) => b.name === budget)?.categories ?? []).map((c) => ({
+    value: c.name,
+    label: c.name,
+  }))
+
   const submitDisabled = !name.trim() || !budget || Number(amount) <= 0 || !dateTime || importMutation.isPending
 
   const submit = (force: boolean) => {
@@ -40,6 +46,7 @@ function ImportEmailModal({ item, onClose }: { item: EmailImport; onClose: () =>
       dateTime: dayjs(dateTime).format('YYYY-MM-DD HH:mm'),
       name: name.trim(),
       budget,
+      category: category ?? undefined,
       amount: Number(amount),
       description: description.trim() === '' ? undefined : description.trim(),
     }
@@ -116,10 +123,25 @@ function ImportEmailModal({ item, onClose }: { item: EmailImport; onClose: () =>
           placeholder="Pilih budget"
           data={(budgets ?? []).map((b) => b.name)}
           value={budget}
-          onChange={(v) => setBudget(v ?? '')}
+          onChange={(v) => {
+            setBudget(v ?? '')
+            setCategory(null)
+          }}
           searchable
           required
           size="md"
+        />
+        <Select
+          label="Category"
+          placeholder={budget ? 'Uncategorized' : 'Pilih budget dulu'}
+          data={categoryOptions}
+          value={category}
+          onChange={setCategory}
+          searchable
+          clearable
+          disabled={!budget || categoryOptions.length === 0}
+          size="md"
+          comboboxProps={{ withinPortal: false }}
         />
         <DateTimePicker
           label="Waktu"

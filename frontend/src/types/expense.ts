@@ -2,9 +2,31 @@ export interface ExpenseRequest {
   dateTime: string
   name: string
   budget: string
+  category?: string
   amount: number
   description?: string
   invoiceId?: string
+}
+
+export interface CategoryOption {
+  id: number
+  name: string
+  description?: string
+}
+
+export interface CategoryCreateRequest {
+  budgetName: string
+  name: string
+  description?: string
+}
+
+export interface CategoryUpdateRequest {
+  name: string
+  description?: string
+}
+
+export interface CategoriesResponse {
+  categories: CategoryOption[]
 }
 
 export interface BudgetOption {
@@ -12,6 +34,7 @@ export interface BudgetOption {
   balance: number
   alertThreshold: number
   description?: string
+  categories: CategoryOption[]
 }
 
 export interface BudgetCreateRequest {
@@ -37,6 +60,7 @@ export interface Expense {
   dateTime: string
   name: string
   budget: string
+  category?: string
   amount: number
   description?: string
   hasPhoto: boolean
@@ -52,10 +76,17 @@ export interface ExpensesResponse {
   expenses: Expense[]
 }
 
+export interface CategorySummary {
+  category: string
+  amount: number
+  count: number
+}
+
 export interface BudgetSummary {
   budget: string
   amount: number
   count: number
+  categories?: CategorySummary[]
 }
 
 export interface SummaryResponse {
@@ -113,6 +144,7 @@ export interface AiInvoiceItem {
   name: string
   amount: number
   suggestedBudget?: string
+  suggestedCategory?: string
 }
 
 export interface AiAnalysis {
@@ -142,6 +174,7 @@ export interface InvoiceDetail {
 export interface BatchExpenseItem {
   name: string
   budget: string
+  category?: string
   amount: number
   description?: string
 }

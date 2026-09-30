@@ -1,11 +1,15 @@
 package com.expensetracker.data;
 
 import com.expensetracker.model.BudgetOption;
+import com.expensetracker.model.CategoryOption;
 import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Repository
 public class BudgetRepository {
@@ -17,10 +21,22 @@ public class BudgetRepository {
     }
 
     public List<BudgetOption> getOptions() {
+        Map<String, List<CategoryOption>> categoriesByBudget = new LinkedHashMap<>();
+        jdbcTemplate.query(
+                "SELECT b.name AS budget_name, c.id AS category_id, c.name AS category_name, c.description AS category_description "
+                        + "FROM categories c JOIN budgets b ON b.id = c.budget_id "
+                        + "WHERE c.is_active = TRUE AND b.is_active = TRUE ORDER BY b.name, c.name",
+                rs -> {
+                    String budgetName = rs.getString("budget_name");
+                    categoriesByBudget.computeIfAbsent(budgetName, k -> new ArrayList<>())
+                            .add(new CategoryOption(rs.getLong("category_id"), rs.getString("category_name"),
+                                    rs.getString("category_description")));
+                });
         return jdbcTemplate.query(
                 "SELECT name, balance, alert_threshold, description FROM budgets WHERE is_active = TRUE ORDER BY name",
                 (rs, rowNum) -> new BudgetOption(rs.getString("name"), rs.getLong("balance"),
-                        rs.getLong("alert_threshold"), rs.getString("description")));
+                        rs.getLong("alert_threshold"), rs.getString("description"),
+                        categoriesByBudget.getOrDefault(rs.getString("name"), List.of())));
     }
 
     public Long findIdByName(String name) {
