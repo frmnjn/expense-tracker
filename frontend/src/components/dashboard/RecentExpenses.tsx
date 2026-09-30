@@ -60,7 +60,8 @@ export function RecentExpenses({
                     {e.name}
                   </Text>
                   <Text size="xs" c="dimmed">
-                    {e.budget} · {dayjs(e.dateTime).format('DD MMM, HH:mm')}
+                    {e.budget}
+                    {e.category ? ` / ${e.category}` : ''} · {dayjs(e.dateTime).format('DD MMM, HH:mm')}
                   </Text>
                 </div>
                 <Text size="sm" fw={700} ff="monospace" style={{ whiteSpace: 'nowrap' }}>

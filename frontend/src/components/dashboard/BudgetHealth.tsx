@@ -11,7 +11,7 @@ import {
   Text,
 } from '@mantine/core'
 import { formatCurrency } from '../../utils/currency'
-import type { BudgetSummary, CategoryOption } from '../../types/expense'
+import type { BudgetSummary } from '../../types/expense'
 import { DashboardSection } from './DashboardSection'
 
 export interface BudgetCardData {
@@ -19,7 +19,6 @@ export interface BudgetCardData {
   balance: number
   alertThreshold: number
   description?: string
-  categories: CategoryOption[]
 }
 
 export function BudgetHealth({
@@ -129,11 +128,6 @@ export function BudgetHealth({
                     {belowThreshold && (
                       <Text size="xs" c="orange" fw={600}>
                         di bawah ambang {formatCurrency(b.alertThreshold)}
-                      </Text>
-                    )}
-                    {info && info.categories && info.categories.length > 0 && (
-                      <Text size="xs" c="dimmed" truncate title={info.categories.map((c) => `${c.category}: ${formatCurrency(c.amount)}`).join(', ')}>
-                        {info.categories.map((c) => `${c.category} ${formatCurrency(c.amount)}`).join(' · ')}
                       </Text>
                     )}
                   </div>
