@@ -307,8 +307,12 @@ function HistoryPage() {
                     <Table.Td>{dayjs(expense.dateTime).format(DATE_TIME_FORMAT)}</Table.Td>
                     <Table.Td>{expense.name}</Table.Td>
                     <Table.Td>
-                      {expense.budget}
-                      {expense.category ? ` / ${expense.category}` : ''}
+                      <Text size="sm">{expense.budget}</Text>
+                      {expense.category && (
+                        <Text size="xs" c="dimmed">
+                          {expense.category}
+                        </Text>
+                      )}
                     </Table.Td>
                     <Table.Td ta="right">{formatCurrency(expense.amount)}</Table.Td>
                     <Table.Td ta="right">

@@ -1,4 +1,4 @@
-import { ActionIcon, Badge, Divider, Group, Paper, Text } from '@mantine/core'
+import { ActionIcon, Divider, Group, Paper, Stack, Text } from '@mantine/core'
 import dayjs from 'dayjs'
 import { formatCurrency } from '../utils/currency'
 import type { Expense } from '../types/expense'
@@ -26,14 +26,19 @@ export function TransactionCard({
           {formatCurrency(expense.amount)}
         </Text>
       </Group>
-      <Group justify="space-between" mt={2} wrap="nowrap">
+      <Text size="xs" c="dimmed" mt={2}>
+        {dayjs(expense.dateTime).format(DATE_TIME_FORMAT)}
+      </Text>
+      <Stack gap={2} mt={4}>
         <Text size="xs" c="dimmed">
-          {dayjs(expense.dateTime).format(DATE_TIME_FORMAT)}
+          Budget: <Text span fw={600}>{expense.budget}</Text>
         </Text>
-        <Badge size="sm" variant="light" color="gray">
-          {expense.category ? `${expense.budget} / ${expense.category}` : expense.budget}
-        </Badge>
-      </Group>
+        {expense.category ? (
+          <Text size="xs" c="dimmed">
+            Category: <Text span fw={600}>{expense.category}</Text>
+          </Text>
+        ) : null}
+      </Stack>
       <Divider mt="sm" mb="xs" />
       <Group justify="flex-end" gap={8}>
         {expense.hasPhoto && (
