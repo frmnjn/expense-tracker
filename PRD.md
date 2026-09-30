@@ -240,6 +240,7 @@ Transaksi dari email notifikasi bank dibaca **backend** via **IMAP Gmail** (App 
 * **Status**: email transaksi → `PENDING_REVIEW`; bukan transaksi pengeluaran (mis. promo) → `DISCARDED`; gagal parse/error teknis → `FAILED`.
 * **Retry manual**: baris `FAILED` bisa diproses ulang lewat `POST /email-imports/{id}/retry` (email diambil ulang dari IMAP berdasarkan Message-ID, lalu parse lagi).
 * **Custom discard rule**: merchant yang cocok dengan keyword di `INBOX_DISCARD_MERCHANTS` otomatis ditandai `DISCARDED` (case-insensitive, toleran spasi/tanda baca — mis. `superindo` menangkap `SUPERINDO CNE` & `SUPER INDO`).
+* **Auto-scan attachment**: email dari pengirim di `INBOX_SCAN_SENDERS` (mis. e-receipt `do-not-reply@superindo.co.id`) yang punya lampiran `pdf/jpg/jpeg/png` otomatis dibuatkan invoice scan (status `ANALYZING`, `scan_flow=TRUE`) lalu dianalisis AI — jadi struk langsung siap direview di `/scan`, tanpa lewat `/inbox`. Lampiran dideteksi dari **ekstensi nama file** (bukan content-type, karena Superindo memakai `application/octet-stream`). Bila email Superindo **tanpa** lampiran (mis. notifikasi BCA "SUPERINDO CNE"), tetap diproses seperti biasa (parse → discard). Baris dicatat di `email_imports` (status `DISCARDED`, catatan "Auto-scan") untuk dedup `Message-ID`.
 
 > Catatan: IMAP keluar dari VPS (Linode) tidak diblokir (port 993), berbeda dengan SMTP keluar. Fitur ini berjalan di backend Java (image JVM); notifier tetap khusus kirim email.
 
@@ -528,6 +529,7 @@ INBOX_SENDERS=klikbca.com,bca.co.id,danamon.co.id  # opsional, whitelist domain
 INBOX_LOOKBACK_DAYS=3             # opsional
 INBOX_MAX_PER_POLL=50             # opsional
 INBOX_DISCARD_MERCHANTS=superindo # opsional, keyword merchant auto-discard (comma-separated)
+INBOX_SCAN_SENDERS=superindo.co.id # opsional, sender yang lampirannya auto dikirim ke Scan Struk
 ```
 
 ### Frontend
