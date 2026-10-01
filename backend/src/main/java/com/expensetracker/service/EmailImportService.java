@@ -150,23 +150,34 @@ public class EmailImportService {
             throw new ValidationException("Email tidak ditemukan di inbox");
         }
         try {
-            ParsedTransaction parsed = emailParserService.parse(fetched.sender(), fetched.body());
+            ParsedTransaction parsed = emailParserService.parse(fetched.sender(), fetched.subject(), fetched.body());
+            String description = descriptionWithNote(fetched.subject(), parsed);
             if (merchantDiscardRule.shouldDiscard(parsed.merchant())) {
                 emailImportRepository.updateParsed(id, parsed.transactionAt(), parsed.merchant(),
-                        parsed.amount(), parsed.suggestedBudget(), parsed.suggestedCategory(), parsed.parseMethod(),
-                        EmailImportStatus.DISCARDED.value(), "Auto-discard: merchant " + parsed.merchant());
+                        parsed.amount(), description, parsed.suggestedBudget(), parsed.suggestedCategory(),
+                        parsed.parseMethod(), EmailImportStatus.DISCARDED.value(),
+                        "Auto-discard: merchant " + parsed.merchant());
             } else {
                 emailImportRepository.updateParsed(id, parsed.transactionAt(), parsed.merchant(),
-                        parsed.amount(), parsed.suggestedBudget(), parsed.suggestedCategory(), parsed.parseMethod(),
-                        EmailImportStatus.PENDING_REVIEW.value(), null);
+                        parsed.amount(), description, parsed.suggestedBudget(), parsed.suggestedCategory(),
+                        parsed.parseMethod(), EmailImportStatus.PENDING_REVIEW.value(), null);
             }
         } catch (NotExpenseException e) {
-            emailImportRepository.updateParsed(id, null, null, null, null, null, "AI",
+            emailImportRepository.updateParsed(id, null, null, null, null, null, null, "AI",
                     EmailImportStatus.DISCARDED.value(), e.getMessage());
+        } catch (AiParseException e) {
+            emailImportRepository.updateParsed(id, null, null, null, null, null, null, "AI",
+                    EmailImportStatus.FAILED.value(), e.getMessage());
         } catch (ValidationException e) {
-            emailImportRepository.updateParsed(id, null, null, null, null, null, "REGEX",
+            emailImportRepository.updateParsed(id, null, null, null, null, null, null, "REGEX",
                     EmailImportStatus.FAILED.value(), e.getMessage());
         }
+    }
+
+    /** Subjek + catatan konversi (mis. "… · USD 0,45 @ 15.888 = Rp7.150") bila ada. */
+    private static String descriptionWithNote(String subject, ParsedTransaction parsed) {
+        String note = parsed.conversionNote();
+        return note == null ? subject : subject + " · " + note;
     }
 
     private EmailImportData requirePending(String id) {

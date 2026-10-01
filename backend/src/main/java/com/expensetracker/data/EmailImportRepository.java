@@ -86,14 +86,15 @@ public class EmailImportRepository {
 
     /** Isi ulang hasil parse (dipakai saat retry baris FAILED). */
     public void updateParsed(String id, LocalDateTime transactionAt, String merchant, Long amount,
-                             String suggestedBudget, String suggestedCategory, String parseMethod, String status,
-                             String errorMessage) {
+                             String description, String suggestedBudget, String suggestedCategory,
+                             String parseMethod, String status, String errorMessage) {
         String safe = errorMessage == null ? null : errorMessage.substring(0, Math.min(errorMessage.length(), 500));
         jdbcTemplate.update(
-                "UPDATE email_imports SET transaction_at = ?, merchant = ?, amount = ?, suggested_budget = ?, "
-                        + "suggested_category = ?, parse_method = ?, status = ?, error_message = ? WHERE id = ?",
+                "UPDATE email_imports SET transaction_at = ?, merchant = ?, amount = ?, description = ?, "
+                        + "suggested_budget = ?, suggested_category = ?, parse_method = ?, status = ?, "
+                        + "error_message = ? WHERE id = ?",
                 transactionAt == null ? null : Timestamp.valueOf(transactionAt),
-                merchant, amount, suggestedBudget, suggestedCategory, parseMethod, status, safe, id);
+                merchant, amount, description, suggestedBudget, suggestedCategory, parseMethod, status, safe, id);
     }
 
     public void markFailed(String id, String message) {

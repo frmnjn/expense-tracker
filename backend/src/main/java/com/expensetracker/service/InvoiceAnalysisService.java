@@ -75,8 +75,7 @@ public class InvoiceAnalysisService implements ApplicationRunner {
     private final String deepseekApiKey;
     private final String deepseekModel;
     private final String deepseekBaseUrl;
-    private final String fxApi;
-    private final Duration fxTimeout;
+    private final ExchangeRateService exchangeRateService;
 
     @Value("${upload.dir:/app/uploads}")
     private String uploadDir;
@@ -84,13 +83,12 @@ public class InvoiceAnalysisService implements ApplicationRunner {
     public InvoiceAnalysisService(InvoiceRepository invoiceRepository,
                                   BudgetRepository budgetRepository,
                                   ObjectMapper objectMapper,
+                                  ExchangeRateService exchangeRateService,
                                   @Value("${ai.gemini-api-key:}") String apiKey,
                                   @Value("${ai.model:gemini-3.5-flash-lite}") String model,
                                   @Value("${ai.timeout:600}") long timeoutSeconds,
                                   @Value("${ai.max-attempts:50}") int maxAttempts,
                                   @Value("${ai.retry-delay-ms:2000}") long retryDelayMs,
-                                  @Value("${ai.fx-api:}") String fxApi,
-                                  @Value("${ai.fx-timeout-ms:8000}") long fxTimeoutMs,
                                   @Value("${ai.deepseek-api-key:}") String deepseekApiKey,
                                   @Value("${ai.deepseek-model:deepseek-flash}") String deepseekModel,
                                   @Value("${ai.deepseek-base-url:https://api.deepseek.com}") String deepseekBaseUrl,
@@ -98,6 +96,7 @@ public class InvoiceAnalysisService implements ApplicationRunner {
         this.invoiceRepository = invoiceRepository;
         this.budgetRepository = budgetRepository;
         this.objectMapper = objectMapper;
+        this.exchangeRateService = exchangeRateService;
         this.apiKey = apiKey == null ? "" : apiKey.trim();
         this.model = model == null ? "gemini-3.5-flash-lite" : model;
         this.timeout = Duration.ofSeconds(timeoutSeconds);
@@ -107,8 +106,6 @@ public class InvoiceAnalysisService implements ApplicationRunner {
         this.deepseekApiKey = deepseekApiKey == null ? "" : deepseekApiKey.trim();
         this.deepseekModel = deepseekModel == null || deepseekModel.isBlank() ? "deepseek-flash" : deepseekModel;
         this.deepseekBaseUrl = normalizeBaseUrl(deepseekBaseUrl);
-        this.fxApi = fxApi == null ? "" : fxApi.trim();
-        this.fxTimeout = Duration.ofMillis(fxTimeoutMs < 1 ? 8000 : fxTimeoutMs);
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(10))
                 .build();
@@ -201,7 +198,7 @@ public class InvoiceAnalysisService implements ApplicationRunner {
             return copyWith(analysis, cleanedDate, analysis.total(), null, null);
         }
         String base = currency.toUpperCase(java.util.Locale.ROOT);
-        String exchangeDate = exchangeDateOf(cleanedDate);
+        String exchangeDate = ExchangeRateService.exchangeDateOf(cleanedDate);
         Double rate = fetchRate(base, exchangeDate);
         if (rate == null) {
             LOGGER.warn("fx rate unavailable for {} at {}, keeping original amounts", base, exchangeDate);
@@ -216,21 +213,14 @@ public class InvoiceAnalysisService implements ApplicationRunner {
         return copyWith(analysis, cleanedDate, total, rate, exchangeDate, convertedItems);
     }
 
+    /** Seam agar mudah di-stub pada test. */
+    protected Double fetchRate(String base, String date) {
+        return exchangeRateService.rateToIdr(base, date);
+    }
+
     private AiInvoiceItem toIdrItem(AiInvoiceItem item, double rate) {
         Long amount = item.amount() == null ? null : Math.round(item.amount() * rate);
         return new AiInvoiceItem(item.name(), amount, item.suggestedBudget(), item.suggestedCategory());
-    }
-
-    private static String exchangeDateOf(String cleanedDate) {
-        if (cleanedDate == null || cleanedDate.isBlank()) {
-            return java.time.LocalDate.now().toString();
-        }
-        String datePart = cleanedDate.substring(0, Math.min(10, cleanedDate.length()));
-        try {
-            return java.time.LocalDate.parse(datePart).toString();
-        } catch (Exception e) {
-            return java.time.LocalDate.now().toString();
-        }
     }
 
     private AiAnalysisResponse copyWith(AiAnalysisResponse a, String cleanedDate,
@@ -242,52 +232,6 @@ public class InvoiceAnalysisService implements ApplicationRunner {
                                         Long total, Double rate, String exchangeDate, List<AiInvoiceItem> items) {
         return new AiAnalysisResponse(
                 a.storeName(), total, cleanedDate, a.currency(), rate, exchangeDate, a.originalTotal(), items);
-    }
-
-    /**
-     * Ambil kurs 1 {base} = IDR dari API kurs (fawazahmed0) untuk tanggal tertentu.
-     * Coba tanggal yang diminta; bila tanggal future/belum rilis, coba mundur
-     * hingga 5 hari sebelum menyerah. Mengembalikan null bila gagal.
-     */
-    Double fetchRate(String base, String date) {
-        if (fxApi.isBlank()) {
-            return null;
-        }
-        for (int back = 0; back <= 5; back++) {
-            String target = back == 0 ? date : java.time.LocalDate.parse(date).minusDays(back).toString();
-            try {
-                Double rate = fetchRateFor(base, target);
-                if (rate != null) {
-                    if (back > 0) {
-                        LOGGER.warn("fx date {} unavailable, using {} for {}", date, target, base);
-                    }
-                    return rate;
-                }
-            } catch (Exception e) {
-                LOGGER.warn("fx fetch failed for {} at {}: {}", base, target, e.getMessage());
-            }
-        }
-        return null;
-    }
-
-    private Double fetchRateFor(String base, String date) throws Exception {
-        String url = fxApi.replace("%DATE%", date).replace("%CUR%", base.toLowerCase(java.util.Locale.ROOT));
-        HttpRequest request = HttpRequest.newBuilder()
-                .uri(URI.create(url))
-                .timeout(Duration.ofMillis(fxTimeout.toMillis()))
-                .GET()
-                .build();
-        HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
-        if (response.statusCode() < 200 || response.statusCode() >= 300) {
-            return null;
-        }
-        JsonNode root = objectMapper.readTree(response.body());
-        JsonNode baseNode = root.path(base.toLowerCase(java.util.Locale.ROOT)).path("idr");
-        if (baseNode.isMissingNode() || baseNode.asText().isBlank()) {
-            return null;
-        }
-        double rate = baseNode.asDouble();
-        return rate > 0 ? rate : null;
     }
 
     /**
