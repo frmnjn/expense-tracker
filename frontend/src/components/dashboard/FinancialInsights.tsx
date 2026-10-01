@@ -2,6 +2,7 @@ import { Group, Skeleton, Stack, Text } from '@mantine/core'
 import { IconAlertOctagon, IconAlertTriangle, IconBulb } from '@tabler/icons-react'
 import type { Icon } from '@tabler/icons-react'
 import type { Insight } from '../../utils/insights'
+import { ErrorState } from '../ErrorState'
 import { DashboardSection } from './DashboardSection'
 
 function iconFor(tone: Insight['tone']): { Icon: Icon; color: string } {
@@ -40,9 +41,7 @@ export function FinancialInsights({
           <Skeleton h={20} />
         </Stack>
       ) : isError ? (
-        <Text size="sm" c="red">
-          Insight tidak dapat dihitung.
-        </Text>
+        <ErrorState message="Insight tidak dapat dihitung." />
       ) : insights.length === 0 ? (
         <Text size="sm" c="dimmed" py="sm">
           Tidak ada insight untuk ditampilkan.

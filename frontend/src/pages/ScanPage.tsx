@@ -20,6 +20,7 @@ import { useScanInvoices, useUploadInvoice, useRetryAnalysis } from '../hooks/us
 import { usePeriods } from '../hooks/useExpenses'
 import { getInvoicePhotoUrl } from '../services/expense'
 import { getErrorMessage } from '../utils/error'
+import { toUploadableImage } from '../utils/image'
 import { PageHeader } from '../components/PageHeader'
 import { InvoiceCard } from '../components/InvoiceCard'
 import ReviewModal from '../components/ReviewModal'
@@ -86,10 +87,17 @@ function ScanPage() {
     return sorted
   }, [data, statusFilter, sortBy])
 
-  const pick = (file: File | null) => {
+  const pick = async (file: File | null) => {
     if (!file) return
+    let prepared: File
+    try {
+      prepared = await toUploadableImage(file)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Gagal memproses gambar', { title: 'Gagal' })
+      return
+    }
     upload.mutate(
-      { file, dateTime: nowDate },
+      { file: prepared, dateTime: nowDate },
       {
         onError: (error) => toast.error(getErrorMessage(error), { title: 'Gagal upload' }),
       },
@@ -230,14 +238,14 @@ function ScanPage() {
         accept="image/*"
         capture="environment"
         style={{ display: 'none' }}
-        onChange={(e) => pick(e.target.files?.[0] ?? null)}
+        onChange={(e) => void pick(e.target.files?.[0] ?? null)}
       />
       <input
         ref={galleryRef}
         type="file"
         accept="image/*,application/pdf"
         style={{ display: 'none' }}
-        onChange={(e) => pick(e.target.files?.[0] ?? null)}
+        onChange={(e) => void pick(e.target.files?.[0] ?? null)}
       />
 
       {reviewId && (

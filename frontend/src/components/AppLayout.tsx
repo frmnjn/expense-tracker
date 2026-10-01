@@ -1,5 +1,5 @@
-import { useEffect } from 'react'
-import { AppShell, Box, Group, Stack, Text, UnstyledButton } from '@mantine/core'
+import { Suspense, useEffect, useRef } from 'react'
+import { AppShell, Box, Center, Group, Loader, Stack, Text, UnstyledButton } from '@mantine/core'
 import {
   IconHome,
   IconPlus,
@@ -11,6 +11,8 @@ import { NavLink, Outlet } from 'react-router-dom'
 import ColorSchemeToggle from './ColorSchemeToggle'
 import InstallButton from './InstallButton'
 import { OfflineBanner } from './OfflineBanner'
+import { PullToRefresh } from './PullToRefresh'
+import { useScrollMemory } from '../hooks/useScrollMemory'
 
 const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: IconHome },
@@ -21,6 +23,9 @@ const navItems = [
 ]
 
 function AppLayout() {
+  const mainRef = useRef<HTMLDivElement>(null)
+  useScrollMemory(mainRef)
+
   // Saat keyboard HP muncul dan menyusutkan viewport, field yang difokus bisa
   // berakhir di bawah keyboard. Setelah animasi keyboard selesai, geser field
   // ke tengah area yang terlihat agar user tidak perlu scroll manual.
@@ -83,11 +88,20 @@ function AppLayout() {
         </Box>
       </AppShell.Navbar>
 
-      <AppShell.Main>
+      <AppShell.Main ref={mainRef}>
         <Box className="page-shell">
           <OfflineBanner />
-          <Outlet />
+          <Suspense
+            fallback={
+              <Center py="xl">
+                <Loader />
+              </Center>
+            }
+          >
+            <Outlet />
+          </Suspense>
         </Box>
+        <PullToRefresh scrollRef={mainRef} />
       </AppShell.Main>
     </AppShell>
   )

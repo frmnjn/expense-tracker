@@ -115,12 +115,21 @@ function InboxPage() {
           </Group>
         ) : imports.length === 0 ? (
           <Paper withBorder p="xl" radius="md">
-            <Stack align="center" gap={4}>
+            <Stack align="center" gap="sm">
               <IconMail size={40} aria-hidden />
               <Text fw={600}>Tidak ada transaksi email</Text>
               <Text size="sm" c="dimmed" ta="center">
-                Tekan ikon segarkan untuk mengambil email terbaru dari inbox.
+                Ambil email terbaru dari inbox untuk mulai memproses transaksi.
               </Text>
+              <Button
+                variant="light"
+                size="compact-sm"
+                leftSection={<IconRefresh size={16} />}
+                onClick={handlePoll}
+                loading={poll.isPending}
+              >
+                Segarkan
+              </Button>
             </Stack>
           </Paper>
         ) : (

@@ -3,7 +3,9 @@ import { Button, Grid, Group, Image, Loader, Modal, Stack, Text } from '@mantine
 import { IconArrowLeft, IconCamera, IconFolder, IconPhoto } from '@tabler/icons-react'
 import { useInvoices } from '../hooks/useInvoices'
 import { getInvoicePhotoUrl } from '../services/expense'
+import { toUploadableImage } from '../utils/image'
 import { InvoiceThumb } from './InvoiceThumb'
+import { useToast } from './Toast'
 
 export type PhotoSelection =
   | { kind: 'new'; file: File }
@@ -36,10 +38,20 @@ function PhotoInput({
   }, [value])
 
   const invoices = useInvoices(pickingExisting ? dateTime : null)
+  const toast = useToast()
 
-  const pick = (file: File | null) => {
-    onChange(file ? { kind: 'new', file } : null)
+  const pick = async (file: File | null) => {
     setOpened(false)
+    if (!file) {
+      onChange(null)
+      return
+    }
+    try {
+      const prepared = await toUploadableImage(file)
+      onChange({ kind: 'new', file: prepared })
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Gagal memproses gambar', { title: 'Gagal' })
+    }
   }
 
   const pickExisting = (invoiceId: string, name?: string) => {
@@ -88,14 +100,14 @@ function PhotoInput({
         accept="image/*"
         capture="environment"
         style={{ display: 'none' }}
-        onChange={(e) => pick(e.target.files?.[0] ?? null)}
+        onChange={(e) => void pick(e.target.files?.[0] ?? null)}
       />
       <input
         ref={galleryRef}
         type="file"
         accept="image/*,application/pdf"
         style={{ display: 'none' }}
-        onChange={(e) => pick(e.target.files?.[0] ?? null)}
+        onChange={(e) => void pick(e.target.files?.[0] ?? null)}
       />
 
       <Modal opened={opened} onClose={() => setOpened(false)} title="Tambah Foto Invoice" centered>

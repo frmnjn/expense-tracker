@@ -1,5 +1,6 @@
-import { Group, Paper, Skeleton, Text } from '@mantine/core'
+import { Box, Group, Paper, Skeleton, Text } from '@mantine/core'
 import { formatCurrency } from '../../utils/currency'
+import { ErrorState } from '../ErrorState'
 
 export function SpendingSummary({
   total,
@@ -28,9 +29,9 @@ export function SpendingSummary({
             <Skeleton h={14} mt="sm" w="35%" />
           </>
         ) : isError ? (
-          <Text size="sm" c="red" mt="sm">
-            Gagal memuat ringkasan pengeluaran.
-          </Text>
+          <Box mt="sm">
+            <ErrorState message="Gagal memuat ringkasan pengeluaran." />
+          </Box>
         ) : (
           <Text size="sm" c="dimmed" mt="sm">
             Pilih periode untuk melihat ringkasan.

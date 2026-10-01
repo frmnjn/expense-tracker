@@ -5,7 +5,7 @@ import { InvoiceThumb } from './InvoiceThumb'
 import { getInvoicePhotoUrl } from '../services/expense'
 import type { Invoice } from '../types/expense'
 
-const DATE_TIME_FORMAT = 'YYYY-MM-DD HH:mm'
+const DATE_TIME_FORMAT = 'DD MMM YYYY HH:mm'
 
 const STATUS_META: Record<string, { label: string; color: string }> = {
   ANALYZING: { label: 'Menunggu AI', color: 'blue' },

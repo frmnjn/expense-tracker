@@ -3,8 +3,8 @@
   "short_name": "Expense",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#ffffff",
-  "theme_color": "#863bff",
+  "background_color": "#0b0d10",
+  "theme_color": "#228be6",
   "description": "Aplikasi pencatat pengeluaran harian",
   "icons": [
     {

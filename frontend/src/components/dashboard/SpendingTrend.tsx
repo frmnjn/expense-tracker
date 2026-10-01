@@ -1,6 +1,7 @@
 import { Box, Group, Skeleton, Stack, Text } from '@mantine/core'
 import { formatCurrency } from '../../utils/currency'
 import type { TrendPoint } from '../../types/expense'
+import { ErrorState } from '../ErrorState'
 import { DashboardSection } from './DashboardSection'
 
 function shortLabel(period: string): string {
@@ -32,9 +33,7 @@ export function SpendingTrend({
           <Skeleton h={14} w="60%" />
         </Stack>
       ) : isError ? (
-        <Text size="sm" c="red">
-          Gagal memuat tren pengeluaran.
-        </Text>
+        <ErrorState message="Gagal memuat tren pengeluaran." />
       ) : periods.length === 0 ? (
         <Text size="sm" c="dimmed" py="sm">
           Belum ada data tren.

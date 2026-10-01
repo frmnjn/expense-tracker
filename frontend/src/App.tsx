@@ -1,12 +1,14 @@
+import { lazy } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import AppLayout from './components/AppLayout'
-import DashboardPage from './pages/DashboardPage'
 import ExpensePage from './pages/ExpensePage'
-import HistoryPage from './pages/HistoryPage'
-import InboxPage from './pages/InboxPage'
 import LockPage from './pages/LockPage'
-import ScanPage from './pages/ScanPage'
 import { getAccessCode } from './utils/access'
+
+const DashboardPage = lazy(() => import('./pages/DashboardPage'))
+const HistoryPage = lazy(() => import('./pages/HistoryPage'))
+const InboxPage = lazy(() => import('./pages/InboxPage'))
+const ScanPage = lazy(() => import('./pages/ScanPage'))
 
 function Protected() {
   return getAccessCode() ? <AppLayout /> : <Navigate to="/lock" replace />

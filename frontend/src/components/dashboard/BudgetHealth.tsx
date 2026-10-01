@@ -22,6 +22,7 @@ import {
 } from '@tabler/icons-react'
 import { formatCurrency } from '../../utils/currency'
 import type { BudgetSummary } from '../../types/expense'
+import { ErrorState } from '../ErrorState'
 import { DashboardSection } from './DashboardSection'
 
 export interface BudgetCardData {
@@ -82,9 +83,7 @@ export function BudgetHealth({
           <Skeleton h={40} />
         </Stack>
       ) : isError ? (
-        <Text size="sm" c="red">
-          Gagal memuat budget.
-        </Text>
+        <ErrorState message="Gagal memuat budget." />
       ) : budgets.length === 0 ? (
         <Text c="dimmed" py="md">
           Belum ada budget. Tambahkan budget pertama kamu.

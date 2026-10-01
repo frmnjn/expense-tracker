@@ -4,7 +4,7 @@ import dayjs from 'dayjs'
 import { formatCurrency } from '../utils/currency'
 import type { Expense } from '../types/expense'
 
-const DATE_TIME_FORMAT = 'YYYY-MM-DD HH:mm'
+const DATE_TIME_FORMAT = 'DD MMM YYYY HH:mm'
 
 export function TransactionCard({
   expense,

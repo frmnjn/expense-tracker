@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
   ActionIcon,
   Button,
@@ -46,6 +47,7 @@ import { getErrorMessage } from '../utils/error'
 import type { Expense } from '../types/expense'
 
 const DATE_TIME_FORMAT = 'YYYY-MM-DD HH:mm'
+const DISPLAY_DATE_TIME_FORMAT = 'DD MMM YYYY HH:mm'
 
 const UNCATEGORIZED = '__uncategorized__'
 
@@ -281,9 +283,16 @@ function HistoryPage() {
           />
 
           {expenses.length === 0 ? (
-            <Text c="dimmed" ta="center" py="lg">
-              {period ? 'Belum ada pengeluaran pada periode ini.' : 'Pilih periode untuk melihat pengeluaran.'}
-            </Text>
+            <Stack align="center" gap="sm" py="lg">
+              <Text c="dimmed" ta="center">
+                {period ? 'Belum ada pengeluaran pada periode ini.' : 'Pilih periode untuk melihat pengeluaran.'}
+              </Text>
+              {period && (
+                <Button component={Link} to="/catat" size="compact-sm" variant="light">
+                  Catat pengeluaran
+                </Button>
+              )}
+            </Stack>
           ) : visibleExpenses.length === 0 ? (
             <Stack align="center" gap={4} py="xl">
               <IconSearchOff size={28} aria-hidden />
@@ -320,7 +329,7 @@ function HistoryPage() {
               <Table.Tbody>
                 {pageExpenses.map((expense) => (
                   <Table.Tr key={expense.id}>
-                    <Table.Td>{dayjs(expense.dateTime).format(DATE_TIME_FORMAT)}</Table.Td>
+                    <Table.Td>{dayjs(expense.dateTime).format(DISPLAY_DATE_TIME_FORMAT)}</Table.Td>
                     <Table.Td>{expense.name}</Table.Td>
                     <Table.Td>
                       <Text size="sm">{expense.budget}</Text>
