@@ -239,7 +239,11 @@ function ReviewModal({
   }
 
   const handleSubmit = () => {
-    if (invalid || batch.isPending) return
+    if (batch.isPending) return
+    if (invalid) {
+      toast.error('Periksa item yang ditandai di bawah', { title: 'Belum lengkap' })
+      return
+    }
     const groupsPayload = groups.map(([key, group]) => {
       const amount = group.items.reduce((s, it) => s + Number(it.amount), 0)
       const description = buildDescription(group.items)
@@ -428,7 +432,7 @@ function ReviewModal({
                     <Text
                       key={it.key}
                       size="xs"
-                      c="brand"
+                      c="blue"
                       style={{ cursor: 'pointer', textDecoration: 'underline' }}
                       onClick={() => jumpToItem(it.key)}
                     >
@@ -591,7 +595,6 @@ function ReviewModal({
             size="md"
             onClick={handleSubmit}
             loading={batch.isPending}
-            disabled={invalid}
           >
             Buat {groups.length} Pengeluaran
           </Button>

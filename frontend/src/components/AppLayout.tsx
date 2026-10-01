@@ -44,16 +44,16 @@ function AppLayout() {
       className="app-shell"
     >
       <AppShell.Header className="app-header">
-        <Group h="100%" px={{ base: 'md', sm: 'xl' }} justify="space-between">
-          <Group gap="sm">
+        <Group h="100%" px={{ base: 'md', sm: 'xl' }} justify="space-between" wrap="nowrap">
+          <Group gap="sm" wrap="nowrap" style={{ minWidth: 0 }}>
             <Box className="brand-mark">Rp</Box>
             <Stack gap={0} visibleFrom="sm">
               <Text fw={800} lh={1.1}>Expense Tracker</Text>
               <Text size="xs" c="dimmed">Keuangan pribadi</Text>
             </Stack>
-            <Text fw={800} hiddenFrom="sm">Expense Tracker</Text>
+            <Text fw={800} hiddenFrom="sm" truncate style={{ minWidth: 0 }}>Expense Tracker</Text>
           </Group>
-          <Group gap="xs">
+          <Group gap="xs" wrap="nowrap" style={{ flexShrink: 0 }}>
             <InstallButton />
             <ColorSchemeToggle />
           </Group>

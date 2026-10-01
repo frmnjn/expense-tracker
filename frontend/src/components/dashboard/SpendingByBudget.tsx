@@ -38,7 +38,7 @@ export function SpendingByBudget({
         {total > 0 && (
           <Box bg="var(--mantine-color-gray-light)" style={{ height: 6, borderRadius: 999 }}>
             <Box
-              bg="var(--mantine-color-brand-6)"
+              bg="var(--mantine-color-blue-6)"
               style={{ width: `${Math.max(share, 1)}%`, height: 6, borderRadius: 999 }}
             />
           </Box>

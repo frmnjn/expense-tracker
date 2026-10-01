@@ -48,7 +48,7 @@ function SubmittedExpensesModal({ invoiceId, type, onClose }: { invoiceId: strin
                 </Text>
                 <Text size="xs" c="dimmed">{expenses.length} pengeluaran</Text>
                 <Text size="xs" c="dimmed" mt={6}>Total akhir</Text>
-                <Text fw={800} fz="xl" c="brand">{formatCurrency(total)}</Text>
+                <Text fw={800} fz="xl" c="blue">{formatCurrency(total)}</Text>
               </Stack>
             </Group>
           </Paper>

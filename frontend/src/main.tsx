@@ -1,7 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
-import { createTheme, localStorageColorSchemeManager, MantineProvider } from '@mantine/core'
+import { localStorageColorSchemeManager, MantineProvider } from '@mantine/core'
 import { DatesProvider } from '@mantine/dates'
 import '@mantine/core/styles.css'
 import '@mantine/dates/styles.css'
@@ -29,29 +29,10 @@ if ('serviceWorker' in navigator && import.meta.env.PROD) {
 const colorSchemeManager = localStorageColorSchemeManager({ key: 'expense-color-scheme' })
 const queryClient = new QueryClient()
 
-// Aksen brand diselaraskan dengan email notifier (#863bff).
-const theme = createTheme({
-  primaryColor: 'brand',
-  colors: {
-    brand: [
-      '#f5f0ff',
-      '#e6dbff',
-      '#cab4ff',
-      '#ac8aff',
-      '#966aff',
-      '#8a54ff',
-      '#863bff',
-      '#7733e6',
-      '#6a2bcb',
-      '#5b22a8',
-    ],
-  },
-})
-
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <QueryClientProvider client={queryClient}>
-      <MantineProvider theme={theme} colorSchemeManager={colorSchemeManager} defaultColorScheme="dark">
+      <MantineProvider colorSchemeManager={colorSchemeManager} defaultColorScheme="dark">
         <DatesProvider settings={{}}>
           <ToastProvider>
             <ErrorBoundary>

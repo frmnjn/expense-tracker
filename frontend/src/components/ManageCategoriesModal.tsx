@@ -85,7 +85,7 @@ function ManageCategoriesModal({ budget, onClose }: { budget: string; onClose: (
                 <Group gap={4} wrap="nowrap">
                   <ActionIcon
                     variant="light"
-                    color="brand"
+                    color="blue"
                     onClick={() => startEdit(c.id, c.name, c.description)}
                     aria-label="Edit kategori"
                   >

@@ -4,17 +4,33 @@ body,
   min-height: 100%;
 }
 
+/**
+ * Variabel skema. Jangan pakai `light-dark()` di sini: lightningcss (Vite)
+ * mengubahnya jadi `var(--lightningcss-light,...)var(--lightningcss-dark,...)`
+ * yang variabelnya tidak pernah didefinisikan sehingga background jadi
+ * transparan. Pakai atribut skema Mantine.
+ */
+:root {
+  --app-bg: #f7f8fa;
+  --app-header-bg: #ffffff;
+  --app-nav-bg: #ffffff;
+  --app-border: #e6e8ec;
+}
+
+:root[data-mantine-color-scheme='dark'] {
+  --app-bg: #0b0d10;
+  --app-header-bg: #0f1115;
+  --app-nav-bg: #111318;
+  --app-border: #252a31;
+}
+
 body {
   margin: 0;
-  background: light-dark(#f7f8fa, #0b0d10);
+  background: var(--app-bg);
 }
 
 * {
   box-sizing: border-box;
-}
-
-.app-shell {
-  --app-border: light-dark(#e6e8ec, #252a31);
 }
 
 /* Beri ruang saat browser auto-scroll ke field yang difokus (mis. keyboard HP). */
@@ -26,7 +42,7 @@ body {
 }
 
 .app-header {
-  background: light-dark(#ffffff, #0f1115);
+  background: var(--app-header-bg);
   border-bottom: 1px solid var(--app-border);
   backdrop-filter: none;
   -webkit-backdrop-filter: none;
@@ -34,7 +50,7 @@ body {
 }
 
 .app-navbar {
-  background: light-dark(#fff, #111318);
+  background: var(--app-nav-bg);
   border-right: 1px solid var(--app-border);
   box-shadow: none;
 }
@@ -48,8 +64,8 @@ body {
   font-size: 12px;
   font-weight: 900;
   letter-spacing: -0.05em;
-  color: var(--mantine-color-brand-7);
-  background: var(--mantine-color-brand-light);
+  color: var(--mantine-color-blue-7);
+  background: var(--mantine-color-blue-light);
 }
 
 .nav-item {
@@ -71,8 +87,8 @@ body {
 }
 
 .nav-item.active {
-  color: var(--mantine-color-brand-7);
-  background: var(--mantine-color-brand-light);
+  color: var(--mantine-color-blue-7);
+  background: var(--mantine-color-blue-light);
 }
 
 .nav-icon {
@@ -114,7 +130,7 @@ body {
   }
 
   .app-header {
-    background: light-dark(#ffffff, #0f1115) !important;
+    background: var(--app-header-bg) !important;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
   }
@@ -139,11 +155,11 @@ body {
     height: calc(76px + env(safe-area-inset-bottom, 0px)) !important;
     min-height: 76px !important;
     padding: 8px 10px env(safe-area-inset-bottom, 0px) !important;
-    background: light-dark(#ffffff, #111318) !important;
-    background-color: light-dark(#ffffff, #111318) !important;
+    background: var(--app-nav-bg) !important;
+    background-color: var(--app-nav-bg) !important;
     background-image: none !important;
     border-right: 0 !important;
-    border-top: 1px solid light-dark(#e6e8ec, #252a31) !important;
+    border-top: 1px solid var(--app-border) !important;
     opacity: 1 !important;
     backdrop-filter: none !important;
     -webkit-backdrop-filter: none !important;
@@ -155,6 +171,7 @@ body {
   .app-navbar > .mantine-Stack-root {
     flex-direction: row;
     justify-content: space-around;
+    align-items: center;
     width: 100%;
     height: 100%;
     gap: 4px;
@@ -166,10 +183,12 @@ body {
 
   .nav-item {
     flex: 1;
+    height: 54px;
     justify-content: center;
     flex-direction: column;
     gap: 2px;
-    padding: 5px 2px;
+    padding: 4px 2px;
+    border-radius: 12px;
     font-size: 10px;
     line-height: 1.1;
   }

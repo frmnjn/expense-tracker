@@ -47,7 +47,7 @@ export function TransactionCard({
             <IconPhoto size={18} />
           </ActionIcon>
         )}
-        <ActionIcon variant="light" color="brand" size="lg" disabled={!expense.id} onClick={() => onEdit(expense)} aria-label="Edit">
+        <ActionIcon variant="light" color="blue" size="lg" disabled={!expense.id} onClick={() => onEdit(expense)} aria-label="Edit">
           <IconPencil size={18} />
         </ActionIcon>
         <ActionIcon variant="light" color="red" size="lg" disabled={!expense.id} onClick={() => onDelete(expense)} aria-label="Hapus">

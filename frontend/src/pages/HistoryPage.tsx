@@ -168,7 +168,7 @@ function HistoryPage() {
           subtitle="Lihat dan kelola semua pengeluaran kamu."
           right={
             <Select
-              w={{ base: 150, sm: 190 }}
+              w={{ base: '100%', sm: 190 }}
               placeholder={periodsLoading ? 'Memuat...' : 'Pilih periode'}
               data={periods}
               value={period}
@@ -201,7 +201,7 @@ function HistoryPage() {
               <Button
                 size="md"
                 variant={hasActiveFilters ? 'filled' : 'light'}
-                color="brand"
+                color="blue"
                 leftSection={<IconAdjustmentsHorizontal size={16} />}
                 onClick={() => setFilterOpened(true)}
                 style={{ flexShrink: 0 }}
@@ -216,7 +216,7 @@ function HistoryPage() {
                   <Button
                     size="xs"
                     variant="light"
-                    color="brand"
+                    color="blue"
                     rightSection={<IconX size={12} />}
                     onClick={() => {
                       setBudgetFilter(null)
@@ -326,7 +326,7 @@ function HistoryPage() {
                             <IconPhoto size={16} />
                           </ActionIcon>
                         )}
-                        <ActionIcon variant="light" color="brand" size="md" disabled={!expense.id} onClick={() => setEditing(expense)} aria-label="Edit">
+                        <ActionIcon variant="light" color="blue" size="md" disabled={!expense.id} onClick={() => setEditing(expense)} aria-label="Edit">
                           <IconPencil size={16} />
                         </ActionIcon>
                         <ActionIcon variant="light" color="red" size="md" disabled={!expense.id} onClick={() => setDeleting(expense)} aria-label="Hapus">
@@ -547,14 +547,6 @@ function EditExpenseForm({
 
   const submitDisabled = name.trim() === '' || !budget || Number(amount) <= 0 || updateExpense.isPending
 
-  const problems = useMemo(() => {
-    const list: string[] = []
-    if (name.trim() === '') list.push('Nama belum diisi')
-    if (!budget) list.push('Budget belum dipilih')
-    if (Number(amount) <= 0) list.push('Nominal harus lebih dari 0')
-    return list
-  }, [name, budget, amount])
-
   const balanceOf = (n: string): number | undefined => options?.budgets.find((b) => b.name === n)?.balance
   const oldAmount = expense.amount
   const newAmount = Number(amount)
@@ -735,16 +727,6 @@ function EditExpenseForm({
           }}
           dateTime={dayjs(dateTime).format(DATE_TIME_FORMAT)}
         />
-
-        {problems.length > 0 && (
-          <Stack gap={2}>
-            {problems.map((problem) => (
-              <Text key={problem} size="xs" c="orange">
-                ⚠ {problem}
-              </Text>
-            ))}
-          </Stack>
-        )}
 
         <Group justify="flex-end" mt="md">
           <Button onClick={handleSubmit} loading={updateExpense.isPending} disabled={submitDisabled}>

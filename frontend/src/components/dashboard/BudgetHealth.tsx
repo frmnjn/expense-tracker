@@ -114,7 +114,7 @@ export function BudgetHealth({
                             <ActionIcon
                               size="xs"
                               variant="subtle"
-                              color="brand"
+                              color="blue"
                               aria-label={`Deskripsi ${b.name}`}
                               style={{ flexShrink: 0 }}
                             >

@@ -62,6 +62,10 @@ function ExpenseForm() {
   const photoUploading = uploadPhoto.isPending
   const queryClient = useQueryClient()
   const submittingRef = useRef(false)
+  const [errors, setErrors] = useState<{ name?: string; budget?: string; amount?: string }>({})
+  const nameRef = useRef<HTMLInputElement>(null)
+  const budgetRef = useRef<HTMLInputElement>(null)
+  const amountRef = useRef<HTMLInputElement>(null)
 
   const nowDisabled = mode === 'now'
   const displayValue = nowDisabled ? dayjs().format(DATE_TIME_SECONDS_FORMAT) : dateTime
@@ -75,8 +79,13 @@ function ExpenseForm() {
     }
   }, [name, budget, category, amount, description])
 
-  const submitDisabled =
-    name.trim() === '' || !budget || Number(amount) <= 0 || createExpense.isPending || photoUploading
+  const validate = () => {
+    const next: { name?: string; budget?: string; amount?: string } = {}
+    if (name.trim() === '') next.name = 'Nama belum diisi'
+    if (!budget) next.budget = 'Budget belum dipilih'
+    if (Number(amount) <= 0) next.amount = 'Nominal harus lebih dari 0'
+    return next
+  }
 
   const resetForm = () => {
     setName('')
@@ -94,7 +103,17 @@ function ExpenseForm() {
   }
 
   const handleSubmit = () => {
-    if (submittingRef.current) return
+    if (submittingRef.current || createExpense.isPending || photoUploading) return
+    const nextErrors = validate()
+    if (Object.keys(nextErrors).length > 0) {
+      setErrors(nextErrors)
+      toast.error('Periksa field yang ditandai merah', { title: 'Belum lengkap' })
+      if (nextErrors.name) nameRef.current?.focus()
+      else if (nextErrors.budget) budgetRef.current?.focus()
+      else if (nextErrors.amount) amountRef.current?.focus()
+      return
+    }
+    setErrors({})
     submittingRef.current = true
     createExpense.mutate(
       {
@@ -155,14 +174,6 @@ function ExpenseForm() {
     [options, budget],
   )
 
-  const problems = useMemo(() => {
-    const list: string[] = []
-    if (name.trim() === '') list.push('Nama belum diisi')
-    if (!budget) list.push('Budget belum dipilih')
-    if (Number(amount) <= 0) list.push('Nominal harus lebih dari 0')
-    return list
-  }, [name, budget, amount])
-
   const selectedBalance = budget ? balanceOf(budget) : undefined
   const amountNumber = Number(amount)
   const showPreview = selectedBalance !== undefined && amountNumber > 0
@@ -197,16 +208,22 @@ function ExpenseForm() {
         />
 
         <TextInput
+          ref={nameRef}
           label="Nama"
           placeholder="Nama pengeluaran"
           value={name}
-          onChange={(event) => setName(event.currentTarget.value)}
+          onChange={(event) => {
+            setName(event.currentTarget.value)
+            if (errors.name) setErrors((prev) => ({ ...prev, name: undefined }))
+          }}
+          error={errors.name}
           maxLength={255}
           required
           size="md"
         />
 
         <Select
+          ref={budgetRef}
           label="Budget"
           placeholder={optionsLoading ? 'Memuat...' : 'Pilih budget'}
           data={budgetOptions}
@@ -214,7 +231,9 @@ function ExpenseForm() {
           onChange={(value) => {
             setBudget(value)
             setCategory(null)
+            if (errors.budget) setErrors((prev) => ({ ...prev, budget: undefined }))
           }}
+          error={errors.budget}
           searchable
           required
           disabled={optionsLoading}
@@ -247,10 +266,15 @@ function ExpenseForm() {
         />
 
         <NumberInput
+          ref={amountRef}
           label="Nominal"
           placeholder="0"
           value={amount}
-          onChange={setAmount}
+          onChange={(value) => {
+            setAmount(value)
+            if (errors.amount) setErrors((prev) => ({ ...prev, amount: undefined }))
+          }}
+          error={errors.amount}
           min={1}
           allowNegative={false}
           prefix="Rp"
@@ -293,7 +317,7 @@ function ExpenseForm() {
         )}
 
         <TextInput
-          label="Description (opsional)"
+          label="Deskripsi (opsional)"
           placeholder="Catatan tambahan"
           value={description}
           onChange={(event) => setDescription(event.currentTarget.value)}
@@ -310,7 +334,7 @@ function ExpenseForm() {
         {photoUploading && (
           <Paper withBorder p="sm" radius="md">
             <Group justify="space-between" mb={4}>
-              <Text size="sm">Mengupload foto...</Text>
+              <Text size="sm">Mengunggah foto...</Text>
               <Text size="sm" c="dimmed">
                 {uploadPhoto.progress}%
               </Text>
@@ -319,20 +343,9 @@ function ExpenseForm() {
           </Paper>
         )}
 
-        {problems.length > 0 && (
-          <Stack gap={2}>
-            {problems.map((problem) => (
-              <Text key={problem} size="xs" c="orange">
-                ⚠ {problem}
-              </Text>
-            ))}
-          </Stack>
-        )}
-
         <Button
           onClick={handleSubmit}
           loading={createExpense.isPending || photoUploading}
-          disabled={submitDisabled}
           fullWidth
           size="md"
           mt="xs"

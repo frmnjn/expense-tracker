@@ -98,7 +98,7 @@ function DashboardPage() {
           subtitle="Ringkasan keuangan dan budget kamu."
           right={
             <Select
-              w={{ base: 150, sm: 190 }}
+              w={{ base: '100%', sm: 190 }}
               placeholder={periodsLoading ? 'Memuat...' : 'Pilih periode'}
               data={periods}
               value={period}

@@ -13,7 +13,7 @@ function iconFor(tone: Insight['tone']): { Icon: Icon; color: string } {
     case 'danger':
       return { Icon: IconAlertOctagon, color: 'red' }
     default:
-      return { Icon: IconBulb, color: 'brand' }
+      return { Icon: IconBulb, color: 'blue' }
   }
 }
 

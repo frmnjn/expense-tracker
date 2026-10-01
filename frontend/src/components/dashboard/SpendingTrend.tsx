@@ -64,11 +64,11 @@ export function SpendingTrend({
                   <Box
                     w={BAR_WIDTH}
                     h={height}
-                    bg={isSelected ? 'brand.7' : 'brand.3'}
+                    bg={isSelected ? 'blue.7' : 'blue.4'}
                     style={{ borderRadius: 6, transition: 'height .3s ease' }}
                   />
                 </div>
-                <Text size="xs" fw={isSelected ? 700 : 500} c={isSelected ? 'brand.7' : 'dimmed'}>
+                <Text size="xs" fw={isSelected ? 700 : 500} c={isSelected ? 'blue.7' : 'dimmed'}>
                   {shortLabel(p.period)}
                 </Text>
                 <Text size="xs" ff="monospace" c={isSelected ? undefined : 'dimmed'} truncate>
