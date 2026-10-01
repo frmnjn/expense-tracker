@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Button, Modal, Stack, Text } from '@mantine/core'
+import { ActionIcon, Modal, Stack, Text } from '@mantine/core'
+import { IconDownload } from '@tabler/icons-react'
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>
@@ -49,11 +50,17 @@ function InstallButton() {
 
   return (
     <>
-      <Button variant="subtle" size="xs" onClick={handleClick}>
-        Install App
-      </Button>
+      <ActionIcon
+        variant="subtle"
+        size="lg"
+        onClick={handleClick}
+        hiddenFrom="sm"
+        aria-label="Pasang aplikasi"
+      >
+        <IconDownload size={20} />
+      </ActionIcon>
 
-      <Modal opened={opened} onClose={() => setOpened(false)} title="Cara Install di HP" centered>
+      <Modal opened={opened} onClose={() => setOpened(false)} title="Cara Pasang di HP" centered>
         <Stack>
           {isIos() ? (
             <Text size="sm">

@@ -1,4 +1,5 @@
-import { Anchor, Image, Stack, Text } from '@mantine/core'
+import { Anchor, Image, Stack } from '@mantine/core'
+import { IconFileTypePdf } from '@tabler/icons-react'
 
 export function InvoiceThumb({
   type,
@@ -23,7 +24,7 @@ export function InvoiceThumb({
         onClick={onClick}
         style={{ cursor: onClick ? 'pointer' : undefined }}
       >
-        <Text fz={28}>📄</Text>
+        <IconFileTypePdf size={28} aria-hidden />
         <Anchor href={url} target="_blank" size="xs" onClick={(e) => e.stopPropagation()}>
           Lihat PDF
         </Anchor>

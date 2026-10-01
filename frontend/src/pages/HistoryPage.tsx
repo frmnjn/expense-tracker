@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
   ActionIcon,
   Button,
@@ -6,6 +7,7 @@ import {
   Divider,
   Group,
   Image,
+  Indicator,
   LoadingOverlay,
   Modal,
   NumberInput,
@@ -16,9 +18,22 @@ import {
   Text,
   TextInput,
   Title,
+  Tooltip,
 } from '@mantine/core'
 import { useMediaQuery } from '@mantine/hooks'
+import {
+  IconAdjustmentsHorizontal,
+  IconArrowLeft,
+  IconFileTypePdf,
+  IconPhoto,
+  IconPencil,
+  IconSearch,
+  IconSearchOff,
+  IconTrash,
+  IconX,
+} from '@tabler/icons-react'
 import dayjs from 'dayjs'
+import { PageHeader } from '../components/PageHeader'
 import { useDeleteExpense, useExpenses, usePeriods, useUpdateExpense } from '../hooks/useExpenses'
 import { useDeletePhoto, useUploadPhoto } from '../hooks/useCreateExpense'
 import { useOptions } from '../hooks/useOptions'
@@ -32,6 +47,7 @@ import { getErrorMessage } from '../utils/error'
 import type { Expense } from '../types/expense'
 
 const DATE_TIME_FORMAT = 'YYYY-MM-DD HH:mm'
+const DISPLAY_DATE_TIME_FORMAT = 'DD MMM YYYY HH:mm'
 
 const UNCATEGORIZED = '__uncategorized__'
 
@@ -73,7 +89,7 @@ function HistoryPage() {
 
   const categoryFilterOptions = useMemo(
     () => [
-      { value: UNCATEGORIZED, label: 'Uncategorized' },
+      { value: UNCATEGORIZED, label: 'Tanpa Kategori' },
       ...(options?.budgets.find((b) => b.name === budgetFilter)?.categories ?? []).map((c) => ({
         value: c.name,
         label: c.name,
@@ -150,29 +166,23 @@ function HistoryPage() {
       pb={{ base: 'calc(96px + env(safe-area-inset-bottom, 0px))', sm: 'lg' }}
     >
       <Stack gap="lg">
-        <Group justify="space-between" align="flex-end">
-          <div>
-            <Text size="sm" c="blue" fw={700} mb={4}>
-              TRANSACTIONS
-            </Text>
-            <Title order={1} size="clamp(1.65rem, 5vw, 2.1rem)">
-              Riwayat Pengeluaran
-            </Title>
-            <Text c="dimmed" mt={5}>
-              Lihat dan kelola semua pengeluaran kamu.
-            </Text>
-          </div>
-          <Select
-            w={{ base: 150, sm: 190 }}
-            placeholder={periodsLoading ? 'Memuat...' : 'Pilih periode'}
-            data={periods}
-            value={period}
-            onChange={setPeriod}
-            searchable
-            size="sm"
-            aria-label="Periode"
-          />
-        </Group>
+        <PageHeader
+          eyebrow="Transaksi"
+          title="Riwayat Pengeluaran"
+          subtitle="Lihat dan kelola semua pengeluaran kamu."
+          right={
+            <Select
+              w={{ base: '100%', sm: 190 }}
+              placeholder={periodsLoading ? 'Memuat...' : 'Pilih periode'}
+              data={periods}
+              value={period}
+              onChange={setPeriod}
+              searchable
+              size="sm"
+              aria-label="Periode"
+            />
+          }
+        />
 
         {period && !(isMobile && editing) && (
           <Stack gap="xs">
@@ -181,27 +191,37 @@ function HistoryPage() {
                 placeholder="Cari nama pengeluaran"
                 value={search}
                 onChange={(e) => setSearch(e.currentTarget.value)}
-                leftSection="🔍"
+                leftSection={<IconSearch size={16} />}
                 rightSection={
                   search ? (
                     <ActionIcon variant="subtle" size="sm" onClick={() => setSearch('')} aria-label="Bersihkan pencarian">
-                      ✕
+                      <IconX size={14} />
                     </ActionIcon>
                   ) : null
                 }
                 size="md"
                 style={{ flex: 1, minWidth: 0 }}
               />
-              <Button
-                size="md"
-                variant={hasActiveFilters ? 'filled' : 'light'}
-                color="blue"
-                leftSection="⚙"
-                onClick={() => setFilterOpened(true)}
-                style={{ flexShrink: 0 }}
-              >
-                Filter & Urut{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
-              </Button>
+              <Tooltip label="Filter & Urut">
+                <Indicator
+                  disabled={activeFilterCount === 0}
+                  label={activeFilterCount}
+                  size={16}
+                  offset={4}
+                  color="red"
+                >
+                  <ActionIcon
+                    size="lg"
+                    variant={hasActiveFilters ? 'filled' : 'light'}
+                    color="blue"
+                    onClick={() => setFilterOpened(true)}
+                    aria-label="Filter & Urut"
+                    style={{ flexShrink: 0 }}
+                  >
+                    <IconAdjustmentsHorizontal size={18} />
+                  </ActionIcon>
+                </Indicator>
+              </Tooltip>
             </Group>
 
             {hasActiveFilters && (
@@ -211,7 +231,7 @@ function HistoryPage() {
                     size="xs"
                     variant="light"
                     color="blue"
-                    rightSection={<span>✕</span>}
+                    rightSection={<IconX size={12} />}
                     onClick={() => {
                       setBudgetFilter(null)
                       setCategoryFilter(null)
@@ -224,11 +244,11 @@ function HistoryPage() {
                   <Button
                     size="xs"
                     variant="light"
-                    color="cyan"
-                    rightSection={<span>✕</span>}
+                    color="grape"
+                    rightSection={<IconX size={12} />}
                     onClick={() => setCategoryFilter(null)}
                   >
-                    Category: {categoryFilter === UNCATEGORIZED ? 'Uncategorized' : categoryFilter}
+                    Kategori: {categoryFilter === UNCATEGORIZED ? 'Tanpa Kategori' : categoryFilter}
                   </Button>
                 )}
                 {sortBy !== 'waktu-desc' && (
@@ -236,7 +256,7 @@ function HistoryPage() {
                     size="xs"
                     variant="light"
                     color="gray"
-                    rightSection={<span>✕</span>}
+                    rightSection={<IconX size={12} />}
                     onClick={() => setSortBy('waktu-desc')}
                   >
                     {SORT_LABELS[sortBy] ?? sortBy}
@@ -263,14 +283,19 @@ function HistoryPage() {
           />
 
           {expenses.length === 0 ? (
-            <Text c="dimmed" ta="center" py="lg">
-              {period ? 'Belum ada pengeluaran pada periode ini.' : 'Pilih periode untuk melihat pengeluaran.'}
-            </Text>
+            <Stack align="center" gap="sm" py="lg">
+              <Text c="dimmed" ta="center">
+                {period ? 'Belum ada pengeluaran pada periode ini.' : 'Pilih periode untuk melihat pengeluaran.'}
+              </Text>
+              {period && (
+                <Button component={Link} to="/catat" size="compact-sm" variant="light">
+                  Catat pengeluaran
+                </Button>
+              )}
+            </Stack>
           ) : visibleExpenses.length === 0 ? (
             <Stack align="center" gap={4} py="xl">
-              <Text fz={28} aria-hidden>
-                🔍
-              </Text>
+              <IconSearchOff size={28} aria-hidden />
               <Text c="dimmed" ta="center">
                 Tidak ada pengeluaran ditemukan.
               </Text>
@@ -304,7 +329,7 @@ function HistoryPage() {
               <Table.Tbody>
                 {pageExpenses.map((expense) => (
                   <Table.Tr key={expense.id}>
-                    <Table.Td>{dayjs(expense.dateTime).format(DATE_TIME_FORMAT)}</Table.Td>
+                    <Table.Td>{dayjs(expense.dateTime).format(DISPLAY_DATE_TIME_FORMAT)}</Table.Td>
                     <Table.Td>{expense.name}</Table.Td>
                     <Table.Td>
                       <Text size="sm">{expense.budget}</Text>
@@ -319,14 +344,14 @@ function HistoryPage() {
                       <Group gap="xs" justify="flex-end" wrap="nowrap">
                         {expense.hasPhoto && (
                           <ActionIcon variant="light" color="gray" size="md" onClick={() => setViewingPhoto(expense)} aria-label="Lihat foto">
-                            📷
+                            <IconPhoto size={16} />
                           </ActionIcon>
                         )}
                         <ActionIcon variant="light" color="blue" size="md" disabled={!expense.id} onClick={() => setEditing(expense)} aria-label="Edit">
-                          ✎
+                          <IconPencil size={16} />
                         </ActionIcon>
                         <ActionIcon variant="light" color="red" size="md" disabled={!expense.id} onClick={() => setDeleting(expense)} aria-label="Hapus">
-                          🗑
+                          <IconTrash size={16} />
                         </ActionIcon>
                       </Group>
                     </Table.Td>
@@ -378,8 +403,8 @@ function HistoryPage() {
               comboboxProps={{ withinPortal: false }}
             />
             <Select
-              label="Category"
-              placeholder={budgetFilter ? 'Semua category' : 'Pilih budget dulu'}
+              label="Kategori"
+              placeholder={budgetFilter ? 'Semua kategori' : 'Pilih budget dulu'}
               data={categoryFilterOptions}
               value={categoryFilter}
               onChange={setCategoryFilter}
@@ -404,7 +429,7 @@ function HistoryPage() {
             />
             <Group justify="flex-end" mt="sm">
               <Button fullWidth={isMobile} onClick={() => setFilterOpened(false)}>
-                Apply
+                Terapkan
               </Button>
             </Group>
           </Stack>
@@ -422,7 +447,7 @@ function HistoryPage() {
           {viewingPhoto &&
             (viewingPhoto.photoType === 'pdf' ? (
               <Stack align="center" gap="sm">
-                <Text fz={48}>📄</Text>
+                <IconFileTypePdf size={48} aria-hidden />
                 <Button component="a" href={getPhotoUrl(viewingPhoto.id)} target="_blank" variant="light">
                   Buka PDF
                 </Button>
@@ -597,7 +622,7 @@ function EditExpenseForm({
     <Stack gap="md">
       {inline && (
         <Group justify="space-between" align="center">
-          <Button variant="subtle" leftSection="←" onClick={onClose}>
+          <Button variant="subtle" leftSection={<IconArrowLeft size={16} />} onClick={onClose}>
             Kembali
           </Button>
           <Title order={3}>Ubah pengeluaran</Title>
@@ -608,8 +633,8 @@ function EditExpenseForm({
         <TextInput label="Nama" value={name} onChange={(e) => setName(e.currentTarget.value)} maxLength={255} required size="md" />
         <Select label="Budget" data={budgetOptions} value={budget} onChange={(v) => { setBudget(v); setCategory(null) }} searchable required size="md" comboboxProps={{ withinPortal: false }} />
         <Select
-          label="Category"
-          placeholder={budget ? 'Uncategorized' : 'Pilih budget dulu'}
+          label="Kategori"
+          placeholder={budget ? 'Tanpa Kategori' : 'Pilih budget dulu'}
           data={categoryOptions}
           value={category}
           onChange={setCategory}
@@ -677,7 +702,7 @@ function EditExpenseForm({
         )}
 
         <TextInput
-          label="Description (opsional)"
+          label="Deskripsi (opsional)"
           value={description}
           onChange={(e) => setDescription(e.currentTarget.value)}
           maxLength={10000}
@@ -688,8 +713,8 @@ function EditExpenseForm({
           <Stack gap={4}>
             <Group align="flex-start">
               {expense.photoType === 'pdf' ? (
-                <Button component="a" href={getPhotoUrl(expense.id)} target="_blank" variant="light" size="xs">
-                  📄 Lihat PDF
+                <Button component="a" href={getPhotoUrl(expense.id)} target="_blank" variant="light" size="xs" leftSection={<IconFileTypePdf size={14} />}>
+                  Lihat PDF
                 </Button>
               ) : (
                 <Image

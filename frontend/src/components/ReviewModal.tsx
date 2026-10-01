@@ -14,6 +14,7 @@ import {
   TextInput,
 } from '@mantine/core'
 import { useMediaQuery } from '@mantine/hooks'
+import { IconArrowUp, IconPlus, IconX } from '@tabler/icons-react'
 import { DateTimePicker } from '@mantine/dates'
 import dayjs from 'dayjs'
 import { useInvoiceDetail, useCreateExpenseBatch } from '../hooks/useScan'
@@ -148,12 +149,15 @@ function ReviewModal({
     setDateTime(initialDateTime)
   }, [initialDateTime])
 
+  // Inisialisasi item sekali per invoice. Refetch background (mis. options)
+  // tidak boleh menimpa editan user, jadi kunci dengan invoiceId.
+  const initializedInvoiceRef = useRef<string | null>(null)
   useEffect(() => {
-    if (analysis) {
-      setItems(toEditItems(analysis, budgets))
-      setGroupNames({})
-    }
-    // reset item saat invoice berubah
+    if (!analysis) return
+    if (initializedInvoiceRef.current === invoiceId) return
+    initializedInvoiceRef.current = invoiceId
+    setItems(toEditItems(analysis, budgets))
+    setGroupNames({})
   }, [analysis, budgets, invoiceId])
 
   const updateItem = (key: string, patch: Partial<EditItem>) => {
@@ -235,7 +239,11 @@ function ReviewModal({
   }
 
   const handleSubmit = () => {
-    if (invalid || batch.isPending) return
+    if (batch.isPending) return
+    if (invalid) {
+      toast.error('Periksa item yang ditandai di bawah', { title: 'Belum lengkap' })
+      return
+    }
     const groupsPayload = groups.map(([key, group]) => {
       const amount = group.items.reduce((s, it) => s + Number(it.amount), 0)
       const description = buildDescription(group.items)
@@ -268,10 +276,11 @@ function ReviewModal({
       title={
         analysis ? (
           <Stack gap={4}>
-            <Text fw={600}>Review Hasil Analisis</Text>
+            <Text fw={600}>Tinjau Hasil Analisis</Text>
             <Button
               size="compact-xs"
               variant="light"
+              leftSection={<IconArrowUp size={14} />}
               onClick={scrollToSummary}
               style={{
                 visibility: showBack ? 'visible' : 'hidden',
@@ -279,11 +288,11 @@ function ReviewModal({
                 pointerEvents: showBack ? 'auto' : 'none',
               }}
             >
-              ↑ Pengeluaran per budget
+              Pengeluaran per budget
             </Button>
           </Stack>
         ) : (
-          'Review Hasil Analisis'
+          'Tinjau Hasil Analisis'
         )
       }
       centered
@@ -459,7 +468,7 @@ function ReviewModal({
                     Item {idx + 1}
                   </Text>
                   <ActionIcon color="red" variant="subtle" onClick={() => removeItem(it.key)} aria-label="Hapus item">
-                    ✕
+                    <IconX size={16} />
                   </ActionIcon>
                 </Group>
                 <Stack gap="xs">
@@ -562,13 +571,13 @@ function ReviewModal({
                   comboboxProps={{ withinPortal: false }}
                 />
                 <ActionIcon color="red" variant="subtle" onClick={() => removeItem(it.key)} aria-label="Hapus item">
-                  ✕
+                  <IconX size={16} />
                 </ActionIcon>
               </Group>
             ),
           )}
-          <Button variant="light" size="xs" onClick={addItem} disabled={batch.isPending}>
-            + Tambah item
+          <Button variant="light" size="xs" leftSection={<IconPlus size={14} />} onClick={addItem} disabled={batch.isPending}>
+            Tambah item
           </Button>
 
           {problems.length > 0 && (
@@ -586,7 +595,6 @@ function ReviewModal({
             size="md"
             onClick={handleSubmit}
             loading={batch.isPending}
-            disabled={invalid}
           >
             Buat {groups.length} Pengeluaran
           </Button>

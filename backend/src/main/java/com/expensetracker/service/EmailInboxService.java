@@ -146,7 +146,8 @@ public class EmailInboxService {
                 return null;
             }
             Message message = found[0];
-            return new FetchedEmail(senderOf(message), extractBody(message));
+            String subject = message.getSubject() == null ? "" : message.getSubject();
+            return new FetchedEmail(senderOf(message), subject, extractBody(message));
         } catch (Exception e) {
             LOGGER.warn("fetch by message-id failed: {}", e.getMessage());
             return null;
@@ -229,17 +230,18 @@ public class EmailInboxService {
 
             try {
                 ParsedTransaction parsed = emailParserService.parse(sender, subject, body);
+                String description = descriptionWithNote(subject, parsed);
                 if (merchantDiscardRule.shouldDiscard(parsed.merchant())) {
                     emailImportRepository.insert(id, messageId, sender, subject, receivedAt,
                             parsed.transactionAt(), parsed.merchant(), parsed.amount(),
-                            subject, parsed.suggestedBudget(), parsed.suggestedCategory(), parsed.parseMethod(),
+                            description, parsed.suggestedBudget(), parsed.suggestedCategory(), parsed.parseMethod(),
                             EmailImportStatus.DISCARDED.value(),
                             "Auto-discard: merchant " + parsed.merchant());
                     LOGGER.info("email auto-discarded: sender={} merchant={}", sender, parsed.merchant());
                 } else {
                     emailImportRepository.insert(id, messageId, sender, subject, receivedAt,
                             parsed.transactionAt(), parsed.merchant(), parsed.amount(),
-                            subject, parsed.suggestedBudget(), parsed.suggestedCategory(), parsed.parseMethod(),
+                            description, parsed.suggestedBudget(), parsed.suggestedCategory(), parsed.parseMethod(),
                             EmailImportStatus.PENDING_REVIEW.value(), null);
                     LOGGER.info("email imported for review: sender={} merchant={}", sender, parsed.merchant());
                 }
@@ -248,6 +250,11 @@ public class EmailInboxService {
                         null, null, null, subject, null, null, "AI",
                         EmailImportStatus.DISCARDED.value(), e.getMessage());
                 LOGGER.info("email skipped (not expense): sender={}", sender);
+            } catch (AiParseException e) {
+                emailImportRepository.insert(id, messageId, sender, subject, receivedAt,
+                        null, null, null, subject, null, null, "AI",
+                        EmailImportStatus.FAILED.value(), e.getMessage());
+                LOGGER.warn("email AI parse failed: sender={} reason={}", sender, e.getMessage());
             } catch (ValidationException e) {
                 emailImportRepository.insert(id, messageId, sender, subject, receivedAt,
                         null, null, null, subject, null, null, "REGEX",
@@ -259,6 +266,12 @@ public class EmailInboxService {
             LOGGER.warn("failed to process email: {}", e.getMessage());
             return false;
         }
+    }
+
+    /** Subjek + catatan konversi (mis. "… · USD 0,45 @ 15.888 = Rp7.150") bila ada. */
+    private static String descriptionWithNote(String subject, ParsedTransaction parsed) {
+        String note = parsed.conversionNote();
+        return note == null ? subject : subject + " · " + note;
     }
 
     private boolean isAllowedSender(String sender) {

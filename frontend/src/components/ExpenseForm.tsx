@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Button,
   Divider,
@@ -25,15 +25,34 @@ import { useToast } from './Toast'
 
 const DATE_TIME_FORMAT = 'YYYY-MM-DD HH:mm'
 const DATE_TIME_SECONDS_FORMAT = 'YYYY-MM-DD HH:mm:ss'
+const DRAFT_KEY = 'expense-form-draft'
+
+interface ExpenseDraft {
+  name: string
+  budget: string | null
+  category: string | null
+  amount: string | number
+  description: string
+}
+
+function loadDraft(): ExpenseDraft | null {
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY)
+    return raw ? (JSON.parse(raw) as ExpenseDraft) : null
+  } catch {
+    return null
+  }
+}
 
 function ExpenseForm() {
   const [mode, setMode] = useState('now')
   const [dateTime, setDateTime] = useState<string>(dayjs().format(DATE_TIME_SECONDS_FORMAT))
-  const [name, setName] = useState('')
-  const [budget, setBudget] = useState<string | null>(null)
-  const [category, setCategory] = useState<string | null>(null)
-  const [amount, setAmount] = useState<string | number>('')
-  const [description, setDescription] = useState('')
+  const draft = useMemo(loadDraft, [])
+  const [name, setName] = useState(draft?.name ?? '')
+  const [budget, setBudget] = useState<string | null>(draft?.budget ?? null)
+  const [category, setCategory] = useState<string | null>(draft?.category ?? null)
+  const [amount, setAmount] = useState<string | number>(draft?.amount ?? '')
+  const [description, setDescription] = useState(draft?.description ?? '')
   const [photo, setPhoto] = useState<PhotoSelection | null>(null)
 
   const { data: options, isPending: optionsLoading } = useOptions()
@@ -43,12 +62,30 @@ function ExpenseForm() {
   const photoUploading = uploadPhoto.isPending
   const queryClient = useQueryClient()
   const submittingRef = useRef(false)
+  const [errors, setErrors] = useState<{ name?: string; budget?: string; amount?: string }>({})
+  const nameRef = useRef<HTMLInputElement>(null)
+  const budgetRef = useRef<HTMLInputElement>(null)
+  const amountRef = useRef<HTMLInputElement>(null)
 
   const nowDisabled = mode === 'now'
   const displayValue = nowDisabled ? dayjs().format(DATE_TIME_SECONDS_FORMAT) : dateTime
 
-  const submitDisabled =
-    name.trim() === '' || !budget || Number(amount) <= 0 || createExpense.isPending || photoUploading
+  // Simpan draft input agar tidak hilang saat berpindah aplikasi di HP.
+  useEffect(() => {
+    try {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({ name, budget, category, amount, description }))
+    } catch {
+      // storage penuh / private mode: abaikan
+    }
+  }, [name, budget, category, amount, description])
+
+  const validate = () => {
+    const next: { name?: string; budget?: string; amount?: string } = {}
+    if (name.trim() === '') next.name = 'Nama belum diisi'
+    if (!budget) next.budget = 'Budget belum dipilih'
+    if (Number(amount) <= 0) next.amount = 'Nominal harus lebih dari 0'
+    return next
+  }
 
   const resetForm = () => {
     setName('')
@@ -58,10 +95,25 @@ function ExpenseForm() {
     setDescription('')
     setPhoto(null)
     setDateTime(dayjs().format(DATE_TIME_SECONDS_FORMAT))
+    try {
+      localStorage.removeItem(DRAFT_KEY)
+    } catch {
+      // abaikan
+    }
   }
 
   const handleSubmit = () => {
-    if (submittingRef.current) return
+    if (submittingRef.current || createExpense.isPending || photoUploading) return
+    const nextErrors = validate()
+    if (Object.keys(nextErrors).length > 0) {
+      setErrors(nextErrors)
+      toast.error('Periksa field yang ditandai merah', { title: 'Belum lengkap' })
+      if (nextErrors.name) nameRef.current?.focus()
+      else if (nextErrors.budget) budgetRef.current?.focus()
+      else if (nextErrors.amount) amountRef.current?.focus()
+      return
+    }
+    setErrors({})
     submittingRef.current = true
     createExpense.mutate(
       {
@@ -156,16 +208,22 @@ function ExpenseForm() {
         />
 
         <TextInput
+          ref={nameRef}
           label="Nama"
           placeholder="Nama pengeluaran"
           value={name}
-          onChange={(event) => setName(event.currentTarget.value)}
+          onChange={(event) => {
+            setName(event.currentTarget.value)
+            if (errors.name) setErrors((prev) => ({ ...prev, name: undefined }))
+          }}
+          error={errors.name}
           maxLength={255}
           required
           size="md"
         />
 
         <Select
+          ref={budgetRef}
           label="Budget"
           placeholder={optionsLoading ? 'Memuat...' : 'Pilih budget'}
           data={budgetOptions}
@@ -173,7 +231,9 @@ function ExpenseForm() {
           onChange={(value) => {
             setBudget(value)
             setCategory(null)
+            if (errors.budget) setErrors((prev) => ({ ...prev, budget: undefined }))
           }}
+          error={errors.budget}
           searchable
           required
           disabled={optionsLoading}
@@ -206,10 +266,15 @@ function ExpenseForm() {
         />
 
         <NumberInput
+          ref={amountRef}
           label="Nominal"
           placeholder="0"
           value={amount}
-          onChange={setAmount}
+          onChange={(value) => {
+            setAmount(value)
+            if (errors.amount) setErrors((prev) => ({ ...prev, amount: undefined }))
+          }}
+          error={errors.amount}
           min={1}
           allowNegative={false}
           prefix="Rp"
@@ -252,7 +317,7 @@ function ExpenseForm() {
         )}
 
         <TextInput
-          label="Description (opsional)"
+          label="Deskripsi (opsional)"
           placeholder="Catatan tambahan"
           value={description}
           onChange={(event) => setDescription(event.currentTarget.value)}
@@ -269,7 +334,7 @@ function ExpenseForm() {
         {photoUploading && (
           <Paper withBorder p="sm" radius="md">
             <Group justify="space-between" mb={4}>
-              <Text size="sm">Mengupload foto...</Text>
+              <Text size="sm">Mengunggah foto...</Text>
               <Text size="sm" c="dimmed">
                 {uploadPhoto.progress}%
               </Text>
@@ -281,12 +346,11 @@ function ExpenseForm() {
         <Button
           onClick={handleSubmit}
           loading={createExpense.isPending || photoUploading}
-          disabled={submitDisabled}
           fullWidth
           size="md"
           mt="xs"
         >
-          Save
+          Simpan
         </Button>
       </Stack>
     </Paper>
