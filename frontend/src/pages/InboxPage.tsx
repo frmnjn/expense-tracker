@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import {
+  ActionIcon,
   Badge,
   Button,
   Container,
@@ -10,7 +11,7 @@ import {
   Stack,
   Text,
 } from '@mantine/core'
-import { IconMail } from '@tabler/icons-react'
+import { IconMail, IconRefresh } from '@tabler/icons-react'
 import dayjs from 'dayjs'
 import { useNavigate } from 'react-router-dom'
 import { useDiscardEmail, useEmailImports, usePollEmails, useRetryEmailImport } from '../hooks/useEmailImports'
@@ -88,17 +89,24 @@ function InboxPage() {
           titleSize="clamp(1.5rem, 5vw, 2rem)"
         />
 
-        <Group grow align="flex-end">
+        <Group align="flex-end" wrap="nowrap">
           <Select
             label="Status"
             data={STATUS_OPTIONS}
             value={status}
             onChange={(v) => setStatus(v ?? 'ALL')}
             size="sm"
+            style={{ flex: 1 }}
           />
-          <Button variant="light" onClick={handlePoll} loading={poll.isPending}>
-            Segarkan
-          </Button>
+          <ActionIcon
+            variant="light"
+            size="lg"
+            onClick={handlePoll}
+            loading={poll.isPending}
+            aria-label="Segarkan"
+          >
+            <IconRefresh size={18} />
+          </ActionIcon>
         </Group>
 
         {isPending ? (
@@ -111,7 +119,7 @@ function InboxPage() {
               <IconMail size={40} aria-hidden />
               <Text fw={600}>Tidak ada transaksi email</Text>
               <Text size="sm" c="dimmed" ta="center">
-                Tekan Segarkan untuk mengambil email terbaru dari inbox.
+                Tekan ikon segarkan untuk mengambil email terbaru dari inbox.
               </Text>
             </Stack>
           </Paper>
