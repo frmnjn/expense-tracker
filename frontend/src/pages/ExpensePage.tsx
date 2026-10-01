@@ -1,5 +1,6 @@
-import { Container, Stack, Text, Title } from '@mantine/core'
+import { Container, Stack } from '@mantine/core'
 import ExpenseForm from '../components/ExpenseForm'
+import { PageHeader } from '../components/PageHeader'
 
 function ExpensePage() {
   return (
@@ -10,17 +11,11 @@ function ExpensePage() {
       pb={{ base: 'calc(96px + env(safe-area-inset-bottom, 0px))', sm: 'md' }}
     >
       <Stack gap="lg">
-        <div>
-          <Text size="sm" c="blue" fw={700} mb={4}>
-            PENGELUARAN BARU
-          </Text>
-          <Title order={1} size="clamp(1.65rem, 5vw, 2.1rem)" lh={1.15}>
-            Catat pengeluaran
-          </Title>
-          <Text c="dimmed" mt={6}>
-            Simpan transaksi dan pantau sisa budget kamu.
-          </Text>
-        </div>
+        <PageHeader
+          eyebrow="Pengeluaran Baru"
+          title="Catat pengeluaran"
+          subtitle="Simpan transaksi dan pantau sisa budget kamu."
+        />
         <ExpenseForm />
       </Stack>
     </Container>

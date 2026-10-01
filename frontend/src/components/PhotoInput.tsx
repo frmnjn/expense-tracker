@@ -1,5 +1,6 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Button, Grid, Group, Image, Loader, Modal, Stack, Text } from '@mantine/core'
+import { IconArrowLeft, IconCamera, IconFolder, IconPhoto } from '@tabler/icons-react'
 import { useInvoices } from '../hooks/useInvoices'
 import { getInvoicePhotoUrl } from '../services/expense'
 import { InvoiceThumb } from './InvoiceThumb'
@@ -19,8 +20,20 @@ function PhotoInput({
 }) {
   const [opened, setOpened] = useState(false)
   const [pickingExisting, setPickingExisting] = useState(false)
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const cameraRef = useRef<HTMLInputElement>(null)
   const galleryRef = useRef<HTMLInputElement>(null)
+
+  // Buat & bebaskan object URL agar tidak bocor memori.
+  useEffect(() => {
+    if (value?.kind !== 'new') {
+      setPreviewUrl(null)
+      return
+    }
+    const url = URL.createObjectURL(value.file)
+    setPreviewUrl(url)
+    return () => URL.revokeObjectURL(url)
+  }, [value])
 
   const invoices = useInvoices(pickingExisting ? dateTime : null)
 
@@ -44,7 +57,7 @@ function PhotoInput({
       {value ? (
         <Group align="center" wrap="nowrap">
           <Image
-            src={value.kind === 'existing' ? getInvoicePhotoUrl(value.invoiceId) : URL.createObjectURL(value.file)}
+            src={value.kind === 'existing' ? getInvoicePhotoUrl(value.invoiceId) : previewUrl ?? undefined}
             alt="Preview invoice"
             mah={140}
             maw={120}
@@ -64,8 +77,8 @@ function PhotoInput({
           </Stack>
         </Group>
       ) : (
-        <Button variant="light" fullWidth onClick={() => setOpened(true)}>
-          📷 Tambah Foto
+        <Button variant="light" fullWidth leftSection={<IconCamera size={18} />} onClick={() => setOpened(true)}>
+          Tambah Foto
         </Button>
       )}
 
@@ -90,8 +103,8 @@ function PhotoInput({
           <Stack>
             <Group justify="space-between">
               <Text size="sm">Pilih foto yang sudah ada di periode ini</Text>
-              <Button variant="subtle" size="xs" onClick={() => setPickingExisting(false)}>
-                ← Kembali
+              <Button variant="subtle" size="xs" leftSection={<IconArrowLeft size={14} />} onClick={() => setPickingExisting(false)}>
+                Kembali
               </Button>
             </Group>
             {invoices.isPending ? (
@@ -116,14 +129,14 @@ function PhotoInput({
           </Stack>
         ) : (
           <Stack>
-            <Button fullWidth onClick={() => cameraRef.current?.click()}>
-              📷 Ambil Foto (Kamera)
+            <Button fullWidth leftSection={<IconCamera size={18} />} onClick={() => cameraRef.current?.click()}>
+              Ambil Foto (Kamera)
             </Button>
-            <Button fullWidth variant="light" onClick={() => galleryRef.current?.click()}>
-              🖼 Dari Galeri
+            <Button fullWidth variant="light" leftSection={<IconPhoto size={18} />} onClick={() => galleryRef.current?.click()}>
+              Dari Galeri
             </Button>
-            <Button fullWidth variant="subtle" onClick={() => setPickingExisting(true)}>
-              📁 Pakai Foto Periode Ini
+            <Button fullWidth variant="subtle" leftSection={<IconFolder size={18} />} onClick={() => setPickingExisting(true)}>
+              Pakai Foto Periode Ini
             </Button>
           </Stack>
         )}

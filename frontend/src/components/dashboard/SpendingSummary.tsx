@@ -18,7 +18,7 @@ export function SpendingSummary({
 }) {
   if (!hasPeriod || isLoading || isError) {
     return (
-      <Paper withBorder p={{ base: 'md', sm: 'lg' }} radius="lg" className="hero-card">
+      <Paper withBorder p={{ base: 'md', sm: 'lg' }} radius="lg">
         <Text size="sm" c="dimmed" fw={600}>
           Pengeluaran
         </Text>
@@ -46,7 +46,7 @@ export function SpendingSummary({
   const goingDown = total < (prev ?? 0)
 
   return (
-    <Paper withBorder p={{ base: 'md', sm: 'lg' }} radius="lg" className="hero-card">
+    <Paper withBorder p={{ base: 'md', sm: 'lg' }} radius="lg">
       <Text size="sm" c="dimmed" fw={600}>
         Pengeluaran
       </Text>

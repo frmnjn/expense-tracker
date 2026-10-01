@@ -18,7 +18,7 @@ function App() {
       <Routes>
         <Route path="/lock" element={<LockPage />} />
         <Route element={<Protected />}>
-          <Route path="/" element={<ExpensePage />} />
+          <Route path="/" element={<Navigate to="/catat" replace />} />
           <Route path="/catat" element={<ExpensePage />} />
           <Route path="/scan" element={<ScanPage />} />
           <Route path="/inbox" element={<InboxPage />} />

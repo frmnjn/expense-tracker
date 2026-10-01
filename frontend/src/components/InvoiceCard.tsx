@@ -1,4 +1,5 @@
 import { ActionIcon, Badge, Box, Button, Group, Loader, Paper, Stack, Text } from '@mantine/core'
+import { IconTrash } from '@tabler/icons-react'
 import dayjs from 'dayjs'
 import { InvoiceThumb } from './InvoiceThumb'
 import { getInvoicePhotoUrl } from '../services/expense'
@@ -82,10 +83,10 @@ export function InvoiceCard({
           {invoice.status === 'TO_REVIEW' && (
             <Group justify="space-between" wrap="nowrap" gap="xs">
               <Button size="sm" variant="light" style={{ flex: 1 }} onClick={onReview}>
-                Review
+                Tinjau
               </Button>
               <ActionIcon variant="light" color="red" size="lg" onClick={onDelete} aria-label="Hapus struk">
-                🗑
+                <IconTrash size={18} />
               </ActionIcon>
             </Group>
           )}
@@ -102,7 +103,7 @@ export function InvoiceCard({
                 File ini bukan struk
               </Text>
               <ActionIcon variant="light" color="red" size="lg" onClick={onDelete} aria-label="Hapus struk">
-                🗑
+                <IconTrash size={18} />
               </ActionIcon>
             </Group>
           )}
@@ -120,7 +121,7 @@ export function InvoiceCard({
                 )}
               </Group>
               <ActionIcon variant="light" color="red" size="lg" onClick={onDelete} aria-label="Hapus struk">
-                🗑
+                <IconTrash size={18} />
               </ActionIcon>
             </Group>
           )}

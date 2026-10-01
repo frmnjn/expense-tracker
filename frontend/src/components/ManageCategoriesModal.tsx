@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { ActionIcon, Button, Group, Modal, Paper, Stack, Text, TextInput } from '@mantine/core'
+import { IconPencil, IconTrash } from '@tabler/icons-react'
 import { useOptions } from '../hooks/useOptions'
 import { useCreateCategory, useDeleteCategory, useUpdateCategory } from '../hooks/useCategories'
 import { getErrorMessage } from '../utils/error'
@@ -28,7 +29,7 @@ function ManageCategoriesModal({ budget, onClose }: { budget: string; onClose: (
     const trimmed = name.trim()
     if (!trimmed) return
     const onSuccess = () => {
-      toast.success(editingId ? 'Category diperbarui' : 'Category ditambahkan', { title: 'Berhasil' })
+      toast.success(editingId ? 'Kategori diperbarui' : 'Kategori ditambahkan', { title: 'Berhasil' })
       reset()
     }
     const onError = (error: unknown) => toast.error(getErrorMessage(error), { title: 'Gagal' })
@@ -53,7 +54,7 @@ function ManageCategoriesModal({ budget, onClose }: { budget: string; onClose: (
 
   const handleDelete = (id: number) => {
     deleteCategory.mutate(id, {
-      onSuccess: () => toast.success('Category dihapus', { title: 'Berhasil' }),
+      onSuccess: () => toast.success('Kategori dihapus', { title: 'Berhasil' }),
       onError: (error) => toast.error(getErrorMessage(error), { title: 'Gagal' }),
     })
   }
@@ -61,11 +62,11 @@ function ManageCategoriesModal({ budget, onClose }: { budget: string; onClose: (
   const isPending = createCategory.isPending || updateCategory.isPending
 
   return (
-    <Modal opened onClose={onClose} title={`Kelola Category — ${budget}`} centered size="md">
+    <Modal opened onClose={onClose} title={`Kelola Kategori — ${budget}`} centered size="md">
       <Stack gap="sm">
         {categories.length === 0 ? (
           <Text size="sm" c="dimmed">
-            Belum ada category. Tambahkan category untuk budget ini.
+            Belum ada kategori. Tambahkan kategori untuk budget ini.
           </Text>
         ) : (
           categories.map((c) => (
@@ -84,19 +85,19 @@ function ManageCategoriesModal({ budget, onClose }: { budget: string; onClose: (
                 <Group gap={4} wrap="nowrap">
                   <ActionIcon
                     variant="light"
-                    color="blue"
+                    color="brand"
                     onClick={() => startEdit(c.id, c.name, c.description)}
-                    aria-label="Edit category"
+                    aria-label="Edit kategori"
                   >
-                    ✎
+                    <IconPencil size={16} />
                   </ActionIcon>
                   <ActionIcon
                     variant="light"
                     color="red"
                     onClick={() => handleDelete(c.id)}
-                    aria-label="Hapus category"
+                    aria-label="Hapus kategori"
                   >
-                    🗑
+                    <IconTrash size={16} />
                   </ActionIcon>
                 </Group>
               </Group>
@@ -105,8 +106,8 @@ function ManageCategoriesModal({ budget, onClose }: { budget: string; onClose: (
         )}
 
         <TextInput
-          label={editingId ? 'Ubah category' : 'Category baru'}
-          placeholder="Nama category"
+          label={editingId ? 'Ubah kategori' : 'Kategori baru'}
+          placeholder="Nama kategori"
           value={name}
           onChange={(e) => setName(e.currentTarget.value)}
           maxLength={255}
@@ -114,7 +115,7 @@ function ManageCategoriesModal({ budget, onClose }: { budget: string; onClose: (
         />
         <TextInput
           label="Deskripsi (opsional)"
-          placeholder="Dipakai AI untuk memilih category"
+          placeholder="Dipakai AI untuk memilih kategori"
           value={description}
           onChange={(e) => setDescription(e.currentTarget.value)}
           maxLength={500}

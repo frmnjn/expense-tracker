@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Box, Button, Divider, Group, Loader, Modal, Paper, Stack, Text } from '@mantine/core'
 import { useMediaQuery } from '@mantine/hooks'
+import { IconFileTypePdf } from '@tabler/icons-react'
 import { useInvoiceDetail } from '../hooks/useScan'
 import { getInvoicePhotoUrl } from '../services/expense'
 import { formatCurrency } from '../utils/currency'
@@ -47,7 +48,7 @@ function SubmittedExpensesModal({ invoiceId, type, onClose }: { invoiceId: strin
                 </Text>
                 <Text size="xs" c="dimmed">{expenses.length} pengeluaran</Text>
                 <Text size="xs" c="dimmed" mt={6}>Total akhir</Text>
-                <Text fw={800} fz="xl" c="blue">{formatCurrency(total)}</Text>
+                <Text fw={800} fz="xl" c="brand">{formatCurrency(total)}</Text>
               </Stack>
             </Group>
           </Paper>
@@ -93,7 +94,7 @@ function SubmittedExpensesModal({ invoiceId, type, onClose }: { invoiceId: strin
       >
         {viewingPhoto && (type === 'pdf' ? (
           <Stack align="center" gap="sm">
-            <Text fz={48}>📄</Text>
+            <IconFileTypePdf size={48} aria-hidden />
             <Button component="a" href={getInvoicePhotoUrl(invoiceId)} target="_blank" variant="light">Buka PDF</Button>
           </Stack>
         ) : (

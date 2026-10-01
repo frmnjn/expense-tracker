@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Box, Button, Container, Group, SimpleGrid, Stack, Text } from '@mantine/core'
+import { IconArrowRight, IconBackspace } from '@tabler/icons-react'
 import { useNavigate } from 'react-router-dom'
 import apiClient from '../services/api'
 import { setAccessCode } from '../utils/access'
@@ -87,13 +88,13 @@ export default function LockPage() {
                     </Button>
                   ))}
                   <Button size="lg" variant="subtle" radius="md" onClick={backspace} aria-label="Hapus digit">
-                    ⌫
+                    <IconBackspace size={20} />
                   </Button>
                   <Button size="lg" variant="default" radius="md" onClick={() => press('0')} aria-label="Digit 0">
                     0
                   </Button>
-                  <Button size="lg" color="blue" radius="md" onClick={submit} loading={loading} disabled={pin.length < MIN_PIN} aria-label="Buka">
-                    ➜
+                  <Button size="lg" color="brand" radius="md" onClick={submit} loading={loading} disabled={pin.length < MIN_PIN} aria-label="Buka">
+                    <IconArrowRight size={20} />
                   </Button>
                 </SimpleGrid>
               </Box>
@@ -117,7 +118,7 @@ function GroupPin({ pin, error }: { pin: string; error: boolean }) {
             borderRadius: '50%',
             background:
               i < pin.length
-                ? 'var(--mantine-color-blue-6)'
+                ? 'var(--mantine-color-brand-6)'
                 : 'var(--mantine-color-default-border)',
             boxShadow: error ? '0 0 0 1px var(--mantine-color-red-6)' : undefined,
           }}

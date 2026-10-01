@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   Button,
   Divider,
@@ -25,15 +25,34 @@ import { useToast } from './Toast'
 
 const DATE_TIME_FORMAT = 'YYYY-MM-DD HH:mm'
 const DATE_TIME_SECONDS_FORMAT = 'YYYY-MM-DD HH:mm:ss'
+const DRAFT_KEY = 'expense-form-draft'
+
+interface ExpenseDraft {
+  name: string
+  budget: string | null
+  category: string | null
+  amount: string | number
+  description: string
+}
+
+function loadDraft(): ExpenseDraft | null {
+  try {
+    const raw = localStorage.getItem(DRAFT_KEY)
+    return raw ? (JSON.parse(raw) as ExpenseDraft) : null
+  } catch {
+    return null
+  }
+}
 
 function ExpenseForm() {
   const [mode, setMode] = useState('now')
   const [dateTime, setDateTime] = useState<string>(dayjs().format(DATE_TIME_SECONDS_FORMAT))
-  const [name, setName] = useState('')
-  const [budget, setBudget] = useState<string | null>(null)
-  const [category, setCategory] = useState<string | null>(null)
-  const [amount, setAmount] = useState<string | number>('')
-  const [description, setDescription] = useState('')
+  const draft = useMemo(loadDraft, [])
+  const [name, setName] = useState(draft?.name ?? '')
+  const [budget, setBudget] = useState<string | null>(draft?.budget ?? null)
+  const [category, setCategory] = useState<string | null>(draft?.category ?? null)
+  const [amount, setAmount] = useState<string | number>(draft?.amount ?? '')
+  const [description, setDescription] = useState(draft?.description ?? '')
   const [photo, setPhoto] = useState<PhotoSelection | null>(null)
 
   const { data: options, isPending: optionsLoading } = useOptions()
@@ -47,6 +66,15 @@ function ExpenseForm() {
   const nowDisabled = mode === 'now'
   const displayValue = nowDisabled ? dayjs().format(DATE_TIME_SECONDS_FORMAT) : dateTime
 
+  // Simpan draft input agar tidak hilang saat berpindah aplikasi di HP.
+  useEffect(() => {
+    try {
+      localStorage.setItem(DRAFT_KEY, JSON.stringify({ name, budget, category, amount, description }))
+    } catch {
+      // storage penuh / private mode: abaikan
+    }
+  }, [name, budget, category, amount, description])
+
   const submitDisabled =
     name.trim() === '' || !budget || Number(amount) <= 0 || createExpense.isPending || photoUploading
 
@@ -58,6 +86,11 @@ function ExpenseForm() {
     setDescription('')
     setPhoto(null)
     setDateTime(dayjs().format(DATE_TIME_SECONDS_FORMAT))
+    try {
+      localStorage.removeItem(DRAFT_KEY)
+    } catch {
+      // abaikan
+    }
   }
 
   const handleSubmit = () => {
@@ -121,6 +154,14 @@ function ExpenseForm() {
       })),
     [options, budget],
   )
+
+  const problems = useMemo(() => {
+    const list: string[] = []
+    if (name.trim() === '') list.push('Nama belum diisi')
+    if (!budget) list.push('Budget belum dipilih')
+    if (Number(amount) <= 0) list.push('Nominal harus lebih dari 0')
+    return list
+  }, [name, budget, amount])
 
   const selectedBalance = budget ? balanceOf(budget) : undefined
   const amountNumber = Number(amount)
@@ -278,6 +319,16 @@ function ExpenseForm() {
           </Paper>
         )}
 
+        {problems.length > 0 && (
+          <Stack gap={2}>
+            {problems.map((problem) => (
+              <Text key={problem} size="xs" c="orange">
+                ⚠ {problem}
+              </Text>
+            ))}
+          </Stack>
+        )}
+
         <Button
           onClick={handleSubmit}
           loading={createExpense.isPending || photoUploading}
@@ -286,7 +337,7 @@ function ExpenseForm() {
           size="md"
           mt="xs"
         >
-          Save
+          Simpan
         </Button>
       </Stack>
     </Paper>

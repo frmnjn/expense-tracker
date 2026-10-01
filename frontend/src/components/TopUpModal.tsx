@@ -72,7 +72,7 @@ function TopUpModal({
           size="md"
         />
         <TextInput
-          label="Description (opsional)"
+          label="Deskripsi (opsional)"
           placeholder="Catatan tambahan"
           value={description}
           onChange={(e) => setDescription(e.currentTarget.value)}

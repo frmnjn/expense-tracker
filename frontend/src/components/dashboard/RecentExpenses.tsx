@@ -23,7 +23,7 @@ export function RecentExpenses({
 
   return (
     <DashboardSection
-      title="Recent Expenses"
+      title="Pengeluaran Terakhir"
       subtitle="Pengeluaran terakhir"
       action={
         <Anchor component={Link} to="/riwayat" size="sm">

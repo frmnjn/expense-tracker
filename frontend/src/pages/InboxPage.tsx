@@ -9,11 +9,12 @@ import {
   Select,
   Stack,
   Text,
-  Title,
 } from '@mantine/core'
+import { IconMail } from '@tabler/icons-react'
 import dayjs from 'dayjs'
 import { useNavigate } from 'react-router-dom'
 import { useDiscardEmail, useEmailImports, usePollEmails, useRetryEmailImport } from '../hooks/useEmailImports'
+import { PageHeader } from '../components/PageHeader'
 import { AppPagination } from '../components/AppPagination'
 import ImportEmailModal from '../components/ImportEmailModal'
 import EmailRincianModal from '../components/EmailRincianModal'
@@ -80,17 +81,12 @@ function InboxPage() {
   return (
     <Container size="sm" px="md" py="lg">
       <Stack gap="lg">
-        <div>
-          <Text size="sm" c="blue" fw={700} mb={4}>
-            EMAIL TRANSACTIONS
-          </Text>
-          <Title order={1} size="clamp(1.5rem, 5vw, 2rem)">
-            Inbox Email
-          </Title>
-          <Text size="sm" c="dimmed" mt={5}>
-            Transaksi dari email notifikasi bank. Periksa lalu import menjadi pengeluaran.
-          </Text>
-        </div>
+        <PageHeader
+          eyebrow="Transaksi Email"
+          title="Inbox Email"
+          subtitle="Transaksi dari email notifikasi bank. Periksa lalu impor menjadi pengeluaran."
+          titleSize="clamp(1.5rem, 5vw, 2rem)"
+        />
 
         <Group grow align="flex-end">
           <Select
@@ -101,7 +97,7 @@ function InboxPage() {
             size="sm"
           />
           <Button variant="light" onClick={handlePoll} loading={poll.isPending}>
-            Refresh
+            Segarkan
           </Button>
         </Group>
 
@@ -112,10 +108,10 @@ function InboxPage() {
         ) : imports.length === 0 ? (
           <Paper withBorder p="xl" radius="md">
             <Stack align="center" gap={4}>
-              <Text fz={40}>✉️</Text>
+              <IconMail size={40} aria-hidden />
               <Text fw={600}>Tidak ada transaksi email</Text>
               <Text size="sm" c="dimmed" ta="center">
-                Tekan Refresh untuk mengambil email terbaru dari inbox.
+                Tekan Segarkan untuk mengambil email terbaru dari inbox.
               </Text>
             </Stack>
           </Paper>
@@ -180,7 +176,7 @@ function InboxPage() {
                               Buang
                             </Button>
                             <Button size="xs" onClick={() => setImporting(item)}>
-                              Import
+                              Impor
                             </Button>
                           </Group>
                         )}

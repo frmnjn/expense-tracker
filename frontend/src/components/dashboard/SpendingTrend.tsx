@@ -25,7 +25,7 @@ export function SpendingTrend({
   const max = Math.max(...periods.map((p) => p.total), 1)
 
   return (
-    <DashboardSection title="Spending Trend" subtitle="3 bulan terakhir">
+    <DashboardSection title="Tren Pengeluaran" subtitle="3 bulan terakhir">
       {isLoading ? (
         <Stack gap="sm">
           <Skeleton h={CHART_HEIGHT} />
@@ -40,7 +40,15 @@ export function SpendingTrend({
           Belum ada data tren.
         </Text>
       ) : (
-        <Group align="flex-end" gap="sm" wrap="nowrap">
+        <Group
+          align="flex-end"
+          gap="sm"
+          wrap="nowrap"
+          role="img"
+          aria-label={`Tren pengeluaran: ${periods
+            .map((p) => `${shortLabel(p.period)} ${formatCurrency(p.total)}`)
+            .join(', ')}`}
+        >
           {periods.map((p) => {
             const isSelected = p.period === selectedPeriod
             const height = Math.max(Math.round((p.total / max) * CHART_HEIGHT), p.total > 0 ? 6 : 0)
@@ -56,11 +64,11 @@ export function SpendingTrend({
                   <Box
                     w={BAR_WIDTH}
                     h={height}
-                    bg={isSelected ? 'blue.7' : 'blue.4'}
+                    bg={isSelected ? 'brand.7' : 'brand.3'}
                     style={{ borderRadius: 6, transition: 'height .3s ease' }}
                   />
                 </div>
-                <Text size="xs" fw={isSelected ? 700 : 500} c={isSelected ? 'blue.7' : 'dimmed'}>
+                <Text size="xs" fw={isSelected ? 700 : 500} c={isSelected ? 'brand.7' : 'dimmed'}>
                   {shortLabel(p.period)}
                 </Text>
                 <Text size="xs" ff="monospace" c={isSelected ? undefined : 'dimmed'} truncate>

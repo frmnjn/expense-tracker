@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Container, Group, Select, SimpleGrid, Stack, Text, Title } from '@mantine/core'
+import { Container, Select, SimpleGrid, Stack } from '@mantine/core'
+import { PageHeader } from '../components/PageHeader'
 import { useExpenses, usePeriods, useSummary, useTrend } from '../hooks/useExpenses'
 import { useOptions } from '../hooks/useOptions'
 import TopUpModal from '../components/TopUpModal'
@@ -91,29 +92,23 @@ function DashboardPage() {
   return (
     <Container size="lg" px={{ base: 'md', sm: 'md' }} py={{ base: 'md', sm: 'md' }} pb={{ base: 88, sm: 'md' }}>
       <Stack gap="xl">
-        <Group justify="space-between" align="flex-end">
-          <div>
-            <Text size="sm" c="blue" fw={700} mb={4}>
-              OVERVIEW
-            </Text>
-            <Title order={1} size="clamp(1.65rem, 5vw, 2.1rem)">
-              Dashboard
-            </Title>
-            <Text c="dimmed" mt={5}>
-              Ringkasan keuangan dan budget kamu.
-            </Text>
-          </div>
-          <Select
-            w={{ base: 150, sm: 190 }}
-            placeholder={periodsLoading ? 'Memuat...' : 'Pilih periode'}
-            data={periods}
-            value={period}
-            onChange={setPeriod}
-            searchable
-            size="sm"
-            aria-label="Periode"
-          />
-        </Group>
+        <PageHeader
+          eyebrow="Ringkasan"
+          title="Dashboard"
+          subtitle="Ringkasan keuangan dan budget kamu."
+          right={
+            <Select
+              w={{ base: 150, sm: 190 }}
+              placeholder={periodsLoading ? 'Memuat...' : 'Pilih periode'}
+              data={periods}
+              value={period}
+              onChange={setPeriod}
+              searchable
+              size="sm"
+              aria-label="Periode"
+            />
+          }
+        />
 
         <SpendingSummary
           total={summary?.total ?? 0}

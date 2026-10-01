@@ -10,6 +10,16 @@ import {
   Stack,
   Text,
 } from '@mantine/core'
+import {
+  IconAlertTriangle,
+  IconClipboardList,
+  IconDots,
+  IconInfoCircle,
+  IconPencil,
+  IconPlus,
+  IconTag,
+  IconTrash,
+} from '@tabler/icons-react'
 import { formatCurrency } from '../../utils/currency'
 import type { BudgetSummary } from '../../types/expense'
 import { DashboardSection } from './DashboardSection'
@@ -57,7 +67,7 @@ export function BudgetHealth({
 
   return (
     <DashboardSection
-      title="Budget Health"
+      title="Kesehatan Budget"
       subtitle={`${budgets.length} budget aktif`}
       action={
         <Button size="sm" radius="md" onClick={onAddBudget}>
@@ -93,9 +103,7 @@ export function BudgetHealth({
                   <div style={{ minWidth: 0, flex: 1 }}>
                     <Group gap={6} wrap="nowrap">
                       {warning && (
-                        <Text c={negative ? 'red' : 'orange'} aria-hidden>
-                          ⚠️
-                        </Text>
+                        <IconAlertTriangle size={15} color={negative ? 'var(--mantine-color-red-6)' : 'var(--mantine-color-orange-6)'} aria-hidden />
                       )}
                       <Text fw={600} truncate>
                         {b.name}
@@ -106,11 +114,11 @@ export function BudgetHealth({
                             <ActionIcon
                               size="xs"
                               variant="subtle"
-                              color="blue"
+                              color="brand"
                               aria-label={`Deskripsi ${b.name}`}
                               style={{ flexShrink: 0 }}
                             >
-                              ⓘ
+                              <IconInfoCircle size={14} />
                             </ActionIcon>
                           </Popover.Target>
                           <Popover.Dropdown>
@@ -134,24 +142,24 @@ export function BudgetHealth({
                   <Menu shadow="md" width={200} position="bottom-end">
                     <Menu.Target>
                       <ActionIcon variant="subtle" color="gray" aria-label={`Menu ${b.name}`}>
-                        ⋯
+                        <IconDots size={18} />
                       </ActionIcon>
                     </Menu.Target>
                     <Menu.Dropdown>
-                      <Menu.Item leftSection="+" onClick={() => onTopUp(b.name)}>
+                      <Menu.Item leftSection={<IconPlus size={16} />} onClick={() => onTopUp(b.name)}>
                         Top-up
                       </Menu.Item>
-                      <Menu.Item leftSection="📋" onClick={() => onHistory(b.name)}>
+                      <Menu.Item leftSection={<IconClipboardList size={16} />} onClick={() => onHistory(b.name)}>
                         Riwayat top-up
                       </Menu.Item>
-                      <Menu.Item leftSection="🏷" onClick={() => onManageCategories(b.name)}>
-                        Kelola Category
+                      <Menu.Item leftSection={<IconTag size={16} />} onClick={() => onManageCategories(b.name)}>
+                        Kelola Kategori
                       </Menu.Item>
-                      <Menu.Item leftSection="✎" onClick={() => onEdit({ name: b.name, balance: b.balance, alertThreshold: b.alertThreshold, description: b.description })}>
-                        Edit budget
+                      <Menu.Item leftSection={<IconPencil size={16} />} onClick={() => onEdit({ name: b.name, balance: b.balance, alertThreshold: b.alertThreshold, description: b.description })}>
+                        Edit Budget
                       </Menu.Item>
                       <Menu.Divider />
-                      <Menu.Item color="red" leftSection="🗑" onClick={() => onDelete(b.name)}>
+                      <Menu.Item color="red" leftSection={<IconTrash size={16} />} onClick={() => onDelete(b.name)}>
                         Hapus
                       </Menu.Item>
                     </Menu.Dropdown>

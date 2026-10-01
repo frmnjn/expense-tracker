@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Alert, Button, Group, Modal, NumberInput, Select, Stack, Text, TextInput } from '@mantine/core'
 import { DateTimePicker } from '@mantine/dates'
 import dayjs from 'dayjs'
@@ -41,6 +41,15 @@ function ImportEmailModal({ item, onClose }: { item: EmailImport; onClose: () =>
 
   const submitDisabled = !name.trim() || !budget || Number(amount) <= 0 || !dateTime || importMutation.isPending
 
+  const problems = useMemo(() => {
+    const list: string[] = []
+    if (!name.trim()) list.push('Nama belum diisi')
+    if (!budget) list.push('Budget belum dipilih')
+    if (Number(amount) <= 0) list.push('Nominal harus lebih dari 0')
+    if (!dateTime) list.push('Waktu belum diisi')
+    return list
+  }, [name, budget, amount, dateTime])
+
   const submit = (force: boolean) => {
     const request: ExpenseRequest = {
       dateTime: dayjs(dateTime).format('YYYY-MM-DD HH:mm'),
@@ -77,14 +86,14 @@ function ImportEmailModal({ item, onClose }: { item: EmailImport; onClose: () =>
             {duplicateMessage}
           </Alert>
           <Text size="sm" c="dimmed">
-            Nominal sama bisa saja transaksi berbeda. Pilih "Tetap Import" bila memang transaksi baru.
+            Nominal sama bisa saja transaksi berbeda. Pilih "Tetap Impor" bila memang transaksi baru.
           </Text>
           <Group justify="flex-end" mt="md">
             <Button variant="default" onClick={onClose}>
               Batal
             </Button>
             <Button color="orange" onClick={() => submit(true)} loading={importMutation.isPending}>
-              Tetap Import
+              Tetap Impor
             </Button>
           </Group>
         </Stack>
@@ -93,7 +102,7 @@ function ImportEmailModal({ item, onClose }: { item: EmailImport; onClose: () =>
   }
 
   return (
-    <Modal opened onClose={onClose} title="Import Transaksi" centered>
+    <Modal opened onClose={onClose} title="Impor Transaksi" centered>
       <Stack>
         <Text size="xs" c="dimmed">
           {item.merchant ?? item.subject} · {formatCurrency(item.amount ?? 0)}
@@ -159,12 +168,21 @@ function ImportEmailModal({ item, onClose }: { item: EmailImport; onClose: () =>
           maxLength={255}
           size="md"
         />
+        {problems.length > 0 && (
+          <Stack gap={2}>
+            {problems.map((problem) => (
+              <Text key={problem} size="xs" c="orange">
+                ⚠ {problem}
+              </Text>
+            ))}
+          </Stack>
+        )}
         <Group justify="flex-end" mt="md">
           <Button variant="default" onClick={onClose}>
             Batal
           </Button>
           <Button onClick={() => submit(false)} loading={importMutation.isPending} disabled={submitDisabled}>
-            Import
+            Impor
           </Button>
         </Group>
       </Stack>
