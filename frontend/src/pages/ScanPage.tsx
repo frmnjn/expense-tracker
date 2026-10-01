@@ -12,14 +12,16 @@ import {
   SimpleGrid,
   Stack,
   Text,
-  Title,
 } from '@mantine/core'
 import { useMediaQuery } from '@mantine/hooks'
+import { IconCamera, IconFileTypePdf, IconPhoto, IconReceipt } from '@tabler/icons-react'
 import dayjs from 'dayjs'
 import { useScanInvoices, useUploadInvoice, useRetryAnalysis } from '../hooks/useScan'
 import { usePeriods } from '../hooks/useExpenses'
 import { getInvoicePhotoUrl } from '../services/expense'
 import { getErrorMessage } from '../utils/error'
+import { toUploadableImage } from '../utils/image'
+import { PageHeader } from '../components/PageHeader'
 import { InvoiceCard } from '../components/InvoiceCard'
 import ReviewModal from '../components/ReviewModal'
 import DeleteInvoiceModal from '../components/DeleteInvoiceModal'
@@ -85,10 +87,17 @@ function ScanPage() {
     return sorted
   }, [data, statusFilter, sortBy])
 
-  const pick = (file: File | null) => {
+  const pick = async (file: File | null) => {
     if (!file) return
+    let prepared: File
+    try {
+      prepared = await toUploadableImage(file)
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Gagal memproses gambar', { title: 'Gagal' })
+      return
+    }
     upload.mutate(
-      { file, dateTime: nowDate },
+      { file: prepared, dateTime: nowDate },
       {
         onError: (error) => toast.error(getErrorMessage(error), { title: 'Gagal upload' }),
       },
@@ -104,17 +113,12 @@ function ScanPage() {
   return (
     <Container size="sm" px="md" py="lg">
       <Stack gap="lg">
-        <div>
-          <Text size="sm" c="blue" fw={700} mb={4}>
-            AI RECEIPT SCANNER
-          </Text>
-          <Title order={1} size="clamp(1.5rem, 5vw, 2rem)">
-            Scan Struk dengan AI
-          </Title>
-          <Text size="sm" c="dimmed" mt={5}>
-            Upload foto atau PDF struk, lalu biarkan AI membaca detail pengeluaran.
-          </Text>
-        </div>
+        <PageHeader
+          eyebrow="Pemindai Struk AI"
+          title="Scan Struk dengan AI"
+          subtitle="Unggah foto atau PDF struk, lalu biarkan AI membaca detail pengeluaran."
+          titleSize="clamp(1.5rem, 5vw, 2rem)"
+        />
 
         <Stack>
           <Text size="sm" c="dimmed">
@@ -122,18 +126,18 @@ function ScanPage() {
           </Text>
 
           <Group grow={isMobile}>
-            <Button fullWidth onClick={() => cameraRef.current?.click()} disabled={upload.isPending}>
-              📷 Ambil Foto
+            <Button fullWidth leftSection={<IconCamera size={18} />} onClick={() => cameraRef.current?.click()} disabled={upload.isPending}>
+              Ambil Foto
             </Button>
-            <Button fullWidth variant="light" onClick={() => galleryRef.current?.click()} disabled={upload.isPending}>
-              🖼 Galeri / PDF
+            <Button fullWidth variant="light" leftSection={<IconPhoto size={18} />} onClick={() => galleryRef.current?.click()} disabled={upload.isPending}>
+              Galeri / PDF
             </Button>
           </Group>
 
           {upload.isPending && (
             <Paper withBorder p="sm" radius="md">
               <Group justify="space-between" mb={4}>
-                <Text size="sm">Mengupload...</Text>
+                <Text size="sm">Mengunggah...</Text>
                 <Text size="sm" c="dimmed">
                   {upload.progress}%
                 </Text>
@@ -188,10 +192,10 @@ function ScanPage() {
           ) : invoices.length === 0 ? (
             <Paper withBorder p="xl" radius="md">
               <Stack align="center" gap={4}>
-                <Text fz={40}>🧾</Text>
+                <IconReceipt size={40} aria-hidden />
                 <Text fw={600}>Belum ada struk</Text>
                 <Text size="sm" c="dimmed" ta="center">
-                  Upload foto atau PDF struk di periode ini untuk mulai dianalisis AI.
+                  Unggah foto atau PDF struk di periode ini untuk mulai dianalisis AI.
                 </Text>
               </Stack>
             </Paper>
@@ -234,14 +238,14 @@ function ScanPage() {
         accept="image/*"
         capture="environment"
         style={{ display: 'none' }}
-        onChange={(e) => pick(e.target.files?.[0] ?? null)}
+        onChange={(e) => void pick(e.target.files?.[0] ?? null)}
       />
       <input
         ref={galleryRef}
         type="file"
         accept="image/*,application/pdf"
         style={{ display: 'none' }}
-        onChange={(e) => pick(e.target.files?.[0] ?? null)}
+        onChange={(e) => void pick(e.target.files?.[0] ?? null)}
       />
 
       {reviewId && (
@@ -272,7 +276,7 @@ function ScanPage() {
         {viewingInvoice &&
           (viewingInvoice.type === 'pdf' ? (
             <Stack align="center" gap="sm">
-              <Text fz={48}>📄</Text>
+              <IconFileTypePdf size={48} aria-hidden />
               <Button component="a" href={getInvoicePhotoUrl(viewingInvoice.id)} target="_blank" variant="light">
                 Buka PDF
               </Button>

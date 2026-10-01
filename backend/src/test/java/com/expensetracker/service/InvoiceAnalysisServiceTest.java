@@ -50,7 +50,8 @@ class InvoiceAnalysisServiceTest {
         String lastDeepSeekMime = null;
 
         TestService(InvoiceRepository repo, BudgetRepository budgetRepo) {
-            super(repo, budgetRepo, new ObjectMapper(), "key", "gemini-test", 600L, 50, 0L, "", 8000L,
+            super(repo, budgetRepo, new ObjectMapper(), new ExchangeRateService(new ObjectMapper(), "", 8000L),
+                    "key", "gemini-test", 600L, 50, 0L,
                     "dsk-key", "deepseek-flash", "https://api.deepseek.com", 120000L);
         }
 
@@ -81,7 +82,7 @@ class InvoiceAnalysisServiceTest {
         }
 
         @Override
-        Double fetchRate(String base, String date) {
+        protected Double fetchRate(String base, String date) {
             return rate;
         }
     }

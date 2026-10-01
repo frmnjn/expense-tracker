@@ -8,7 +8,7 @@ import {
   getTrend,
   updateExpense,
 } from '../services/expense'
-import type { ExpenseRequest } from '../types/expense'
+import type { ExpensesResponse, ExpenseRequest } from '../types/expense'
 
 export function usePeriods() {
   return useQuery({
@@ -63,9 +63,21 @@ export function useDeleteExpense() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (id: string) => deleteExpense(id),
-    onSuccess: () => {
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: ['expenses'] })
+      const snapshots = queryClient.getQueriesData<ExpensesResponse>({ queryKey: ['expenses'] })
+      queryClient.setQueriesData<ExpensesResponse>({ queryKey: ['expenses'] }, (old) =>
+        old ? { ...old, expenses: old.expenses.filter((e) => e.id !== id) } : old,
+      )
+      return { snapshots }
+    },
+    onError: (_error, _id, context) => {
+      context?.snapshots.forEach(([key, data]) => queryClient.setQueryData(key, data))
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ['expenses'] })
       queryClient.invalidateQueries({ queryKey: ['options'] })
+      queryClient.invalidateQueries({ queryKey: ['summary'] })
     },
   })
 }

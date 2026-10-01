@@ -1,9 +1,10 @@
 import { ActionIcon, Divider, Group, Paper, Stack, Text } from '@mantine/core'
+import { IconPhoto, IconPencil, IconTrash } from '@tabler/icons-react'
 import dayjs from 'dayjs'
 import { formatCurrency } from '../utils/currency'
 import type { Expense } from '../types/expense'
 
-const DATE_TIME_FORMAT = 'YYYY-MM-DD HH:mm'
+const DATE_TIME_FORMAT = 'DD MMM YYYY HH:mm'
 
 export function TransactionCard({
   expense,
@@ -43,14 +44,14 @@ export function TransactionCard({
       <Group justify="flex-end" gap={8}>
         {expense.hasPhoto && (
           <ActionIcon variant="light" color="gray" size="lg" onClick={() => onViewPhoto(expense)} aria-label="Lihat foto">
-            📷
+            <IconPhoto size={18} />
           </ActionIcon>
         )}
         <ActionIcon variant="light" color="blue" size="lg" disabled={!expense.id} onClick={() => onEdit(expense)} aria-label="Edit">
-          ✎
+          <IconPencil size={18} />
         </ActionIcon>
         <ActionIcon variant="light" color="red" size="lg" disabled={!expense.id} onClick={() => onDelete(expense)} aria-label="Hapus">
-          🗑
+          <IconTrash size={18} />
         </ActionIcon>
       </Group>
     </Paper>

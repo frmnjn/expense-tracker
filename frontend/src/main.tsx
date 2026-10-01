@@ -7,6 +7,7 @@ import '@mantine/core/styles.css'
 import '@mantine/dates/styles.css'
 import './index.css'
 import App from './App.tsx'
+import ErrorBoundary from './components/ErrorBoundary.tsx'
 import { ToastProvider } from './components/Toast.tsx'
 
 // Console on-device untuk debugging HP: buka app dengan ?debug di URL.
@@ -34,7 +35,9 @@ createRoot(document.getElementById('root')!).render(
       <MantineProvider colorSchemeManager={colorSchemeManager} defaultColorScheme="dark">
         <DatesProvider settings={{}}>
           <ToastProvider>
-            <App />
+            <ErrorBoundary>
+              <App />
+            </ErrorBoundary>
           </ToastProvider>
         </DatesProvider>
       </MantineProvider>

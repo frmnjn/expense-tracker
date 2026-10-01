@@ -41,7 +41,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
   const show = useCallback((tone: ToastTone, message: string, options?: ToastOptions) => {
     const id = ++idRef.current
-    setToasts((prev) => [...prev, { id, title: options?.title ?? DEFAULT_TITLE[tone], message, tone }])
+    setToasts((prev) =>
+      [...prev, { id, title: options?.title ?? DEFAULT_TITLE[tone], message, tone }].slice(-3),
+    )
     window.setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== id))
     }, 4000)
@@ -80,6 +82,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             withBorder
             p="sm"
             radius="md"
+            role={t.tone === 'error' ? 'alert' : 'status'}
+            aria-live={t.tone === 'error' ? 'assertive' : 'polite'}
             style={{ pointerEvents: 'auto', width: '100%', maxWidth: 360 }}
           >
             <Group justify="space-between" align="flex-start" wrap="nowrap">

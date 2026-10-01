@@ -1,9 +1,10 @@
 import { Fragment } from 'react'
 import { Link } from 'react-router-dom'
-import { Anchor, Divider, Group, Skeleton, Stack, Text } from '@mantine/core'
+import { Anchor, Button, Divider, Group, Skeleton, Stack, Text } from '@mantine/core'
 import dayjs from 'dayjs'
 import { formatCurrency } from '../../utils/currency'
 import type { Expense } from '../../types/expense'
+import { ErrorState } from '../ErrorState'
 import { DashboardSection } from './DashboardSection'
 
 const MAX_RECENT = 5
@@ -23,7 +24,7 @@ export function RecentExpenses({
 
   return (
     <DashboardSection
-      title="Recent Expenses"
+      title="Pengeluaran Terakhir"
       subtitle="Pengeluaran terakhir"
       action={
         <Anchor component={Link} to="/riwayat" size="sm">
@@ -42,13 +43,16 @@ export function RecentExpenses({
           <Skeleton h={28} />
         </Stack>
       ) : isError ? (
-        <Text size="sm" c="red">
-          Gagal memuat pengeluaran.
-        </Text>
+        <ErrorState message="Gagal memuat pengeluaran." />
       ) : recent.length === 0 ? (
-        <Text size="sm" c="dimmed" py="sm">
-          Belum ada pengeluaran pada periode ini.
-        </Text>
+        <Stack align="center" gap="sm" py="md">
+          <Text size="sm" c="dimmed" ta="center">
+            Belum ada pengeluaran pada periode ini.
+          </Text>
+          <Button component={Link} to="/catat" size="compact-sm" variant="light">
+            Catat pengeluaran
+          </Button>
+        </Stack>
       ) : (
         <Stack gap={0}>
           {recent.map((e, i) => (

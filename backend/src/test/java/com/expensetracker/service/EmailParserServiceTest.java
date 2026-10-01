@@ -10,6 +10,7 @@ import tools.jackson.databind.ObjectMapper;
 import java.time.LocalDateTime;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
@@ -20,7 +21,8 @@ class EmailParserServiceTest {
     private BudgetRepository budgetRepository;
 
     private EmailParserService parser() {
-        return new EmailParserService(budgetRepository, new ObjectMapper(), "", "gemini-3.5-flash-lite", 60, 2, 0,
+        return new EmailParserService(budgetRepository, new ObjectMapper(), new ExchangeRateService(new ObjectMapper(), "", 8000),
+                "", "gemini-3.5-flash-lite", 60, 2, 0,
                 "", "deepseek-flash", "https://api.deepseek.com", 120000);
     }
 
@@ -31,7 +33,8 @@ class EmailParserServiceTest {
         String deepseekResponse = null;
 
         TestService(String... responses) {
-            super(null, new ObjectMapper(), "test-key", "gemini-3.5-flash-lite", 60, 2, 0,
+            super(null, new ObjectMapper(), new ExchangeRateService(new ObjectMapper(), "", 8000),
+                    "test-key", "gemini-3.5-flash-lite", 60, 2, 0,
                     "dsk-key", "deepseek-flash", "https://api.deepseek.com", 120000);
             this.responses = responses;
         }
@@ -249,6 +252,85 @@ class EmailParserServiceTest {
     @Test
     void rejectsUnknownFormatWithoutAi() {
         assertThrows(ValidationException.class, () -> parser().parse("someone@example.com", "<p>hello</p>"));
+    }
+
+    /** ExchangeRateService palsu: 1 unit mata uang = Rp15.888. */
+    private static class StubRate extends ExchangeRateService {
+        StubRate() {
+            super(new ObjectMapper(), "", 8000);
+        }
+
+        @Override
+        public Double rateToIdr(String base, String date) {
+            return 15_888.0;
+        }
+    }
+
+    private static class RateTestService extends EmailParserService {
+        RateTestService() {
+            super(null, new ObjectMapper(), new StubRate(), "", "gemini-3.5-flash-lite", 60, 2, 0,
+                    "", "deepseek-flash", "https://api.deepseek.com", 120000);
+        }
+    }
+
+    @Test
+    void parsesMoneyWithCurrency() {
+        EmailParserService.Money idr = EmailParserService.parseMoney("Rp240.390,00");
+        assertEquals("IDR", idr.currency());
+        assertEquals(240_390.0, idr.amount().doubleValue());
+
+        EmailParserService.Money usd = EmailParserService.parseMoney("USD 0,45");
+        assertEquals("USD", usd.currency());
+        assertEquals(0.45, usd.amount().doubleValue());
+
+        EmailParserService.Money apple = EmailParserService.parseMoney("IDR 59.000");
+        assertEquals("IDR", apple.currency());
+        assertEquals(59_000.0, apple.amount().doubleValue());
+    }
+
+    @Test
+    void parsesBcaCreditCardUsdAndConvertsToIdr() {
+        String html = """
+                <html><body><table>
+                <tr><td>Merchant / ATM</td>
+                <td>:&nbsp;</td>
+                <td><span>LINODE . AKAMAI</span></td>
+                </tr>
+                <tr><td>Pada Tanggal</td>
+                <td>:</td>
+                <td><span>01-10-2026 12:45:28 WIB</span></td></tr>
+                <tr><td>Sejumlah</td>
+                <td>:</td>
+                <td><span>USD 0,45</span></td></tr>
+                </table></body></html>
+                """;
+        ParsedTransaction result = new RateTestService().parse(
+                "kartukreditbca@bca.co.id", "Credit Card Transaction Notification", html);
+
+        assertEquals("LINODE . AKAMAI", result.merchant());
+        assertEquals(7_150L, result.amount()); // 0.45 * 15888 = 7149.6 -> 7150
+        assertEquals("USD", result.currency());
+        assertEquals("2026-10-01", result.exchangeDate());
+        assertNotNull(result.conversionNote());
+        assertEquals("REGEX", result.parseMethod());
+    }
+
+    @Test
+    void parsesBcaCreditCardUsdWithoutRateFails() {
+        // parser() memakai ExchangeRateService tanpa fx-api -> rate null -> FAILED.
+        String html = """
+                <html><body><table>
+                <tr><td>Merchant / ATM</td>
+                <td>:&nbsp;</td>
+                <td><span>LINODE . AKAMAI</span></td>
+                </tr>
+                <tr><td>Sejumlah</td>
+                <td>:</td>
+                <td><span>USD 0,45</span></td></tr>
+                </table></body></html>
+                """;
+        assertThrows(ValidationException.class, () ->
+                parser().parse("kartukreditbca@bca.co.id", "Credit Card Transaction Notification", html));
     }
 
     @Test

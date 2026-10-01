@@ -1,6 +1,7 @@
 import { Box, Group, Skeleton, Stack, Text } from '@mantine/core'
 import { formatCurrency } from '../../utils/currency'
 import type { BudgetSummary, CategorySummary } from '../../types/expense'
+import { ErrorState } from '../ErrorState'
 import { DashboardSection } from './DashboardSection'
 
 export function SpendingByBudget({
@@ -62,7 +63,7 @@ export function SpendingByBudget({
   }
 
   return (
-    <DashboardSection title="Spending by Budget" subtitle="Ke mana uang mengalir">
+    <DashboardSection title="Pengeluaran per Budget" subtitle="Ke mana uang mengalir">
       {isLoading ? (
         <Stack gap="sm">
           <Skeleton h={28} />
@@ -70,9 +71,7 @@ export function SpendingByBudget({
           <Skeleton h={28} />
         </Stack>
       ) : isError ? (
-        <Text size="sm" c="red">
-          Gagal memuat pengeluaran per budget.
-        </Text>
+        <ErrorState message="Gagal memuat pengeluaran per budget." />
       ) : byBudget.length === 0 ? (
         <Text size="sm" c="dimmed" py="sm">
           Belum ada pengeluaran pada periode ini.

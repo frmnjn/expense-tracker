@@ -77,14 +77,14 @@ function ImportEmailModal({ item, onClose }: { item: EmailImport; onClose: () =>
             {duplicateMessage}
           </Alert>
           <Text size="sm" c="dimmed">
-            Nominal sama bisa saja transaksi berbeda. Pilih "Tetap Import" bila memang transaksi baru.
+            Nominal sama bisa saja transaksi berbeda. Pilih "Tetap Impor" bila memang transaksi baru.
           </Text>
           <Group justify="flex-end" mt="md">
             <Button variant="default" onClick={onClose}>
               Batal
             </Button>
             <Button color="orange" onClick={() => submit(true)} loading={importMutation.isPending}>
-              Tetap Import
+              Tetap Impor
             </Button>
           </Group>
         </Stack>
@@ -93,7 +93,7 @@ function ImportEmailModal({ item, onClose }: { item: EmailImport; onClose: () =>
   }
 
   return (
-    <Modal opened onClose={onClose} title="Import Transaksi" centered>
+    <Modal opened onClose={onClose} title="Impor Transaksi" centered>
       <Stack>
         <Text size="xs" c="dimmed">
           {item.merchant ?? item.subject} · {formatCurrency(item.amount ?? 0)}
@@ -164,7 +164,7 @@ function ImportEmailModal({ item, onClose }: { item: EmailImport; onClose: () =>
             Batal
           </Button>
           <Button onClick={() => submit(false)} loading={importMutation.isPending} disabled={submitDisabled}>
-            Import
+            Impor
           </Button>
         </Group>
       </Stack>

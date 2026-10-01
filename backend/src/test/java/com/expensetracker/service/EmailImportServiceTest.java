@@ -138,28 +138,28 @@ class EmailImportServiceTest {
     void retryFailedBecomesPendingReview() {
         when(emailImportRepository.findById("e1")).thenReturn(importRow("FAILED"));
         when(emailInboxService.fetchByMessageId("<msg-1@danamon>"))
-                .thenReturn(new FetchedEmail("dbank.app@danamon.co.id", "<p>qris</p>"));
-        when(emailParserService.parse(anyString(), anyString())).thenReturn(new ParsedTransaction(
+                .thenReturn(new FetchedEmail("dbank.app@danamon.co.id", "Notifikasi Transaksi", "<p>qris</p>"));
+        when(emailParserService.parse(anyString(), anyString(), anyString())).thenReturn(new ParsedTransaction(
                 "TOTAL BUAH SEGAR", 57_500L, LocalDateTime.of(2026, 9, 20, 19, 56), "Belanja", "AI"));
         when(merchantDiscardRule.shouldDiscard("TOTAL BUAH SEGAR")).thenReturn(false);
 
         service.retry("e1");
 
         verify(emailImportRepository).updateParsed(eq("e1"), any(), eq("TOTAL BUAH SEGAR"), eq(57_500L),
-                eq("Belanja"), isNull(), eq("AI"), eq("PENDING_REVIEW"), isNull());
+                eq("Notifikasi Transaksi"), eq("Belanja"), isNull(), eq("AI"), eq("PENDING_REVIEW"), isNull());
     }
 
     @Test
     void retryFailedDiscardedWhenNotExpense() {
         when(emailImportRepository.findById("e1")).thenReturn(importRow("FAILED"));
         when(emailInboxService.fetchByMessageId(anyString()))
-                .thenReturn(new FetchedEmail("dbank.app@danamon.co.id", "<p>promo</p>"));
-        when(emailParserService.parse(anyString(), anyString()))
+                .thenReturn(new FetchedEmail("dbank.app@danamon.co.id", "Promo", "<p>promo</p>"));
+        when(emailParserService.parse(anyString(), anyString(), anyString()))
                 .thenThrow(new NotExpenseException("Bukan transaksi pengeluaran"));
 
         service.retry("e1");
 
-        verify(emailImportRepository).updateParsed(eq("e1"), isNull(), isNull(), isNull(), isNull(), isNull(),
+        verify(emailImportRepository).updateParsed(eq("e1"), isNull(), isNull(), isNull(), isNull(), isNull(), isNull(),
                 eq("AI"), eq("DISCARDED"), eq("Bukan transaksi pengeluaran"));
     }
 
@@ -167,15 +167,16 @@ class EmailImportServiceTest {
     void retryFailedDiscardedByMerchantRule() {
         when(emailImportRepository.findById("e1")).thenReturn(importRow("FAILED"));
         when(emailInboxService.fetchByMessageId(anyString()))
-                .thenReturn(new FetchedEmail("KartuKreditBCA@klikbca.com", "<p>superindo</p>"));
-        when(emailParserService.parse(anyString(), anyString())).thenReturn(new ParsedTransaction(
+                .thenReturn(new FetchedEmail("KartuKreditBCA@klikbca.com", "Credit Card Transaction Notification", "<p>superindo</p>"));
+        when(emailParserService.parse(anyString(), anyString(), anyString())).thenReturn(new ParsedTransaction(
                 "SUPERINDO CNE", 85_490L, LocalDateTime.of(2026, 9, 20, 12, 0), null, "REGEX"));
         when(merchantDiscardRule.shouldDiscard("SUPERINDO CNE")).thenReturn(true);
 
         service.retry("e1");
 
         verify(emailImportRepository).updateParsed(eq("e1"), any(), eq("SUPERINDO CNE"), eq(85_490L),
-                isNull(), isNull(), eq("REGEX"), eq("DISCARDED"), eq("Auto-discard: merchant SUPERINDO CNE"));
+                eq("Credit Card Transaction Notification"), isNull(), isNull(), eq("REGEX"), eq("DISCARDED"),
+                eq("Auto-discard: merchant SUPERINDO CNE"));
     }
 
     @Test

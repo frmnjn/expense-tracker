@@ -1,5 +1,6 @@
-import { Group, Paper, Skeleton, Text } from '@mantine/core'
+import { Box, Group, Paper, Skeleton, Text } from '@mantine/core'
 import { formatCurrency } from '../../utils/currency'
+import { ErrorState } from '../ErrorState'
 
 export function SpendingSummary({
   total,
@@ -18,7 +19,7 @@ export function SpendingSummary({
 }) {
   if (!hasPeriod || isLoading || isError) {
     return (
-      <Paper withBorder p={{ base: 'md', sm: 'lg' }} radius="lg" className="hero-card">
+      <Paper withBorder p={{ base: 'md', sm: 'lg' }} radius="lg">
         <Text size="sm" c="dimmed" fw={600}>
           Pengeluaran
         </Text>
@@ -28,9 +29,9 @@ export function SpendingSummary({
             <Skeleton h={14} mt="sm" w="35%" />
           </>
         ) : isError ? (
-          <Text size="sm" c="red" mt="sm">
-            Gagal memuat ringkasan pengeluaran.
-          </Text>
+          <Box mt="sm">
+            <ErrorState message="Gagal memuat ringkasan pengeluaran." />
+          </Box>
         ) : (
           <Text size="sm" c="dimmed" mt="sm">
             Pilih periode untuk melihat ringkasan.
@@ -46,7 +47,7 @@ export function SpendingSummary({
   const goingDown = total < (prev ?? 0)
 
   return (
-    <Paper withBorder p={{ base: 'md', sm: 'lg' }} radius="lg" className="hero-card">
+    <Paper withBorder p={{ base: 'md', sm: 'lg' }} radius="lg">
       <Text size="sm" c="dimmed" fw={600}>
         Pengeluaran
       </Text>

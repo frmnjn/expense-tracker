@@ -11,6 +11,8 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpHeaders;
@@ -43,8 +45,17 @@ public class EmailParserService {
 
     private static final Pattern AMOUNT = Pattern.compile("[-0-9.,]+");
 
+    /** Token mata uang yang dikenali pada nilai nominal email. */
+    private static final Pattern CURRENCY = Pattern.compile(
+            "(RP|IDR|USD|SGD|EUR|JPY|MYR|AUD|GBP|CNY|HKD|KRW|THB|PHP|INR|SAR|AED|NZD|CAD|CHF|VND)");
+
+    /** Nominal dalam mata uang aslinya (belum dikonversi ke IDR). */
+    record Money(String currency, BigDecimal amount) {
+    }
+
     private final BudgetRepository budgetRepository;
     private final ObjectMapper objectMapper;
+    private final ExchangeRateService exchangeRateService;
     private final HttpClient httpClient;
     private final String apiKey;
     private final String model;
@@ -58,6 +69,7 @@ public class EmailParserService {
 
     public EmailParserService(BudgetRepository budgetRepository,
                               ObjectMapper objectMapper,
+                              ExchangeRateService exchangeRateService,
                               @Value("${ai.gemini-api-key:}") String apiKey,
                               @Value("${ai.model:gemini-3.5-flash-lite}") String model,
                               @Value("${ai.timeout:600}") long timeoutSeconds,
@@ -69,6 +81,7 @@ public class EmailParserService {
                               @Value("${ai.retry-after-cap-ms:120000}") long retryAfterCapMs) {
         this.budgetRepository = budgetRepository;
         this.objectMapper = objectMapper;
+        this.exchangeRateService = exchangeRateService;
         this.apiKey = apiKey == null ? "" : apiKey.trim();
         this.model = model == null || model.isBlank() ? "gemini-3.5-flash-lite" : model;
         this.timeout = Duration.ofSeconds(timeoutSeconds);
@@ -129,24 +142,19 @@ public class EmailParserService {
 
     /** BCA Credit Card Transaction Notification (regex existing dulu, V2 fallback). */
     private ParsedTransaction parseBcaCreditCard(String text) {
-        String merchant = field(text, "Merchant\\s*/\\s*ATM");
-        Long amount = parseAmount(field(text, "Sejumlah"));
-        if (merchant != null && amount != null && amount > 0) {
-            return new ParsedTransaction(merchant, amount,
-                    parseDateTime(field(text, "Pada\\s+Tanggal")), null, "REGEX");
-        }
-        return parseBcaCreditCardV2(text);
+        ParsedTransaction parsed = regexTransaction(
+                field(text, "Merchant\\s*/\\s*ATM"),
+                field(text, "Sejumlah"),
+                parseDateTime(field(text, "Pada\\s+Tanggal")));
+        return parsed != null ? parsed : parseBcaCreditCardV2(text);
     }
 
     /** Fallback: label & value terpisah baris (template HTML pretty-printed). */
     private ParsedTransaction parseBcaCreditCardV2(String text) {
-        String merchant = fieldMultiline(text, "Merchant\\s*/\\s*ATM");
-        Long amount = parseAmount(fieldMultiline(text, "Sejumlah"));
-        if (merchant == null || amount == null || amount <= 0) {
-            return null;
-        }
-        return new ParsedTransaction(merchant, amount,
-                parseDateTime(fieldMultiline(text, "Pada\\s+Tanggal")), null, "REGEX");
+        return regexTransaction(
+                fieldMultiline(text, "Merchant\\s*/\\s*ATM"),
+                fieldMultiline(text, "Sejumlah"),
+                parseDateTime(fieldMultiline(text, "Pada\\s+Tanggal")));
     }
 
     /** BCA Internet Transaction Journal / myBCA (regex existing dulu, V2 fallback). */
@@ -155,13 +163,11 @@ public class EmailParserService {
         if (status != null && !status.toLowerCase(Locale.ROOT).contains("berhasil")) {
             return null;
         }
-        String merchant = field(text, "Pembayaran\\s+Ke");
-        Long amount = parseAmount(field(text, "Total\\s+Bayar"));
-        if (merchant != null && amount != null && amount > 0) {
-            return new ParsedTransaction(merchant, amount,
-                    parseDateTime(field(text, "Tanggal\\s+Transaksi")), null, "REGEX");
-        }
-        return parseBcaInternetJournalV2(text);
+        ParsedTransaction parsed = regexTransaction(
+                field(text, "Pembayaran\\s+Ke"),
+                field(text, "Total\\s+Bayar"),
+                parseDateTime(field(text, "Tanggal\\s+Transaksi")));
+        return parsed != null ? parsed : parseBcaInternetJournalV2(text);
     }
 
     /** Fallback: label multiline + varian Transfer/VA (tanpa label "Pembayaran Ke"). */
@@ -175,15 +181,12 @@ public class EmailParserService {
                 fieldMultiline(text, "Nama\\s+Perusahaan\\s*/\\s*Produk"),
                 fieldMultiline(text, "Nama\\s+Penerima"),
                 fieldMultiline(text, "Rekening\\s+Tujuan"));
-        Long amount = parseAmount(firstNonNull(
+        String amount = firstNonNull(
                 fieldMultiline(text, "Total\\s+Bayar"),
                 fieldMultiline(text, "Nominal"),
-                fieldMultiline(text, "Total\\s+Tagihan")));
-        if (merchant == null || amount == null || amount <= 0) {
-            return null;
-        }
-        return new ParsedTransaction(merchant, amount,
-                parseDateTime(fieldMultiline(text, "Tanggal\\s+Transaksi")), null, "REGEX");
+                fieldMultiline(text, "Total\\s+Tagihan"));
+        return regexTransaction(merchant, amount,
+                parseDateTime(fieldMultiline(text, "Tanggal\\s+Transaksi")));
     }
 
     /** D-Bank PRO QRIS Berhasil. */
@@ -192,13 +195,10 @@ public class EmailParserService {
         if (status != null && !status.toLowerCase(Locale.ROOT).contains("berhasil")) {
             return null;
         }
-        String merchant = field(text, "Merchant\\s+Tujuan");
-        Long amount = parseAmount(field(text, "Nominal"));
-        if (merchant == null || amount == null || amount <= 0) {
-            return null;
-        }
-        return new ParsedTransaction(merchant, amount,
-                parseDateTime(field(text, "Tanggal\\s+Pembayaran")), null, "REGEX");
+        return regexTransaction(
+                field(text, "Merchant\\s+Tujuan"),
+                field(text, "Nominal"),
+                parseDateTime(field(text, "Tanggal\\s+Pembayaran")));
     }
 
     /** Ambil value dari baris "Label : value" (titik dua opsional). */
@@ -253,13 +253,10 @@ public class EmailParserService {
         if (status != null && !status.toLowerCase(Locale.ROOT).contains("success")) {
             return null;
         }
-        String merchant = fieldMultiline(text, "To\\b");
-        Long amount = parseAmount(fieldMultiline(text, "Amount"));
-        if (merchant == null || amount == null || amount <= 0) {
-            return null;
-        }
-        return new ParsedTransaction(merchant, amount,
-                parseDateTime(fieldMultiline(text, "Transaction\\s+Date")), null, "REGEX");
+        return regexTransaction(
+                fieldMultiline(text, "To\\b"),
+                fieldMultiline(text, "Amount"),
+                parseDateTime(fieldMultiline(text, "Transaction\\s+Date")));
     }
 
     private static String domainOf(String sender) {
@@ -299,6 +296,90 @@ public class EmailParserService {
         } catch (NumberFormatException e) {
             return null;
         }
+    }
+
+    /**
+     * Parse nominal yang bisa menyertakan kode mata uang (mis. "Rp240.390,00",
+     * "IDR 59.000", "USD 0,45"). Mengembalikan nilai desimal asli tanpa dibulatkan.
+     */
+    static Money parseMoney(String raw) {
+        if (raw == null) {
+            return null;
+        }
+        String currency = "IDR";
+        Matcher cm = CURRENCY.matcher(raw.toUpperCase(Locale.ROOT));
+        while (cm.find()) {
+            String code = cm.group(1);
+            currency = "RP".equals(code) ? "IDR" : code;
+        }
+
+        Matcher m = AMOUNT.matcher(raw);
+        StringBuilder sb = new StringBuilder();
+        boolean negative = false;
+        while (m.find()) {
+            for (char c : m.group().toCharArray()) {
+                if (c == '-' && sb.length() == 0) {
+                    negative = true;
+                } else if (Character.isDigit(c) || c == '.' || c == ',') {
+                    sb.append(c);
+                }
+            }
+        }
+        if (sb.length() == 0) {
+            return null;
+        }
+        try {
+            BigDecimal value = new BigDecimal(normalizeNumber(sb.toString()));
+            return new Money(currency, negative ? value.negate() : value);
+        } catch (NumberFormatException e) {
+            return null;
+        }
+    }
+
+    /** Bangun transaksi REGEX; null bila nominal tak terbaca (agar fallback ke AI). */
+    private ParsedTransaction regexTransaction(String merchant, String amountRaw, LocalDateTime date) {
+        if (merchant == null) {
+            return null;
+        }
+        Money money = parseMoney(amountRaw);
+        if (money == null || money.amount().signum() <= 0) {
+            return null;
+        }
+        return toIdrTransaction(merchant, money, date, null, null, "REGEX");
+    }
+
+    /**
+     * Finalisasi nominal: IDR langsung (bulat, null bila 0 agar fallback AI);
+     * non-IDR dikonversi pakai kurs tanggal transaksi. Bila kurs tak tersedia
+     * atau hasilnya bulat 0, lempar exception supaya baris ditandai FAILED.
+     */
+    private ParsedTransaction toIdrTransaction(String merchant, Money money, LocalDateTime date,
+                                               String budget, String category, String method) {
+        boolean fromAi = "AI".equals(method);
+        if ("IDR".equals(money.currency())) {
+            long amount = money.amount().setScale(0, RoundingMode.HALF_UP).longValue();
+            if (amount <= 0) {
+                if (fromAi) {
+                    throw new AiParseException("Nominal tidak terbaca");
+                }
+                return null;
+            }
+            return new ParsedTransaction(merchant, amount, date, budget, category, method);
+        }
+        String exchangeDate = ExchangeRateService.exchangeDateOf(date == null ? null : date.toString());
+        Double rate = exchangeRateService.rateToIdr(money.currency(), exchangeDate);
+        if (rate == null) {
+            String message = "Kurs " + money.currency() + " tidak tersedia untuk " + exchangeDate;
+            throw fromAi ? new AiParseException(message) : new ValidationException(message);
+        }
+        long idr = money.amount().multiply(BigDecimal.valueOf(rate))
+                .setScale(0, RoundingMode.HALF_UP).longValue();
+        if (idr <= 0) {
+            String message = "Nominal " + money.currency() + " terlalu kecil untuk dikonversi ke IDR";
+            throw fromAi ? new AiParseException(message) : new ValidationException(message);
+        }
+        return new ParsedTransaction(merchant, idr, date, budget, category, method,
+                money.currency(), money.amount().doubleValue(), rate, exchangeDate);
     }
 
     private static String normalizeNumber(String s) {
@@ -368,8 +449,8 @@ public class EmailParserService {
     }
 
     private ParsedTransaction parseWithAi(String text) {
+        String raw;
         try {
-            String raw;
             try {
                 raw = callGeminiWithRetry(text);
             } catch (RetryableException | IOException geminiFailure) {
@@ -377,31 +458,56 @@ public class EmailParserService {
                         geminiFailure.getMessage());
                 raw = callDeepSeekText(text);
             }
+        } catch (Exception e) {
+            LOGGER.warn("email AI call failed: {}", e.getMessage());
+            throw new AiParseException("Gagal memanggil AI: " + e.getMessage(), e);
+        }
+        try {
             JsonNode json = objectMapper.readTree(raw);
             boolean isExpense = json.path("isExpense").asBoolean(false);
             if (!isExpense) {
                 throw new NotExpenseException("Bukan transaksi pengeluaran");
             }
-            long amount = json.path("amount").asLong(0);
-            if (amount <= 0) {
-                throw new ValidationException("Nominal tidak terbaca");
-            }
             String merchant = json.path("merchant").asText("").trim();
             String budget = json.path("suggestedBudget").asText("").trim();
             String category = json.path("suggestedCategory").asText("").trim();
-            return new ParsedTransaction(
+            Money money = moneyFromAi(json.path("amount"), json.path("currency").asText(""));
+            if (money == null || money.amount().signum() <= 0) {
+                throw new AiParseException("Nominal tidak terbaca");
+            }
+            return toIdrTransaction(
                     merchant.isBlank() ? "Transaksi email" : merchant,
-                    amount,
+                    money,
                     parseDateTime(json.path("dateTime").asText("")),
                     budget.isBlank() ? null : budget,
                     category.isBlank() ? null : category,
                     "AI");
-        } catch (ValidationException e) {
+        } catch (NotExpenseException | AiParseException e) {
             throw e;
         } catch (Exception e) {
             LOGGER.warn("email AI parse failed: {}", e.getMessage());
-            throw new ValidationException("Gagal membaca email: " + e.getMessage());
+            throw new AiParseException("Gagal membaca email: " + e.getMessage(), e);
         }
+    }
+
+    /** Baca node amount dari AI yang bisa berupa number atau string berformat. */
+    private Money moneyFromAi(JsonNode amountNode, String currencyField) {
+        if (amountNode == null || amountNode.isMissingNode() || amountNode.isNull()) {
+            return null;
+        }
+        String currency = currencyField == null ? "" : currencyField.trim().toUpperCase(Locale.ROOT);
+        if (amountNode.isNumber()) {
+            BigDecimal value = BigDecimal.valueOf(amountNode.asDouble());
+            return new Money(currency.isEmpty() ? "IDR" : currency, value);
+        }
+        Money parsed = parseMoney(amountNode.asText(""));
+        if (parsed == null) {
+            return null;
+        }
+        if (!currency.isEmpty() && "IDR".equals(parsed.currency())) {
+            return new Money(currency, parsed.amount());
+        }
+        return parsed;
     }
 
     private String callGeminiWithRetry(String text) throws Exception {
@@ -545,10 +651,13 @@ public class EmailParserService {
                 + "Balas HANYA JSON dengan struktur:\n"
                 + "{\"isExpense\":<true bila ini pembayaran/pengeluaran, false bila bukan (mis. transfer masuk/refund)>,\n"
                 + "\"merchant\":\"nama merchant/tujuan\",\n"
-                + "\"amount\":<nominal integer dalam Rupiah tanpa desimal>,\n"
+                + "\"amount\":<nominal dalam MATA UANG ASLI transaksi, boleh desimal (jangan konversi ke IDR)>,\n"
+                + "\"currency\":\"kode mata uang transaksi (mis. IDR, USD); IDR bila tidak disebutkan\",\n"
                 + "\"dateTime\":\"waktu transaksi format YYYY-MM-DD HH:mm:ss\",\n"
                 + "\"suggestedBudget\":\"<nama budget paling cocok atau string kosong>\",\n"
                 + "\"suggestedCategory\":\"<nama category paling cocok atau string kosong>\"}\n"
+                + "JANGAN mengonversi nominal ke Rupiah — isi \"amount\" apa adanya dalam \"currency\" aslinya; "
+                + "sistem yang akan mengonversi.\n"
                 + "Daftar budget (induk) beserta category (sub) yang tersedia:\n" + budgetList + "\n"
                 + "Isi \"suggestedCategory\" dengan category milik budget yang dipilih; bila ragu isi string kosong "
                 + "(jangan menulis \"uncategorized\"). "
