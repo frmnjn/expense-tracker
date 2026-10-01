@@ -6,6 +6,7 @@ import {
   Divider,
   Group,
   Image,
+  Indicator,
   LoadingOverlay,
   Modal,
   NumberInput,
@@ -16,6 +17,7 @@ import {
   Text,
   TextInput,
   Title,
+  Tooltip,
 } from '@mantine/core'
 import { useMediaQuery } from '@mantine/hooks'
 import {
@@ -198,16 +200,26 @@ function HistoryPage() {
                 size="md"
                 style={{ flex: 1, minWidth: 0 }}
               />
-              <Button
-                size="md"
-                variant={hasActiveFilters ? 'filled' : 'light'}
-                color="blue"
-                leftSection={<IconAdjustmentsHorizontal size={16} />}
-                onClick={() => setFilterOpened(true)}
-                style={{ flexShrink: 0 }}
-              >
-                Filter & Urut{activeFilterCount > 0 ? ` (${activeFilterCount})` : ''}
-              </Button>
+              <Tooltip label="Filter & Urut">
+                <Indicator
+                  disabled={activeFilterCount === 0}
+                  label={activeFilterCount}
+                  size={16}
+                  offset={4}
+                  color="red"
+                >
+                  <ActionIcon
+                    size="lg"
+                    variant={hasActiveFilters ? 'filled' : 'light'}
+                    color="blue"
+                    onClick={() => setFilterOpened(true)}
+                    aria-label="Filter & Urut"
+                    style={{ flexShrink: 0 }}
+                  >
+                    <IconAdjustmentsHorizontal size={18} />
+                  </ActionIcon>
+                </Indicator>
+              </Tooltip>
             </Group>
 
             {hasActiveFilters && (
