@@ -19,7 +19,11 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.Properties;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
@@ -126,5 +130,50 @@ class EmailInboxServiceTest {
         verify(invoiceService, never()).createInvoiceForAi(anyString(), any(), any(byte[].class), anyString());
         verify(emailImportRepository, never()).insert(anyString(), anyString(), anyString(), anyString(), any(),
                 any(), any(), any(), anyString(), any(), any(), anyString(), anyString(), anyString());
+    }
+
+    @Test
+    void triggerPoll_shouldNotRunTwiceConcurrently() throws Exception {
+        CountDownLatch started = new CountDownLatch(1);
+        CountDownLatch release = new CountDownLatch(1);
+        EmailInboxService asyncService = new EmailInboxService(emailImportRepository, emailParserService,
+                merchantDiscardRule, invoiceService, invoiceAnalysisService, true, "imap.gmail.com", 993, "user",
+                "pass", "INBOX", "klikbca.com,bca.co.id", "superindo.co.id", 3, 50) {
+            @Override
+            public int poll() {
+                started.countDown();
+                try {
+                    release.await(5, TimeUnit.SECONDS);
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+                return 0;
+            }
+        };
+        try {
+            assertTrue(asyncService.triggerPoll());
+            assertTrue(started.await(5, TimeUnit.SECONDS));
+            assertTrue(asyncService.isPolling());
+            assertFalse(asyncService.triggerPoll());
+        } finally {
+            release.countDown();
+            asyncService.shutdownExecutor();
+        }
+        for (int i = 0; i < 50 && asyncService.isPolling(); i++) {
+            Thread.sleep(20);
+        }
+        assertFalse(asyncService.isPolling());
+    }
+
+    @Test
+    void triggerPoll_shouldReturnFalseWhenDisabled() {
+        EmailInboxService disabledService = new EmailInboxService(emailImportRepository, emailParserService,
+                merchantDiscardRule, invoiceService, invoiceAnalysisService, false, "imap.gmail.com", 993, "user",
+                "pass", "INBOX", "klikbca.com,bca.co.id", "superindo.co.id", 3, 50);
+        try {
+            assertFalse(disabledService.triggerPoll());
+        } finally {
+            disabledService.shutdownExecutor();
+        }
     }
 }

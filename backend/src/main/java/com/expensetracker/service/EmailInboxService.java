@@ -1,7 +1,9 @@
 package com.expensetracker.service;
 
+import com.expensetracker.config.MdcTask;
 import com.expensetracker.config.TraceIdFilter;
 import com.expensetracker.data.EmailImportRepository;
+import jakarta.annotation.PreDestroy;
 import jakarta.mail.Address;
 import jakarta.mail.Folder;
 import jakarta.mail.Message;
@@ -32,6 +34,9 @@ import java.util.Locale;
 import java.util.Properties;
 import java.util.Set;
 import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Membaca email notifikasi bank dari inbox via IMAP secara berkala (polling),
@@ -51,6 +56,8 @@ public class EmailInboxService {
     private final MerchantDiscardRule merchantDiscardRule;
     private final InvoiceService invoiceService;
     private final InvoiceAnalysisService invoiceAnalysisService;
+    private final ExecutorService executor = Executors.newSingleThreadExecutor();
+    private final AtomicBoolean polling = new AtomicBoolean(false);
 
     private final boolean enabled;
     private final String host;
@@ -108,10 +115,30 @@ public class EmailInboxService {
 
     @Scheduled(fixedDelayString = "${inbox.poll-ms:300000}", initialDelayString = "${inbox.poll-ms:300000}")
     public void scheduledPoll() {
-        if (!isEnabled()) {
-            return;
+        triggerPoll();
+    }
+
+    /**
+     * Jalankan poll di background. Mengembalikan true bila poll baru dimulai,
+     * false bila inbox tidak aktif atau poll lain sedang berjalan.
+     */
+    public boolean triggerPoll() {
+        if (!isEnabled() || !polling.compareAndSet(false, true)) {
+            return false;
         }
-        poll();
+        try {
+            executor.execute(MdcTask.wrap(() -> {
+                try {
+                    poll();
+                } finally {
+                    polling.set(false);
+                }
+            }));
+            return true;
+        } catch (RuntimeException e) {
+            polling.set(false);
+            throw e;
+        }
     }
 
     /** Ambil email baru dari inbox; mengembalikan jumlah email yang diproses. */
@@ -119,13 +146,27 @@ public class EmailInboxService {
         if (!isEnabled()) {
             return 0;
         }
-        String traceId = UUID.randomUUID().toString();
-        MDC.put(TraceIdFilter.MDC_TRACE_ID, traceId);
+        boolean generatedTraceId = false;
+        if (MDC.get(TraceIdFilter.MDC_TRACE_ID) == null) {
+            MDC.put(TraceIdFilter.MDC_TRACE_ID, UUID.randomUUID().toString());
+            generatedTraceId = true;
+        }
         try {
             return fetchAndStore();
         } finally {
-            MDC.remove(TraceIdFilter.MDC_TRACE_ID);
+            if (generatedTraceId) {
+                MDC.remove(TraceIdFilter.MDC_TRACE_ID);
+            }
         }
+    }
+
+    public boolean isPolling() {
+        return polling.get();
+    }
+
+    @PreDestroy
+    void shutdownExecutor() {
+        executor.shutdownNow();
     }
 
     /** Ambil ulang satu email dari IMAP berdasarkan Message-ID (untuk retry). */
