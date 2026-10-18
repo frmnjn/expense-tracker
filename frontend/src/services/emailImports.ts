@@ -36,7 +36,12 @@ export async function retryEmailImport(id: string): Promise<ApiResponse<void>> {
   return response.data
 }
 
-export async function pollEmails(): Promise<{ count: number }> {
-  const response = await apiClient.post<ApiResponse<{ count: number }>>('/email-imports/poll')
-  return response.data.data ?? { count: 0 }
+export async function pollEmails(): Promise<{ started: boolean }> {
+  const response = await apiClient.post<ApiResponse<{ started: boolean }>>('/email-imports/poll')
+  return response.data.data ?? { started: false }
+}
+
+export async function getPollStatus(): Promise<{ running: boolean }> {
+  const response = await apiClient.get<ApiResponse<{ running: boolean }>>('/email-imports/poll/status')
+  return response.data.data ?? { running: false }
 }

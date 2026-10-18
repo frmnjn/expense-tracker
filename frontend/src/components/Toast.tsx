@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useRef, useState } from 'react'
+import { createContext, useCallback, useContext, useMemo, useRef, useState } from 'react'
 import type { ReactNode } from 'react'
 import { ActionIcon, Group, Paper, Stack, Text } from '@mantine/core'
 
@@ -53,11 +53,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     setToasts((prev) => prev.filter((t) => t.id !== id))
   }, [])
 
-  const api: ToastApi = {
+  const api = useMemo<ToastApi>(() => ({
     success: (message, options) => show('success', message, options),
     error: (message, options) => show('error', message, options),
     warning: (message, options) => show('warning', message, options),
-  }
+  }), [show])
 
   return (
     <ToastContext.Provider value={api}>

@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { useQueryClient } from '@tanstack/react-query'
 import {
   ActionIcon,
   Badge,
@@ -15,6 +16,7 @@ import { IconMail, IconRefresh } from '@tabler/icons-react'
 import dayjs from 'dayjs'
 import { useNavigate } from 'react-router-dom'
 import { useDiscardEmail, useEmailImports, usePollEmails, useRetryEmailImport } from '../hooks/useEmailImports'
+import { getPollStatus } from '../services/emailImports'
 import { PageHeader } from '../components/PageHeader'
 import { AppPagination } from '../components/AppPagination'
 import ImportEmailModal from '../components/ImportEmailModal'
@@ -45,7 +47,9 @@ function InboxPage() {
   const [status, setStatus] = useState('ALL')
   const [importing, setImporting] = useState<EmailImport | null>(null)
   const [detail, setDetail] = useState<EmailImport | null>(null)
+  const [polling, setPolling] = useState(false)
   const navigate = useNavigate()
+  const queryClient = useQueryClient()
   const { data, isPending } = useEmailImports(status)
   const poll = usePollEmails()
   const discard = useDiscardEmail()
@@ -53,11 +57,47 @@ function InboxPage() {
   const toast = useToast()
   const imports = data?.imports ?? []
 
+  useEffect(() => {
+    if (!polling) return
+    let cancelled = false
+    let checking = false
+    let completed = false
+
+    const check = async () => {
+      if (checking) return
+      checking = true
+      try {
+        const { running } = await getPollStatus()
+        if (cancelled || running || completed) return
+        completed = true
+        setPolling(false)
+        queryClient.invalidateQueries({ queryKey: ['email-imports'] })
+        toast.success('Pengambilan email selesai', { title: 'Inbox diperbarui' })
+      } catch {
+        // abaikan; coba lagi pada interval berikutnya
+      } finally {
+        checking = false
+      }
+    }
+
+    const interval = setInterval(check, 2000)
+    const fallback = setTimeout(() => setPolling(false), 180_000)
+    check()
+    return () => {
+      cancelled = true
+      clearInterval(interval)
+      clearTimeout(fallback)
+    }
+  }, [polling, queryClient, toast])
+
   const handlePoll = () => {
     poll.mutate(undefined, {
       onSuccess: (result) => {
+        setPolling(true)
         toast.success(
-          result.count > 0 ? `${result.count} email diproses` : 'Tidak ada email baru',
+          result.started
+            ? 'Pengambilan email berjalan di latar belakang'
+            : 'Pengambilan email sedang berjalan',
           { title: 'Inbox diperbarui' },
         )
       },
@@ -103,11 +143,21 @@ function InboxPage() {
             size="lg"
             onClick={handlePoll}
             loading={poll.isPending}
+            disabled={polling}
             aria-label="Segarkan"
           >
             <IconRefresh size={18} />
           </ActionIcon>
         </Group>
+
+        {polling && (
+          <Group gap="xs">
+            <Loader size="xs" />
+            <Text size="sm" c="dimmed">
+              Memproses email...
+            </Text>
+          </Group>
+        )}
 
         {isPending ? (
           <Group justify="center" py="xl">
@@ -127,6 +177,7 @@ function InboxPage() {
                 leftSection={<IconRefresh size={16} />}
                 onClick={handlePoll}
                 loading={poll.isPending}
+                disabled={polling}
               >
                 Segarkan
               </Button>

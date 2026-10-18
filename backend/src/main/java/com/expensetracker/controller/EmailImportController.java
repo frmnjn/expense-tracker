@@ -102,14 +102,21 @@ public class EmailImportController {
         }
     }
 
+    @GetMapping("/email-imports/poll/status")
+    public ResponseEntity<ApiResponse> pollStatus() {
+        return ResponseEntity.ok(ApiResponse.ok(Map.of("running", emailInboxService.isPolling())));
+    }
+
     @PostMapping("/email-imports/poll")
     public ResponseEntity<ApiResponse> pollEmails() {
         try {
             if (!emailInboxService.isEnabled()) {
                 throw new ValidationException("Inbox email belum dikonfigurasi");
             }
-            int count = emailInboxService.poll();
-            return ResponseEntity.ok(ApiResponse.ok(Map.of("count", count)));
+            boolean started = emailInboxService.triggerPoll();
+            LOGGER.info("inbox poll triggered: started={}", started);
+            return ResponseEntity.status(HttpStatus.ACCEPTED)
+                    .body(ApiResponse.ok(Map.of("started", started)));
         } catch (ValidationException e) {
             LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error(e.getMessage()));
