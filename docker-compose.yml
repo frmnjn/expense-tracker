@@ -25,7 +25,7 @@ services:
   backend:
     image: ${BACKEND_IMAGE:-expense-tracker-backend-jvm:latest}
     restart: unless-stopped
-    mem_limit: 512m
+    mem_limit: 768m
     ports:
       - "8080:8080"
     env_file:
