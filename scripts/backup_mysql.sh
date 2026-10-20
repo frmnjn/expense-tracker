@@ -15,8 +15,8 @@
 #   BACKUP_DIR      (default /root/expense-tracker/backups)
 #   KEEP            (default 14, jumlah backup yang disimpan)
 #
-# Contoh cron (harian 03:00 WIB):
-#   0 20 * * * /root/expense-tracker/scripts/backup_mysql.sh >> /var/log/expense-backup.log 2>&1
+# Contoh cron (harian 03:00 WIB, host TZ Asia/Jakarta):
+#   0 3 * * * /root/expense-tracker/scripts/backup_mysql.sh >> /var/log/expense-backup.log 2>&1
 
 set -euo pipefail
 
