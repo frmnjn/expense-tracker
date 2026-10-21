@@ -96,6 +96,7 @@ Di produksi, microservice notifier dijalankan di **perangkat STB (Armbian)** yan
 
 ```bash
 git clone https://github.com/your-user/expense-tracker.git
+export STB_BIND_IP=<ip-wireguard-stb>
 cd expense-tracker
 # buat .env (SMTP + Resend fallback)
 docker compose -f docker-compose.stb.yml up -d --build
@@ -111,6 +112,7 @@ SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
 SMTP_USER=your-email@gmail.com
 SMTP_APP_PASSWORD=your-gmail-app-password
+NOTIFIER_TOKEN=<random-panjang>
 SMTP_FROM=your-email@gmail.com
 ```
 
