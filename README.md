@@ -16,7 +16,7 @@ Demo bersifat **read-only** (tidak bisa menambah/mengubah data), memakai data du
 
 ### Desktop
 
-Tampilan desktop memakai sidebar di kiri, konten lebar, dan tabel untuk daftar transaksi. Screenshot Dashboard di bawah ini memakai **long screenshot** agar seluruh kartu budget dan grafik tren terlihat.
+Tampilan desktop memakai sidebar di kiri, konten lebar, dan tabel untuk daftar transaksi. Screenshot Dashboard desktop dan mobile memakai **long screenshot** agar seluruh kartu budget, grafik tren, dan ringkasan bawah tidak terpotong.
 
 <p align="center">
   <img src="docs/screenshots/dashboard-desktop.jpg" alt="Dashboard desktop" width="100%" />
@@ -36,7 +36,7 @@ Tampilan desktop memakai sidebar di kiri, konten lebar, dan tabel untuk daftar t
 
 ### Mobile
 
-Tampilan mobile mengganti sidebar menjadi **bottom navigation**, form menjadi satu kolom, dan daftar transaksi berubah menjadi kartu agar tombol aksi tetap terlihat tanpa scroll horizontal.
+Tampilan mobile mengganti sidebar menjadi **bottom navigation**, form menjadi satu kolom, dan daftar transaksi berubah menjadi kartu agar tombol aksi tetap terlihat tanpa scroll horizontal. Screenshot Dashboard mobile juga memakai long screenshot sampai bagian paling bawah.
 
 | Dashboard | Catat | Riwayat |
 |---|---|---|

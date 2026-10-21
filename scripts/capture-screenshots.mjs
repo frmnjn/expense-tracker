@@ -18,6 +18,39 @@ await fs.mkdir(outDir, { recursive: true })
 const browser = await chromium.launch({ headless: true })
 const errors = []
 
+async function expandMobileLayout(page) {
+  await page.addStyleTag({
+    content: `
+      @media (max-width: 47.99em) {
+        html, body, #root { height: auto !important; min-height: 100% !important; overflow: visible !important; }
+        .app-shell {
+          display: flex !important;
+          flex-direction: column !important;
+          height: auto !important;
+          min-height: 100dvh !important;
+        }
+        .app-header { position: static !important; order: 0 !important; }
+        .app-shell .mantine-AppShell-main {
+          order: 1 !important;
+          height: auto !important;
+          min-height: 0 !important;
+          overflow: visible !important;
+        }
+        .app-navbar {
+          position: static !important;
+          order: 2 !important;
+          top: auto !important;
+          bottom: auto !important;
+          width: 100% !important;
+          height: auto !important;
+          min-height: 76px !important;
+        }
+      }
+    `,
+  })
+  await page.waitForTimeout(250)
+}
+
 async function capture(viewport, suffix, mobile) {
   const context = await browser.newContext({
     viewport,
@@ -37,11 +70,13 @@ async function capture(viewport, suffix, mobile) {
   for (const [name, path] of pages) {
     await page.goto(`${base}${path}`, { waitUntil: 'networkidle', timeout: 60000 })
     await page.waitForTimeout(1200)
+    const fullPage = ['dashboard', 'catat', 'inbox', 'scan'].includes(name)
+    if (mobile && fullPage) await expandMobileLayout(page)
     await page.screenshot({
       path: `${outDir}/${name}-${suffix}.jpg`,
       type: 'jpeg',
       quality: 84,
-      fullPage: ['dashboard', 'catat', 'inbox', 'scan'].includes(name),
+      fullPage,
     })
     console.log(`captured ${name}-${suffix}`)
   }
