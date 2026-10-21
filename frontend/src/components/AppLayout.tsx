@@ -1,5 +1,5 @@
 import { Suspense, useEffect, useRef } from 'react'
-import { AppShell, Box, Center, Group, Loader, Stack, Text, UnstyledButton } from '@mantine/core'
+import { AppShell, Badge, Box, Center, Group, Loader, Stack, Text, Tooltip, UnstyledButton } from '@mantine/core'
 import {
   IconHome,
   IconPlus,
@@ -14,6 +14,7 @@ import InstallButton from './InstallButton'
 import { OfflineBanner } from './OfflineBanner'
 import { PullToRefresh } from './PullToRefresh'
 import { useScrollMemory } from '../hooks/useScrollMemory'
+import { isDemoMode } from '../utils/demo'
 
 const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: IconHome },
@@ -61,6 +62,13 @@ function AppLayout() {
             <Text fw={800} hiddenFrom="sm" truncate style={{ minWidth: 0 }}>Expense Tracker</Text>
           </Group>
           <Group gap="xs" wrap="nowrap" style={{ flexShrink: 0 }}>
+            {isDemoMode && (
+              <Tooltip label="Ini cuma demo — data nggak bisa diubah.">
+                <Badge color="yellow" variant="light" size="sm" tt="uppercase">
+                  DEMO
+                </Badge>
+              </Tooltip>
+            )}
             <InstallButton />
             <ColorSchemeToggle />
           </Group>
