@@ -13,7 +13,7 @@
 
 set -euo pipefail
 
-STB_HOST="${STB_HOST:-10.0.0.4}"
+STB_HOST="${STB_HOST:?set STB_HOST (IP WireGuard STB)}"
 STB_DIR="${STB_DIR:-/opt/expense-tracker}"
 
 if ! ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 "root@${STB_HOST}" 'true' >/dev/null 2>&1; then

@@ -24,7 +24,7 @@
 
 set -euo pipefail
 
-VPS_HOST="${VPS_HOST:-example.com}"
+VPS_HOST="${VPS_HOST:?set VPS_HOST (hostname/IP VPS)}"
 VPS_DIR="${VPS_DIR:-/opt/expense-tracker}"
 IMAGE="${IMAGE:-expense-tracker-backend-jvm:latest}"
 TOTAL_MS=0
