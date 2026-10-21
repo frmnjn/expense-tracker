@@ -176,8 +176,8 @@ Build & deploy hanya dari PC lokal (butuh RAM ~7GB untuk build native).
 ```bash
 ./build-native.sh       # build image native lokal (~6 menit)
 ./deploy-native.sh      # deploy penuh: export native image -> scp -> VPS git pull -> up -d -> prune
-./deploy-vps.sh         # deploy penuh produksi: git pull -> build backend JVM (di VPS) -> up -d -> prune
-./deploy-stb.sh         # deploy notifier ke STB (git pull + rebuild via docker-compose.stb.yml)
+VPS_HOST=<host-vps> VPS_DIR=/opt/expense-tracker ./deploy-vps.sh  # deploy penuh produksi
+STB_HOST=<ip-wireguard-stb> STB_DIR=/opt/expense-tracker ./deploy-stb.sh  # deploy notifier ke STB
 ```
 
 * Regenerasi native config saat menambah endpoint/model: `./backend/generate-native-config.sh`
