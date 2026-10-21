@@ -18,6 +18,11 @@ Demo bersifat **read-only** (tidak bisa menambah/mengubah data), memakai data du
 
 Tampilan desktop memakai sidebar di kiri, konten lebar, dan tabel untuk daftar transaksi. Screenshot Dashboard desktop dan mobile memakai **long screenshot** agar seluruh kartu budget, grafik tren, dan ringkasan bawah tidak terpotong.
 
+```bash
+./scripts/capture-screenshots.sh
+```
+
+
 <p align="center">
   <img src="docs/screenshots/dashboard-desktop.jpg" alt="Dashboard desktop" width="100%" />
 </p>
