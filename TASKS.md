@@ -928,3 +928,44 @@ khusus kirim email.
 * [x] PRD: halaman `/inbox`, section fitur, endpoint API, env `INBOX_*`.
 * [ ] Deploy: set `INBOX_ENABLED=true` di `backend/.env` VPS lalu `./deploy-vps.sh`.
 * [ ] Uji manual: `/email-imports/poll` → muncul di Inbox → import → expense & saldo terpotong.
+
+
+## Phase 28 - Catat dengan Suara (Voice Assistant)
+
+Merekam voice note, menyimpannya sebagai file, menganalisis dengan Gemini
+(transkrip + ekstraksi expense), review, lalu membuat expense yang tetap
+tertaut ke rekaman aslinya.
+
+### Backend
+
+* [x] Migration `V22__voice_notes.sql` (tabel `voice_notes`, kolom `expenses.voice_note_id`).
+* [x] `VoiceNoteData`, `VoiceNoteAnalysis`, `VoiceNoteRepository`.
+* [x] `VoiceNoteService`: validasi & simpan audio (webm/ogg/mp4/mp3/wav/aac, max 10 MB), list per periode, retry, delete guard, mark submitted.
+* [x] Status terminal `NOT_EXPENSE` untuk rekaman yang bukan pengeluaran (tidak bisa retry, tetap bisa dihapus); UI menampilkan badge orange tanpa tombol Coba lagi.
+* [x] Cascade hapus voice note: expense terakhir dihapus -> file + row voice note dihapus; expense lain yang masih aktif membuat rekaman dipertahankan. Frontend invalidate cache `/voice` setelah delete expense.
+* [x] `VoiceNoteAnalysisService`: analisis audio async via Gemini (transkrip + daftar item JSON), retry 429/5xx, recovery note stuck `ANALYZING`.
+* [x] Prompt voice memisahkan tiap barang menjadi item + mengekstrak `storeName`; fallback format lama (single expense) tetap didukung.
+* [x] `POST /expenses/batch` menerima `voiceNoteId`; semua group ditautkan ke rekaman dan note ditandai `SUBMITTED`.
+* [x] Pisah model: `AI_MODEL` untuk scan/inbox, `AI_VOICE_MODEL` untuk voice note (default `gemini-3.5-flash-lite`).
+* [x] `VoiceNoteController`: `POST/GET/DELETE /voice-notes`, `GET /voice-notes/{id}/audio`, `POST /voice-notes/{id}/retry`.
+* [x] `ExpenseRequest.voiceNoteId` + validasi hanya `TO_REVIEW`; expense attach & note `SUBMITTED` dalam transaksi yang sama.
+* [x] `ExpenseData`/`ExpenseResponse` mengembalikan `voiceNoteId`.
+* [x] Unit test `VoiceNoteServiceTest`, `VoiceNoteAnalysisServiceTest`, `ExpenseServiceTest` (voice link & double submit).
+
+### Frontend
+
+* [x] Tipe `VoiceNote`, `VoiceAnalysis`, `VoiceNoteDetail`; `Expense.voiceNoteId`.
+* [x] Service `voiceNotes.ts`, hook `useVoiceNotes` (polling), upload/retry/delete.
+* [x] `VoiceRecorder` (`MediaRecorder`, maks 60 detik).
+* [x] Halaman `/voice`: preview audio sebelum kirim, tombol Kirim ke AI / Hapus.
+* [x] Halaman `/voice` + kartu rekaman (playback, status, retry, hapus).
+* [x] `VoiceReviewModal` disamakan dengan `ReviewModal` scan: ringkasan per budget, klik item → auto-scroll + highlight, tombol kembali ke ringkasan, editor item mobile/desktop identik, tambah/hapus item, `storeName` sebagai nama group default.
+* [x] Route `/voice` + menu "Suara" di `AppLayout`.
+* [x] Playback rekaman dari Riwayat (ikon mic).
+* [x] Detail voice note `SUBMITTED`: audio, transkrip, dan expense tertaut (`GET /voice-notes/{id}` → `expenses`).
+
+### Verifikasi
+
+* [x] `mvn -q test` lolos (termasuk test baru).
+* [x] `npm run lint` + `npm run build` lolos.
+* [ ] Uji manual di HP: izin mikrofon, rekam, review, simpan, playback di Riwayat.

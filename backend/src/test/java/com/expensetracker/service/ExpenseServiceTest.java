@@ -7,6 +7,7 @@ import com.expensetracker.data.ExpenseData;
 import com.expensetracker.data.ExpenseRepository;
 import com.expensetracker.data.InvoiceData;
 import com.expensetracker.data.TopUpRepository;
+import com.expensetracker.data.VoiceNoteData;
 import com.expensetracker.model.BatchExpenseItem;
 import com.expensetracker.model.BatchExpenseRequest;
 import com.expensetracker.model.BudgetCreateRequest;
@@ -55,6 +56,8 @@ class ExpenseServiceTest {
     @Mock
     private InvoiceService invoiceService;
     @Mock
+    private VoiceNoteService voiceNoteService;
+    @Mock
     private NotificationService notificationService;
 
     private ExpenseService expenseService;
@@ -62,7 +65,7 @@ class ExpenseServiceTest {
     @BeforeEach
     void setUp() {
         expenseService = new ExpenseService(budgetRepository, categoryRepository, expenseRepository, topUpRepository,
-                invoiceService, notificationService);
+                invoiceService, voiceNoteService, notificationService);
     }
 
     private static ExpenseRequest validRequest() {
@@ -72,6 +75,11 @@ class ExpenseServiceTest {
     private static ExpenseData expenseData() {
         return new ExpenseData("id123", "2026-JUL-AUG", "2026-08-06 14:30", "Makan Siang", "Daily",
                 35000L, null, false, false, null, null, null);
+    }
+
+    private static ExpenseData expenseDataWithVoiceNote() {
+        return new ExpenseData("id123", "2026-JUL-AUG", "2026-08-06 14:30", "Makan Siang", "Daily",
+                35000L, null, false, false, null, null, null, null, "vn-1");
     }
 
     @Test
@@ -170,6 +178,47 @@ class ExpenseServiceTest {
     }
 
     @Test
+    void expenseRequest_deserializesVoiceNoteId() throws Exception {
+        ExpenseRequest request = new tools.jackson.databind.ObjectMapper().readValue(
+                "{\"dateTime\":\"2026-08-06 14:30\",\"name\":\"Belanja sayur\",\"budget\":\"Daily\","
+                        + "\"amount\":35000,\"voiceNoteId\":\"vn-1\"}",
+                ExpenseRequest.class);
+
+        assertEquals("vn-1", request.voiceNoteId());
+        assertEquals(35000L, request.amount());
+    }
+
+    @Test
+    void createExpense_withVoiceNoteInReview_shouldAttachAndMarkSubmitted() {
+        when(budgetRepository.findIdByName("Daily")).thenReturn(1L);
+        when(voiceNoteService.requireVoiceNote("vn-1"))
+                .thenReturn(new VoiceNoteData("vn-1", "2026-JUL-AUG", "2026-08-06 14:30", "vn-1.webm",
+                        "audio/webm", 4000, "2026-08-06T14:31:00", "TO_REVIEW", 0, 0, "GEMINI"));
+        ExpenseRequest request = new ExpenseRequest("2026-08-06 14:30", "Belanja sayur", "Daily", null,
+                35000L, null, null, "vn-1");
+
+        assertDoesNotThrow(() -> expenseService.createExpense(request));
+
+        verify(expenseRepository).attachVoiceNote(anyString(), eq("vn-1"));
+        verify(voiceNoteService).markSubmitted("vn-1", LocalDate.of(2026, 8, 6));
+    }
+
+    @Test
+    void createExpense_withSubmittedVoiceNote_shouldRejectWithoutInsert() {
+        when(budgetRepository.findIdByName("Daily")).thenReturn(1L);
+        when(voiceNoteService.requireVoiceNote("vn-1"))
+                .thenReturn(new VoiceNoteData("vn-1", "2026-JUL-AUG", "2026-08-06 14:30", "vn-1.webm",
+                        "audio/webm", 4000, "2026-08-06T14:31:00", "SUBMITTED", 0, 0, "GEMINI"));
+        ExpenseRequest request = new ExpenseRequest("2026-08-06 14:30", "Belanja sayur", "Daily", null,
+                35000L, null, null, "vn-1");
+
+        ValidationException ex = assertThrows(ValidationException.class, () -> expenseService.createExpense(request));
+        assertEquals("Voice note is not ready for review or already submitted", ex.getMessage());
+        verify(expenseRepository, never()).insert(anyString(), anyString(), any(), any(), anyLong(), any(),
+                anyString(), anyLong(), any());
+    }
+
+    @Test
     void updateExpense_changeAmount_sameBudget_shouldAdjustBalanceByDelta() {
         when(expenseRepository.findById("id123")).thenReturn(expenseData());
         when(budgetRepository.findIdByName("Daily")).thenReturn(1L);
@@ -204,6 +253,15 @@ class ExpenseServiceTest {
         assertDoesNotThrow(() -> expenseService.deleteExpense("id123"));
         verify(budgetRepository).adjustBalance("Daily", 35000L);
         verify(expenseRepository).softDelete("id123");
+        verify(voiceNoteService, never()).deleteIfUnused(anyString());
+    }
+
+    @Test
+    void deleteExpense_withVoiceNote_shouldDeleteVoiceNoteIfUnused() {
+        when(expenseRepository.findById("id123")).thenReturn(expenseDataWithVoiceNote());
+        assertDoesNotThrow(() -> expenseService.deleteExpense("id123"));
+        verify(expenseRepository).softDelete("id123");
+        verify(voiceNoteService).deleteIfUnused("vn-1");
     }
 
     @Test
@@ -536,6 +594,24 @@ class ExpenseServiceTest {
         verify(expenseRepository).insert(anyString(), eq("2026-JUL-AUG"),
                 eq(LocalDate.of(2026, 7, 25)), eq(LocalDateTime.of(2026, 8, 6, 14, 30)), eq(2L), eq(null), eq("Kopi"),
                 eq(15000L), eq(null));
+    }
+
+    @Test
+    void createExpenseBatch_withVoiceNote_shouldAttachAndMarkSubmitted() {
+        when(budgetRepository.findIdByName("Daily")).thenReturn(1L);
+        when(voiceNoteService.requireVoiceNote("vn-1"))
+                .thenReturn(new VoiceNoteData("vn-1", "2026-JUL-AUG", "2026-08-06 14:30", "vn-1.webm",
+                        "audio/webm", 4000, "2026-08-06T14:31:00", "TO_REVIEW", 0, 0, "GEMINI"));
+        BatchExpenseRequest request = new BatchExpenseRequest("2026-08-06 14:30", null, "vn-1", List.of(
+                new BatchExpenseItem("Sayur", "Daily", 20000L, null),
+                new BatchExpenseItem("Telur", "Daily", 30000L, null)));
+
+        int count = expenseService.createExpenseBatch(request);
+
+        assertEquals(2, count);
+        verify(expenseRepository, times(2)).attachVoiceNote(anyString(), eq("vn-1"));
+        verify(voiceNoteService).markSubmitted("vn-1", LocalDate.of(2026, 8, 6));
+        verify(budgetRepository).adjustBalance("Daily", -50000L);
     }
 
     @Test

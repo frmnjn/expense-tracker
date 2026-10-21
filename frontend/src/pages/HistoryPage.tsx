@@ -26,6 +26,7 @@ import {
   IconArrowLeft,
   IconFileTypePdf,
   IconPhoto,
+  IconMicrophone,
   IconPencil,
   IconSearch,
   IconSearchOff,
@@ -42,6 +43,7 @@ import { TransactionCard } from '../components/TransactionCard'
 import { AppPagination } from '../components/AppPagination'
 import { useToast } from '../components/Toast'
 import { getPhotoUrl } from '../services/expense'
+import { getVoiceNoteAudioUrl } from '../services/voiceNotes'
 import { formatCurrency } from '../utils/currency'
 import { getErrorMessage } from '../utils/error'
 import type { Expense } from '../types/expense'
@@ -86,6 +88,7 @@ function HistoryPage() {
   const [sortBy, setSortBy] = useState<string>('waktu-desc')
   const [filterOpened, setFilterOpened] = useState(false)
   const [viewingPhoto, setViewingPhoto] = useState<Expense | null>(null)
+  const [viewingVoice, setViewingVoice] = useState<Expense | null>(null)
 
   const categoryFilterOptions = useMemo(
     () => [
@@ -310,6 +313,7 @@ function HistoryPage() {
                   key={expense.id}
                   expense={expense}
                   onViewPhoto={setViewingPhoto}
+                  onViewVoice={setViewingVoice}
                   onEdit={setEditing}
                   onDelete={setDeleting}
                 />
@@ -345,6 +349,11 @@ function HistoryPage() {
                         {expense.hasPhoto && (
                           <ActionIcon variant="light" color="gray" size="md" onClick={() => setViewingPhoto(expense)} aria-label="Lihat foto">
                             <IconPhoto size={16} />
+                          </ActionIcon>
+                        )}
+                        {expense.voiceNoteId && (
+                          <ActionIcon variant="light" color="grape" size="md" onClick={() => setViewingVoice(expense)} aria-label="Putar rekaman suara">
+                            <IconMicrophone size={16} />
                           </ActionIcon>
                         )}
                         <ActionIcon variant="light" color="blue" size="md" disabled={!expense.id} onClick={() => setEditing(expense)} aria-label="Edit">
@@ -472,6 +481,29 @@ function HistoryPage() {
             <Text size="xs" c="dimmed" ta="center" mt="sm" truncate>
               {viewingPhoto.photoName}
             </Text>
+          )}
+        </Modal>
+
+        <Modal
+          opened={!!viewingVoice}
+          onClose={() => setViewingVoice(null)}
+          title={viewingVoice?.name ?? 'Rekaman Suara'}
+          centered
+          size="md"
+        >
+          {viewingVoice?.voiceNoteId && (
+            <Stack gap="sm">
+              <Text size="sm" c="dimmed">
+                Rekaman asli untuk pengeluaran ini.
+              </Text>
+              <audio
+                controls
+                autoPlay
+                preload="metadata"
+                src={getVoiceNoteAudioUrl(viewingVoice.voiceNoteId)}
+                style={{ width: '100%' }}
+              />
+            </Stack>
           )}
         </Modal>
 

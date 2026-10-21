@@ -1,5 +1,5 @@
 import { ActionIcon, Divider, Group, Paper, Stack, Text } from '@mantine/core'
-import { IconPhoto, IconPencil, IconTrash } from '@tabler/icons-react'
+import { IconMicrophone, IconPhoto, IconPencil, IconTrash } from '@tabler/icons-react'
 import dayjs from 'dayjs'
 import { formatCurrency } from '../utils/currency'
 import type { Expense } from '../types/expense'
@@ -9,11 +9,13 @@ const DATE_TIME_FORMAT = 'DD MMM YYYY HH:mm'
 export function TransactionCard({
   expense,
   onViewPhoto,
+  onViewVoice,
   onEdit,
   onDelete,
 }: {
   expense: Expense
   onViewPhoto: (expense: Expense) => void
+  onViewVoice: (expense: Expense) => void
   onEdit: (expense: Expense) => void
   onDelete: (expense: Expense) => void
 }) {
@@ -45,6 +47,11 @@ export function TransactionCard({
         {expense.hasPhoto && (
           <ActionIcon variant="light" color="gray" size="lg" onClick={() => onViewPhoto(expense)} aria-label="Lihat foto">
             <IconPhoto size={18} />
+          </ActionIcon>
+        )}
+        {expense.voiceNoteId && (
+          <ActionIcon variant="light" color="grape" size="lg" onClick={() => onViewVoice(expense)} aria-label="Putar rekaman suara">
+            <IconMicrophone size={18} />
           </ActionIcon>
         )}
         <ActionIcon variant="light" color="blue" size="lg" disabled={!expense.id} onClick={() => onEdit(expense)} aria-label="Edit">

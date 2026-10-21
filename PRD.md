@@ -57,6 +57,7 @@ Target: sederhana, mudah dijalankan dengan Docker, mudah dikembangkan.
 
 * `/` — halaman Catat (form pengeluaran + foto invoice).
 * `/scan` — **Scan Struk dengan AI** (upload foto/PDF, analisis otomatis, review & assign budget, auto-create banyak expense).
+* `/voice` — **Catat dengan Suara** (rekam voice note, AI membuat draft expense, review & simpan, playback dari Riwayat).
 * `/inbox` — **Inbox Email** (transaksi dari email notifikasi bank, hasil pembacaan IMAP, review & import jadi expense).
 * `/dashboard` — ringkasan saldo per budget, top-up, riwayat top-up, dan 3 bulan terakhir.
 * `/riwayat` — daftar pengeluaran per periode, dengan filter/sort, pagination, edit, hapus, dan lihat foto (termasuk PDF).
@@ -76,8 +77,9 @@ Tabel:
 | ----- | ----- |
 | `budgets` | `id` PK, `name` UNIQUE, `balance`, `is_active`, `alert_threshold` (0 = nonaktif), `description` (nullable, dipakai AI saat menyarankan budget) |
 | `categories` | `id` PK, `budget_id` FK→`budgets`, `name`, `description` (nullable, dipakai AI), `is_active`, `created_at`; UNIQUE(`budget_id`, `name`) |
-| `expenses` | `id` PK, `period`, `period_start`, `date_time`, `budget_id` FK→`budgets`, `category_id` FK→`categories` (nullable, NULL = "Uncategorized"), `name`, `amount`, `description` (TEXT), `deleted`, `invoice_id` FK→`invoices` (nullable), `created_at` (DATETIME(6), untuk pengurutan deterministik) |
+| `expenses` | `id` PK, `period`, `period_start`, `date_time`, `budget_id` FK→`budgets`, `category_id` FK→`categories` (nullable, NULL = "Uncategorized"), `name`, `amount`, `description` (TEXT), `deleted`, `invoice_id` FK→`invoices` (nullable), `voice_note_id` FK→`voice_notes` (nullable), `created_at` (DATETIME(6), untuk pengurutan deterministik) |
 | `invoices` | `id` PK, `period`, `period_start`, `photo_path`, `deleted`, `status` (`ANALYZING`/`TO_REVIEW`/`SUBMITTED`/`ERROR`), `analysis_json`, `error_message`, `scan_flow` |
+| `voice_notes` | `id` PK, `period`, `period_start`, `reference_date`, `file_path`, `mime_type`, `duration_ms`, `transcript`, `status` (`ANALYZING`/`TO_REVIEW`/`SUBMITTED`/`ERROR`/`NOT_EXPENSE`), `analysis_json`, `error_message`, `retry_count`, `retry_max`, `ai_provider`, `created_at` |
 | `idempotency_keys` | `id_key` PK, `response_json`, `created_at` |
 | `top_ups` | `id` PK, `date_time`, `budget_id` FK→`budgets`, `amount`, `description` (TEXT) |
 
@@ -104,8 +106,9 @@ Migration saat ini:
 * `V19__email_imports.sql` — tabel `email_imports` (antrian transaksi hasil polling IMAP).
 * `V20__invoice_ai_provider.sql` — kolom `invoices.ai_provider` (GEMINI/DEEPSEEK).
 * `V21__categories.sql` — tabel `categories` (sub-kategori per budget), kolom `expenses.category_id`, kolom `email_imports.suggested_category`.
+* `V22__voice_notes.sql` — tabel `voice_notes` (rekaman suara + hasil AI) dan kolom `expenses.voice_note_id`.
 
-Index yang ada: `budgets` PK(id) + UNIQUE(name); `expenses` PK(id), `budget_id` FK, `deleted`, `invoice_id`, komposit `(period, deleted)`; `invoices` PK(id) + `period`; `top_ups` PK(id) + `budget_id`; `idempotency_keys` PK(id_key) + `created_at`.
+Index yang ada: `budgets` PK(id) + UNIQUE(name); `expenses` PK(id), `budget_id` FK, `deleted`, `invoice_id`, `voice_note_id`, komposit `(period, deleted)`; `invoices` PK(id) + `period`; `voice_notes` PK(id) + `period` + `status`; `top_ups` PK(id) + `budget_id`; `idempotency_keys` PK(id_key) + `created_at`.
 
 Satu **invoice** adalah pemilik satu file foto/PDF dan dapat dirujuk oleh **banyak** expense (`invoice_id`). Karena itu satu foto invoice bisa dipakai untuk beberapa catatan pengeluaran (mis. satu struk untuk beberapa budget). `hasPhoto` pada respons expense berarti `invoice_id` terisi; `photoType` (`image`/`pdf`) diturunkan dari jenis file. Menghapus foto pada sebuah expense melepas referensi (`invoice_id = NULL`); invoice & file foto **baru dihapus jika tidak ada expense lain yang masih memakainya** — jika masih dipakai expense lain, invoice & file dipertahankan.
 
@@ -164,6 +167,33 @@ Detail teknis:
 * **Retry AI & fallback provider**: analisa di-retry untuk error transien (HTTP 429/5xx) memakai `ai.max-attempts`/`ai.retry-delay-ms` (default 50×, 2 detik), dengan jeda menghormati `Retry-After` provider (dibatasi `ai.retry-after-cap-ms`). Bila semua attempt Gemini habis, fallback **sekali** ke DeepSeek (`DEEPSEEK_API_KEY`, model `AI_DEEPSEEK_MODEL`). Invoice menyimpan `ai_provider` (GEMINI/DEEPSEEK) dan counter retry di-reset saat berpindah provider; frontend menampilkan label provider (mis. "Gemini retry 12×", "DeepSeek 1/1"). Untuk PDF, halaman pertama dirender ke PNG sebelum dikirim ke DeepSeek (DeepSeek tidak menerima PDF).
 * **Perlakuan pajak (PPN/PB1)**: prompt AI membedakan dua pola struk. **(A) inklusif** — harga item sudah termasuk pajak (ciri "Termasuk PPN"/"Sub Total (Termasuk PPN)", bagian bawah hanya rekap `DPP/PPN/BTKP/BKP`); PPN **tidak** dijadikan item dan baris rekap diabaikan. **(B) eksklusif** — baris pajak/service terpisah dan grand total = Σ item + pajak; PPN/PB1/service masuk sebagai item positif. Penentu: bila Σ harga item sudah sama dengan grand total → pola A; bila grand total = Σ item + pajak → pola B. Baris ringkasan (`Hemat Produk/Member`, `Total Hemat`, `Total Item`, `Pembayaran`, saldo, kembalian) diabaikan; diskon per-produk tetap item negatif.
 * Konfigurasi AI: `GEMINI_API_KEY`, `AI_MODEL` (default `gemini-3.5-flash-lite`), `AI_TIMEOUT`, `DEEPSEEK_API_KEY`, `AI_DEEPSEEK_MODEL` (default `deepseek-flash`), `AI_DEEPSEEK_BASE_URL`.
+
+### Catat dengan Suara (`/voice`)
+
+Voice assistant untuk mencatat pengeluaran tanpa mengetik. User merekam suara, AI mengekstrak detail pengeluaran, lalu user mereview sebelum menyimpan.
+
+Alur:
+
+1. **Rekam + preview** — tombol rekam memakai `MediaRecorder` (maksimal 60 detik). Setelah stop, rekaman **belum dikirim**; user bisa memutar ulang lewat `<audio>`, lalu memilih **Kirim ke AI** atau **Hapus** untuk merekam ulang.
+2. **Upload + analisis** — setelah user menekan Kirim ke AI, file audio disimpan ke `uploads/` dan voice note dibuat dengan status `ANALYZING`; Gemini menganalisis **async** (transkrip + ekstraksi expense dalam satu panggilan).
+3. **Review** — status menjadi `TO_REVIEW`. Modal review memakai layout yang sama dengan `/scan`: audio asli + transkrip di bagian sumber, ringkasan **Pengeluaran per budget**, nama item bisa diklik untuk auto-scroll + highlight, tombol kembali ke ringkasan, serta editor item mobile/desktop yang identik. User bisa mengoreksi, menambah/menghapus item, dan mengubah nama pengeluaran per group.
+4. **Simpan** — item dikelompokkan per **budget + category** (sama seperti `/scan`). `POST /expenses/batch` dengan `voiceNoteId` membuat satu expense per group, menyesuaikan saldo, mengirim notifikasi, menautkan rekaman ke semua expense group, dan menandai voice note `SUBMITTED`.
+5. **Playback di Riwayat** — expense dengan `voiceNoteId` menampilkan ikon mic di Riwayat untuk memutar rekaman aslinya.
+6. **Lihat rincian dari `/voice`** — voice note berstatus `SUBMITTED` menampilkan tombol **Lihat rincian** (audio, transkrip, dan detail expense yang dibuat), mirip halaman `/scan` dan `/inbox`.
+
+Detail teknis:
+
+* Satu rekaman bisa berisi **banyak item**. AI memisahkan tiap barang/pos menjadi item sendiri; jika user hanya menyebut satu total, dibuat satu item.
+* Item di-group per budget + category menjadi beberapa expense (mirip split struk di `/scan`). Nama group default memakai `storeName` hasil AI (mis. “Tukang Sayur Komplek”); fallback “Belanja” bila tidak disebut. Deskripsi group berisi daftar item + nominal.
+* Waktu referensi rekaman (`reference_date`) dikirim frontend agar AI bisa menafsirkan “hari ini”, “kemarin”, atau “jam 3 sore”.
+* AI hanya boleh memilih budget/category dari daftar yang tersedia; category kosong berarti Uncategorized.
+* Format audio yang didukung: webm, ogg, mp4/m4a, mp3, wav, aac (maksimal 10 MB). Browser Chrome umumnya `audio/webm`, Safari `audio/mp4`.
+* Error transien Gemini (429/5xx) di-retry memakai konfigurasi `ai.max-attempts`/`ai.retry-delay-ms` yang sama dengan Scan Struk. Tidak ada fallback DeepSeek karena model tersebut bukan model audio.
+* Menghapus expense dari Riwayat: jika masih ada expense aktif lain dari rekaman yang sama, rekaman dipertahankan. Jika expense terakhir yang memakai rekaman dihapus, rekaman + file audio ikut dihapus dan referensi `voice_note_id` pada expense soft-deleted dilepas.
+* Voice note `SUBMITTED` boleh dihapus manual hanya jika sudah tidak ada expense aktif yang memakainya.
+* Status `NOT_EXPENSE` = rekaman valid tetapi bukan catatan pengeluaran (mis. suara burung/obrolan). Status ini **terminal**: tidak bisa di-retry, tetapi rekamannya bisa dihapus.
+* Rekaman `TO_REVIEW`/`ERROR`/`NOT_EXPENSE` bisa dihapus; rekaman yang sudah menjadi expense tidak bisa dihapus.
+* Perekaman mikrofon membutuhkan HTTPS atau localhost.
 
 ### Dashboard
 
@@ -330,11 +360,14 @@ Membuat expense.
   "budget": "Daily",
   "amount": 35000,
   "description": "Catatan",
-  "invoiceId": "inv-abc123"
+  "invoiceId": "inv-abc123",
+  "voiceNoteId": "vn-abc123"
 }
 ```
 
 `invoiceId` opsional — mengaitkan expense ke invoice yang sudah ada (untuk memakai ulang foto). Invoice harus berada di periode yang sama dengan `dateTime`, jika tidak → `Invoice is not in the same period as the expense`.
+
+`voiceNoteId` opsional — mengaitkan expense ke rekaman suara yang sudah selesai dianalisis (`TO_REVIEW`). Satu rekaman hanya bisa dipakai sekali. Rekaman ditandai `SUBMITTED` dan periodenya mengikuti tanggal expense.
 
 Response:
 
@@ -407,21 +440,31 @@ Membuat banyak expense hasil split struk dalam **satu transaksi** (alur `/scan`)
 {
   "dateTime": "2026-08-06 14:30",
   "invoiceId": "inv-abc123",
+  "voiceNoteId": "vn-abc123",
   "groups": [
     { "name": "Belanja Superindo", "budget": "Alana", "amount": 65000, "description": "Popok; Kopi" }
   ]
 }
 ```
 
-Semua group memakai `dateTime` yang sama; saldo di-adjust **agregat per budget**; invoice ditandai `SUBMITTED`; mengirim **1 email ringkasan** (bukan per expense). Respons `{ "count": N }`. Idempotensi via `Idempotency-Key`.
+Semua group memakai `dateTime` yang sama; saldo di-adjust **agregat per budget**; `invoiceId`/`voiceNoteId` (opsional) ditautkan ke semua group dan sumbernya ditandai `SUBMITTED`; mengirim **1 email ringkasan** (bukan per expense). Respons `{ "count": N }`. Idempotensi via `Idempotency-Key`.
 
 ### GET /invoices?date=...&scan=...
 
 Daftar id invoice per periode (untuk "Pakai Foto Periode Ini"). Dengan `scan=true`, hanya invoice alur `/scan` yang dikembalikan. Setiap item: `{ id, createdAt, status, type }`.
 
+### Voice Note endpoints
+
+* `POST /voice-notes` — upload rekaman (multipart `file`, `date` `yyyy-MM-dd HH:mm`, `durationMs`) dan memicu analisis AI async. Response `{ "voiceNoteId": "..." }`. Mendukung `Idempotency-Key`.
+* `GET /voice-notes?period=YYYY-MON-MON` — daftar rekaman pada periode (status, durasi, progres retry).
+* `GET /voice-notes/{id}` — detail: `{ id, status, errorMessage?, analysis?, retryCount, retryMax, provider, durationMs, expenses? }`. Saat `TO_REVIEW`, `analysis` berisi `{ transcript, isExpense, storeName, dateTime, items: [{ name, amount, suggestedBudget, suggestedCategory }] }`. Saat `SUBMITTED`, `expenses` berisi expense yang tertaut ke rekaman.
+* `GET /voice-notes/{id}/audio` — file audio untuk playback (mendukung query `access_code`).
+* `POST /voice-notes/{id}/retry` — ulang analisis rekaman `ERROR`. Ditolak untuk `NOT_EXPENSE` (bukan pengeluaran) dan `SUBMITTED`.
+* `DELETE /voice-notes/{id}` — hapus rekaman `TO_REVIEW`/`ERROR`/`NOT_EXPENSE` yang belum dipakai expense.
+
 ### Idempotensi
 
-Semua endpoint `POST` (`/expenses`, `/expenses/batch`, `/expenses/{id}/photo`, `/topups`, `/budgets`, `/invoices`) menerima header `Idempotency-Key` opsional. Jika key diberikan, backend menyimpan respons selama **24 jam** dan mengembalikan respons tersimpan untuk key yang sama (mencegah duplikat saat retry). Baris lama dibersihkan otomatis saat penyimpanan baru.
+Semua endpoint `POST` (`/expenses`, `/expenses/batch`, `/expenses/{id}/photo`, `/topups`, `/budgets`, `/invoices`, `/voice-notes`) menerima header `Idempotency-Key` opsional. Jika key diberikan, backend menyimpan respons selama **24 jam** dan mengembalikan respons tersimpan untuk key yang sama (mencegah duplikat saat retry). Baris lama dibersihkan otomatis saat penyimpanan baru.
 
 ### GET /summary?period=YYYY-MON-MON
 
@@ -516,7 +559,8 @@ DB_USER=expense_tracker_user
 DB_PASSWORD=password-kuat
 UPLOAD_DIR=/app/uploads
 GEMINI_API_KEY=AIza...            # untuk Scan Struk dengan AI
-AI_MODEL=gemini-3.5-flash-lite    # opsional, default
+AI_MODEL=gemini-3.5-flash-lite    # opsional, default; dipakai scan & inbox
+AI_VOICE_MODEL=gemini-3.5-flash-lite  # opsional, model khusus analisis voice note
 AI_TIMEOUT=60                     # opsional, detik
 INBOX_ENABLED=true                # aktifkan baca email (default false)
 INBOX_HOST=imap.gmail.com         # opsional
@@ -561,6 +605,7 @@ Untuk **produksi**, `docker-compose.prod.yml` memakai MySQL VPS dan image backen
 * User dapat melihat saldo per budget dan menambah saldo (top-up).
 * User dapat mengelola budget (tambah/edit/hapus).
 * User dapat melihat riwayat per periode, filter/sort, edit, hapus, dan lihat foto.
+* User dapat mencatat pengeluaran dengan rekaman suara, mereview hasil AI, dan memutar kembali rekamannya dari Riwayat.
 * Data tersimpan di MySQL.
 * Aplikasi dapat dijalankan dengan Docker Compose.
 

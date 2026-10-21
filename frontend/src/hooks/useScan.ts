@@ -74,9 +74,12 @@ export function useCreateExpenseBatch() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['scan-invoices'] })
       queryClient.invalidateQueries({ queryKey: ['invoice-detail'] })
+      queryClient.invalidateQueries({ queryKey: ['voice-notes'] })
+      queryClient.invalidateQueries({ queryKey: ['voice-note-detail'] })
       queryClient.invalidateQueries({ queryKey: ['options'] })
       queryClient.invalidateQueries({ queryKey: ['expenses'] })
       queryClient.invalidateQueries({ queryKey: ['summary'] })
+      queryClient.invalidateQueries({ queryKey: ['periods'] })
     },
   })
 }

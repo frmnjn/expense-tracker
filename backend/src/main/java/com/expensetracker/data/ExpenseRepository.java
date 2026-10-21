@@ -16,7 +16,8 @@ public class ExpenseRepository {
     private static final String SELECT_COLS =
             "SELECT e.id, e.period, e.date_time, e.name, b.name AS budget_name, c.name AS category_name, "
                     + "e.amount, e.description, e.deleted, "
-                    + "e.invoice_id, inv.photo_path AS inv_photo_path, inv.original_name AS inv_original_name "
+                    + "e.invoice_id, inv.photo_path AS inv_photo_path, inv.original_name AS inv_original_name, "
+                    + "e.voice_note_id "
                     + "FROM expenses e JOIN budgets b ON b.id = e.budget_id "
                     + "LEFT JOIN categories c ON c.id = e.category_id "
                     + "LEFT JOIN invoices inv ON inv.id = e.invoice_id ";
@@ -50,6 +51,14 @@ public class ExpenseRepository {
                         + "ORDER BY e.created_at ASC, e.id",
                 this::mapRow,
                 invoiceId);
+    }
+
+    public List<ExpenseData> findByVoiceNoteId(String voiceNoteId) {
+        return jdbcTemplate.query(
+                SELECT_COLS + "WHERE e.voice_note_id = ? AND e.deleted = FALSE "
+                        + "ORDER BY e.created_at ASC, e.id",
+                this::mapRow,
+                voiceNoteId);
     }
 
     /** Expense aktif dengan nominal persis sama pada satu periode (untuk deteksi duplikat). */
@@ -96,6 +105,15 @@ public class ExpenseRepository {
         jdbcTemplate.update("UPDATE expenses SET invoice_id = NULL WHERE id = ?", id);
     }
 
+    public void attachVoiceNote(String id, String voiceNoteId) {
+        jdbcTemplate.update("UPDATE expenses SET voice_note_id = ? WHERE id = ?", voiceNoteId, id);
+    }
+
+    /** Lepas referensi rekaman sebelum baris voice_notes dihapus (termasuk expense soft-deleted). */
+    public void clearVoiceNoteReferences(String voiceNoteId) {
+        jdbcTemplate.update("UPDATE expenses SET voice_note_id = NULL WHERE voice_note_id = ?", voiceNoteId);
+    }
+
     public long totalForPeriod(String period) {
         List<Long> totals = jdbcTemplate.query(
                 "SELECT COALESCE(SUM(amount), 0) FROM expenses WHERE period = ? AND deleted = FALSE",
@@ -133,6 +151,7 @@ public class ExpenseRepository {
                 invoiceId,
                 photoType,
                 rs.getString("inv_original_name"),
-                rs.getString("category_name"));
+                rs.getString("category_name"),
+                rs.getString("voice_note_id"));
     }
 }

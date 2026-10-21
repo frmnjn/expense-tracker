@@ -78,6 +78,8 @@ export function useDeleteExpense() {
       queryClient.invalidateQueries({ queryKey: ['expenses'] })
       queryClient.invalidateQueries({ queryKey: ['options'] })
       queryClient.invalidateQueries({ queryKey: ['summary'] })
+      queryClient.invalidateQueries({ queryKey: ['voice-notes'] })
+      queryClient.invalidateQueries({ queryKey: ['voice-note-detail'] })
     },
   })
 }

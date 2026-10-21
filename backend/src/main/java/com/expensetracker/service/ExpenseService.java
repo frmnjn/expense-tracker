@@ -7,6 +7,7 @@ import com.expensetracker.data.ExpenseData;
 import com.expensetracker.data.ExpenseRepository;
 import com.expensetracker.data.InvoiceData;
 import com.expensetracker.data.TopUpRepository;
+import com.expensetracker.data.VoiceNoteData;
 import com.expensetracker.model.BatchExpenseItem;
 import com.expensetracker.model.BatchExpenseRequest;
 import com.expensetracker.model.BudgetCreateRequest;
@@ -52,6 +53,7 @@ public class ExpenseService {
     private final ExpenseRepository expenseRepository;
     private final TopUpRepository topUpRepository;
     private final InvoiceService invoiceService;
+    private final VoiceNoteService voiceNoteService;
     private final NotificationService notificationService;
 
     public ExpenseService(BudgetRepository budgetRepository,
@@ -59,12 +61,14 @@ public class ExpenseService {
                           ExpenseRepository expenseRepository,
                           TopUpRepository topUpRepository,
                           InvoiceService invoiceService,
+                          VoiceNoteService voiceNoteService,
                           NotificationService notificationService) {
         this.budgetRepository = budgetRepository;
         this.categoryRepository = categoryRepository;
         this.expenseRepository = expenseRepository;
         this.topUpRepository = topUpRepository;
         this.invoiceService = invoiceService;
+        this.voiceNoteService = voiceNoteService;
         this.notificationService = notificationService;
     }
 
@@ -222,6 +226,7 @@ public class ExpenseService {
         LocalDateTime dateTime = PeriodSheetName.parseLenient(request.dateTime());
         Long budgetId = requireBudgetId(request.budget());
         Long categoryId = requireCategoryId(budgetId, request.category());
+        validateVoiceNoteForSubmit(request.voiceNoteId());
         String id = UUID.randomUUID().toString();
         String period = PeriodSheetName.forDate(dateTime.toLocalDate());
         LocalDate periodStart = PeriodSheetName.periodStart(dateTime.toLocalDate());
@@ -237,6 +242,10 @@ public class ExpenseService {
                 request.description());
         if (request.invoiceId() != null && !request.invoiceId().isBlank()) {
             attachInvoiceToExpense(id, request.invoiceId(), period);
+        }
+        if (request.voiceNoteId() != null && !request.voiceNoteId().isBlank()) {
+            expenseRepository.attachVoiceNote(id, request.voiceNoteId());
+            voiceNoteService.markSubmitted(request.voiceNoteId(), dateTime.toLocalDate());
         }
         budgetRepository.adjustBalance(request.budget(), -request.amount());
         notificationService.sendExpenseCreated(request.name(), request.budget(), request.amount(),
@@ -280,6 +289,7 @@ public class ExpenseService {
             // agar periode invoice konsisten dengan tanggal expense.
             invoiceService.updatePeriod(request.invoiceId(), dateTime.toLocalDate());
         }
+        validateVoiceNoteForSubmit(request.voiceNoteId());
 
         Map<String, Long> totalByBudget = new LinkedHashMap<>();
         for (BatchExpenseItem item : request.groups()) {
@@ -297,6 +307,9 @@ public class ExpenseService {
             if (request.invoiceId() != null && !request.invoiceId().isBlank()) {
                 expenseRepository.attachInvoice(id, request.invoiceId());
             }
+            if (request.voiceNoteId() != null && !request.voiceNoteId().isBlank()) {
+                expenseRepository.attachVoiceNote(id, request.voiceNoteId());
+            }
         }
 
         for (Map.Entry<String, Long> entry : totalByBudget.entrySet()) {
@@ -305,6 +318,9 @@ public class ExpenseService {
 
         if (request.invoiceId() != null && !request.invoiceId().isBlank()) {
             invoiceService.markSubmitted(request.invoiceId());
+        }
+        if (request.voiceNoteId() != null && !request.voiceNoteId().isBlank()) {
+            voiceNoteService.markSubmitted(request.voiceNoteId(), dateTime.toLocalDate());
         }
 
         long total = totalByBudget.values().stream().mapToLong(Long::longValue).sum();
@@ -502,6 +518,9 @@ public class ExpenseService {
         ExpenseData current = requireExpense(id);
         budgetRepository.adjustBalance(current.budgetName(), current.amount());
         expenseRepository.softDelete(id);
+        if (current.voiceNoteId() != null) {
+            voiceNoteService.deleteIfUnused(current.voiceNoteId());
+        }
     }
 
     @Transactional
@@ -556,7 +575,22 @@ public class ExpenseService {
                 expense.description(),
                 expense.hasPhoto(),
                 expense.photoType(),
-                expense.photoName());
+                expense.photoName(),
+                expense.voiceNoteId());
+    }
+
+    /**
+     * Validasi voice note yang akan dijadikan sumber expense. Hanya note yang
+     * sudah selesai dianalisis (TO_REVIEW) dan belum dipakai yang boleh disubmit.
+     */
+    private void validateVoiceNoteForSubmit(String voiceNoteId) {
+        if (voiceNoteId == null || voiceNoteId.isBlank()) {
+            return;
+        }
+        VoiceNoteData note = voiceNoteService.requireVoiceNote(voiceNoteId);
+        if (!VoiceNoteStatus.TO_REVIEW.value().equals(note.status())) {
+            throw new ValidationException("Voice note is not ready for review or already submitted");
+        }
     }
 
     private void validate(ExpenseRequest request) {
