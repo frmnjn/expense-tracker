@@ -6,6 +6,7 @@ export interface ExpenseRequest {
   amount: number
   description?: string
   invoiceId?: string
+  voiceNoteId?: string
 }
 
 export interface CategoryOption {
@@ -66,6 +67,7 @@ export interface Expense {
   hasPhoto: boolean
   photoType?: 'image' | 'pdf' | string
   photoName?: string
+  voiceNoteId?: string
 }
 
 export interface PeriodsResponse {
@@ -182,6 +184,7 @@ export interface BatchExpenseItem {
 export interface BatchExpenseRequest {
   dateTime: string
   invoiceId?: string
+  voiceNoteId?: string
   groups: BatchExpenseItem[]
 }
 
@@ -189,4 +192,44 @@ export interface ApiResponse<T> {
   success: boolean
   message?: string
   data?: T
+}
+
+
+export interface VoiceNote {
+  id: string
+  createdAt: string
+  status: 'ANALYZING' | 'TO_REVIEW' | 'SUBMITTED' | 'ERROR' | string
+  durationMs?: number
+  retryCount?: number
+  retryMax?: number
+  provider?: string
+}
+
+export interface VoiceNotesResponse {
+  voiceNotes: VoiceNote[]
+}
+
+export interface VoiceAnalysis {
+  transcript?: string
+  isExpense?: boolean
+  storeName?: string
+  dateTime?: string
+  items?: AiInvoiceItem[]
+  name?: string
+  amount?: number
+  budget?: string
+  category?: string
+  description?: string
+}
+
+export interface VoiceNoteDetail {
+  id: string
+  status: string
+  errorMessage?: string
+  analysis?: VoiceAnalysis
+  retryCount?: number
+  retryMax?: number
+  provider?: string
+  durationMs?: number
+  expenses?: Expense[]
 }

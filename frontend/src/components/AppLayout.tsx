@@ -6,6 +6,7 @@ import {
   IconReceipt,
   IconMail,
   IconHistory,
+  IconMicrophone,
 } from '@tabler/icons-react'
 import { NavLink, Outlet } from 'react-router-dom'
 import ColorSchemeToggle from './ColorSchemeToggle'
@@ -18,6 +19,7 @@ const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: IconHome },
   { to: '/scan', label: 'Scan', icon: IconReceipt },
   { to: '/catat', label: 'Catat', icon: IconPlus },
+  { to: '/voice', label: 'Suara', icon: IconMicrophone },
   { to: '/inbox', label: 'Inbox', icon: IconMail },
   { to: '/riwayat', label: 'Riwayat', icon: IconHistory },
 ]

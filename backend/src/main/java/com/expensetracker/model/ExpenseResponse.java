@@ -14,10 +14,16 @@ public record ExpenseResponse(
         @JsonProperty("description") String description,
         @JsonProperty("hasPhoto") boolean hasPhoto,
         @JsonProperty("photoType") String photoType,
-        @JsonProperty("photoName") String photoName) {
+        @JsonProperty("photoName") String photoName,
+        @JsonProperty("voiceNoteId") String voiceNoteId) {
 
     public ExpenseResponse(String id, String dateTime, String name, String budget, Long amount, String description,
                            boolean hasPhoto, String photoType, String photoName) {
-        this(id, dateTime, name, budget, null, amount, description, hasPhoto, photoType, photoName);
+        this(id, dateTime, name, budget, null, amount, description, hasPhoto, photoType, photoName, null);
+    }
+
+    public ExpenseResponse(String id, String dateTime, String name, String budget, String category, Long amount,
+                           String description, boolean hasPhoto, String photoType, String photoName) {
+        this(id, dateTime, name, budget, category, amount, description, hasPhoto, photoType, photoName, null);
     }
 }

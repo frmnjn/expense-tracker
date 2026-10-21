@@ -1,10 +1,15 @@
 # AI Model Log
 
-Riwayat model yang dipakai untuk **analisa struk** pada fitur **Scan Struk dengan AI**
-(Gemini API via HTTP, dikonfigurasi lewat `backend/.env` → `AI_MODEL`).
+Riwayat model yang dipakai untuk **analisa struk** (`/scan`), **import email** (`/inbox`),
+dan **voice note** (`/voice`) melalui Gemini API via HTTP.
 
 > Konfigurasi ada di `backend/.env` di VPS (file ini tidak di-version control /
-> gitignored). Default di `application.yml` = `gemini-3.5-flash-lite`.
+> gitignored):
+> * `AI_MODEL` — scan struk & fallback parse email.
+> * `AI_VOICE_MODEL` — analisis rekaman suara.
+>
+> Default di `application.yml`: `AI_MODEL=gemini-3.5-flash-lite`,
+> `AI_VOICE_MODEL=gemini-3.5-flash-lite`.
 
 | Tanggal | Model | Catatan |
 |---|---|---|
@@ -14,3 +19,6 @@ Riwayat model yang dipakai untuk **analisa struk** pada fitur **Scan Struk denga
 | 2026-09-10 | gemini-3.7-flash → gemini-3.8-flash | `gemini-3.7-flash` juga ternyata error transien (gagal lalu sukses setelah diulang). Kembali ke `gemini-3.8-flash` + diaktifkan auto-retry untuk menutupi error sesaat. |
 | 2026-09-16 | gemini-3.8-flash → gemini-3.6-flash | `gemini-3.8-flash` kena kuota free tier (limit 20 req) → HTTP 429 terus-menerus; auto-retry 50× sia-sia. `gemini-3.6-flash` terverifikasi HTTP 200. |
 | 2026-09-29 | + fallback ke `deepseek-flash` | Gemini 429 (kuota free tier limit 5) & 503 (high demand) terus-menerus. Tambah fallback: setelah 50× Gemini gagal → DeepSeek `deepseek-flash` (vision, OpenAI-compatible) sekali. Jeda retry menghormati `Retry-After`; PDF dirender ke PNG untuk DeepSeek. |
+| 2026-10-21 | Voice `gemini-3.5-flash-lite` | Fitur voice note pertama kali memakai `AI_MODEL=gemini-3.6-flash`. Muncul error intermiten `503` (high demand) lalu `429` (rate limit); retry 50× terlalu agresif. Dua rekaman akhirnya tetap sampai `TO_REVIEW`. |
+| 2026-10-21 | Gemini `402 RESOURCE_EXHAUSTED` | Prepayment credits Gemini habis: *“Your prepayment credits are depleted”*. Request teks sederhana juga kena 402 (bukan masalah audio/prompt). Rekaman berstatus `ERROR`. Solusi: top up saldo di AI Studio → Billing/Prepay. Setelah top up, request teks & audio kembali HTTP 200. |
+| 2026-10-21 | Scan `gemini-3.8-flash`, voice `gemini-3.5-flash-lite` | Pisah model setelah saldo diisi. Scan/inbox kembali ke `gemini-3.8-flash` demi akurasi OCR; voice memakai `AI_VOICE_MODEL=gemini-3.5-flash-lite` yang lebih murah karena hasil selalu direview. Retry rekaman `c0d87502...` sukses `TO_REVIEW` dengan retry 0. |
