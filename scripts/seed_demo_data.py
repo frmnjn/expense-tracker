@@ -64,6 +64,12 @@ INVOICE_ASSETS = {
     'inv-demo-submitted': ('demo-receipt-submitted.png', 'demo_receipt_submitted.png'),
     'inv-demo-not-invoice': ('demo-not-invoice.png', 'demo_not_invoice.png'),
 }
+VOICE_ASSETS = [
+    'demo-voice-review.webm',
+    'demo-voice-wartek.webm',
+    'demo-voice-household.webm',
+    'demo-voice-not-expense.webm',
+]
 
 
 def period_of(d: datetime.date) -> str:
@@ -95,6 +101,11 @@ def copy_demo_assets() -> None:
         if not source.exists():
             raise SystemExit(f'Asset demo tidak ditemukan: {source}')
         shutil.copyfile(source, UPLOAD_DIR / source_name)
+    for voice_name in VOICE_ASSETS:
+        source = ASSETS_DIR / voice_name
+        if not source.exists():
+            raise SystemExit(f'Asset demo tidak ditemukan: {source}')
+        shutil.copyfile(source, UPLOAD_DIR / voice_name)
 
 
 def invoice_analysis(store: str, date_time: str, items: list[tuple[str, int, str, str]]) -> str:
@@ -140,23 +151,34 @@ def build_sql(days: int, seed: int) -> str:
             minute = rng.choice([0, 10, 15, 30, 45])
             date_time = f'{d:%Y-%m-%d} {hour:02d}:{minute:02d}:00'
             expenses.append((uuid.uuid4().hex, period_of(d), period_start(d), date_time,
-                             budget[0], category_id, name, amount, date_time, None))
+                             budget[0], category_id, name, amount, date_time, None, None))
             total_expense[budget[0]] += amount
 
     submitted_date = today - datetime.timedelta(days=1)
     submitted_time = f'{submitted_date:%Y-%m-%d} 10:00:00'
     fixed_expenses = [
         ('exp-demo-submitted-groceries', submitted_date, 2, 4, 'Demo Fresh Market', 90_000,
-         'Sayur, buah, dan susu', 'inv-demo-submitted'),
+         'Sayur, buah, dan susu', 'inv-demo-submitted', None),
         ('exp-demo-submitted-household', submitted_date, 1, 2, 'Demo Fresh Market', 60_000,
-         'Sabun dan tissue rumah', 'inv-demo-submitted'),
+         'Sabun dan tissue rumah', 'inv-demo-submitted', None),
         ('exp-demo-email-imported', today - datetime.timedelta(days=2), 1, 3, 'Demo Grocery', 125_000,
-         'Transaksi kartu kredit', None),
+         'Transaksi kartu kredit', None, None),
+        ('exp-demo-voice-wartek', today, 4, 10, 'Wartek', 18_000,
+         'Makan di wartek Rp18.000', None, 'voice-demo-wartek'),
+        ('exp-demo-voice-household', today, 1, 2, 'Bayar Mbak Anik', 10_000,
+         'Bayar Mbak Anik Rp10.000', None, 'voice-demo-household'),
     ]
-    for expense_id, date_value, budget_id, category_id, name, amount, description, invoice_id in fixed_expenses:
-        date_time = f'{date_value:%Y-%m-%d} 10:00:00' if invoice_id else f'{date_value:%Y-%m-%d} 14:30:00'
+    for expense_id, date_value, budget_id, category_id, name, amount, description, invoice_id, voice_note_id in fixed_expenses:
+        if invoice_id:
+            date_time = f'{date_value:%Y-%m-%d} 10:00:00'
+        elif voice_note_id == 'voice-demo-wartek':
+            date_time = f'{date_value:%Y-%m-%d} 19:00:00'
+        elif voice_note_id == 'voice-demo-household':
+            date_time = f'{date_value:%Y-%m-%d} 17:00:00'
+        else:
+            date_time = f'{date_value:%Y-%m-%d} 14:30:00'
         expenses.append((expense_id, period_of(date_value), period_start(date_value), date_time,
-                         budget_id, category_id, name, amount, date_time, invoice_id))
+                         budget_id, category_id, name, amount, date_time, invoice_id, voice_note_id))
         total_expense[budget_id] += amount
 
     topup_total = {b[0]: 0 for b in BUDGETS}
@@ -222,8 +244,60 @@ def build_sql(days: int, seed: int) -> str:
                  'error_message, scan_flow, created_at, original_name, retry_count, retry_max, ai_provider) VALUES '
                  + ',\n'.join(invoice_rows) + ';')
 
-    parts.append('INSERT INTO expenses (id, period, period_start, date_time, budget_id, category_id, name, amount, description, deleted, created_at, invoice_id) VALUES '
-                 + ',\n'.join(f"('{e[0]}', '{e[1]}', '{e[2]}', '{e[3]}', {e[4]}, {e[5]}, '{esc(e[6])}', {e[7]}, 'Demo data', 0, '{e[8]}', {('NULL' if e[9] is None else repr(e[9]))})" for e in expenses) + ';')
+    voice_analyses = {
+        'voice-demo-review': json.dumps({
+            'transcript': 'Tadi di kantor, gua jajan di FamilyMart beli bakpau sama siomay harganya totalnya dua puluh ribu sekitar jam setengah empat sore.',
+            'isExpense': True,
+            'storeName': 'FamilyMart',
+            'dateTime': f'{today:%Y-%m-%d} 15:30',
+            'items': [{'name': 'Bakpau dan Siomay', 'amount': 20000,
+                       'suggestedBudget': 'Groceries', 'suggestedCategory': 'Snacks'}],
+        }, ensure_ascii=False),
+        'voice-demo-wartek': json.dumps({
+            'transcript': 'tadi beli makan di wartek depan pake orek tempe ayam goreng sama perkedel satu harganya Rp18.000 jam ya 07.00 malam lah',
+            'isExpense': True,
+            'storeName': 'Wartek',
+            'dateTime': f'{today:%Y-%m-%d} 19:00',
+            'items': [{'name': 'Makan di wartek', 'amount': 18000,
+                       'suggestedBudget': 'Entertainment', 'suggestedCategory': 'Dining Out'}],
+        }, ensure_ascii=False),
+        'voice-demo-household': json.dumps({
+            'transcript': 'jam 5 sore 10.000 bayar baal',
+            'isExpense': True,
+            'storeName': '',
+            'dateTime': f'{today:%Y-%m-%d} 17:00',
+            'items': [{'name': 'Baal', 'amount': 10000,
+                       'suggestedBudget': 'Household', 'suggestedCategory': 'Cleaning'}],
+        }, ensure_ascii=False),
+    }
+    voice_rows = [
+        ('voice-demo-review', 'demo-voice-review.webm', '14417', '23:51:00',
+         'Tadi di kantor, gua jajan di FamilyMart beli bakpau sama siomay harganya totalnya dua puluh ribu sekitar jam setengah empat sore.',
+         'TO_REVIEW', voice_analyses['voice-demo-review'], None),
+        ('voice-demo-wartek', 'demo-voice-wartek.webm', '16459', '23:49:00',
+         'tadi beli makan di wartek depan pake orek tempe ayam goreng sama perkedel satu harganya Rp18.000 jam ya 07.00 malam lah',
+         'SUBMITTED', voice_analyses['voice-demo-wartek'], None),
+        ('voice-demo-household', 'demo-voice-household.webm', '5683', '21:44:00',
+         'jam 5 sore 10.000 bayar baal',
+         'SUBMITTED', voice_analyses['voice-demo-household'], None),
+        ('voice-demo-not-expense', 'demo-voice-not-expense.webm', '4159', '20:51:00',
+         None, 'NOT_EXPENSE', None, 'Rekaman bukan catatan pengeluaran'),
+    ]
+    voice_values = []
+    for note_id, file_name, duration, clock, transcript, status, analysis, error in voice_rows:
+        def qv(value):
+            return 'NULL' if value is None else "'" + esc(str(value)) + "'"
+        voice_values.append(
+            f"('{note_id}', '{period_of(today)}', '{period_start(today)}', "
+            f"'{today:%Y-%m-%d} {clock}', '{file_name}', 'audio/webm', {duration}, "
+            f"{qv(transcript)}, '{status}', {qv(analysis)}, {qv(error)}, 0, 50, 'GEMINI', "
+            f"'{today:%Y-%m-%d} {clock}')")
+    parts.append('INSERT INTO voice_notes (id, period, period_start, reference_date, file_path, mime_type, '
+                 'duration_ms, transcript, status, analysis_json, error_message, retry_count, retry_max, '
+                 'ai_provider, created_at) VALUES ' + ',\n'.join(voice_values) + ';')
+
+    parts.append('INSERT INTO expenses (id, period, period_start, date_time, budget_id, category_id, name, amount, description, deleted, created_at, invoice_id, voice_note_id) VALUES '
+                 + ',\n'.join(f"('{e[0]}', '{e[1]}', '{e[2]}', '{e[3]}', {e[4]}, {e[5]}, '{esc(e[6])}', {e[7]}, 'Demo data', 0, '{e[8]}', {('NULL' if e[9] is None else repr(e[9]))}, {('NULL' if e[10] is None else repr(e[10]))})" for e in expenses) + ';')
 
     email_rows = [
         ('email-demo-qris', '<demo-qris@demo-bank.example>', 'notifikasi@demo-bank.example',
@@ -299,7 +373,7 @@ def main() -> None:
         return
     copy_demo_assets()
     run_sql(args.container, args.db_user, args.db_password, args.db, sql)
-    print(f'==> Demo data seeded: {len(BUDGETS)} budgets, {len(INVOICE_ASSETS)} sample invoices, 5 sample emails.')
+    print(f'==> Demo data seeded: {len(BUDGETS)} budgets, {len(INVOICE_ASSETS)} sample invoices, {len(VOICE_ASSETS)} sample voice notes, 5 sample emails.')
 
 
 if __name__ == '__main__':

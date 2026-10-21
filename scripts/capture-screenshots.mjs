@@ -70,7 +70,7 @@ async function capture(viewport, suffix, mobile) {
   for (const [name, path] of pages) {
     await page.goto(`${base}${path}`, { waitUntil: 'networkidle', timeout: 60000 })
     await page.waitForTimeout(1200)
-    const fullPage = ['dashboard', 'catat', 'inbox', 'scan'].includes(name)
+    const fullPage = ['dashboard', 'catat', 'inbox', 'scan', 'voice'].includes(name)
     if (mobile && fullPage) await expandMobileLayout(page)
     await page.screenshot({
       path: `${outDir}/${name}-${suffix}.jpg`,

@@ -10,7 +10,7 @@ Aplikasi web untuk mencatat pengeluaran harian, memantau saldo per budget, dan m
 
 PIN demo: **2026**
 
-Demo bersifat **read-only** (tidak bisa menambah/mengubah data), memakai data dummy, dan tidak terhubung ke AI, email, atau notifier production.
+Demo bersifat **read-only** (tidak bisa menambah/mengubah data), memakai data dummy, dan tidak terhubung ke AI, email, atau notifier production. Demo berisi contoh invoice (`TO_REVIEW`/`SUBMITTED`/`NOT_INVOICE`), email inbox, dan voice note (`TO_REVIEW`/`SUBMITTED`/`NOT_EXPENSE`).
 
 ## Screenshots
 
