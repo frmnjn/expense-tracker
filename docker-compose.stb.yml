@@ -8,4 +8,4 @@ services:
     environment:
       PORT: 8081
     ports:
-      - "8081:8081"
+      - "${STB_BIND_IP:?set STB_BIND_IP in .env}:8081:8081"

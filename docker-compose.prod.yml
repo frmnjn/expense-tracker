@@ -7,8 +7,6 @@ services:
       - ./backend/.env
     extra_hosts:
       - "host.docker.internal:host-gateway"
-    environment:
-      NOTIFIER_URL: http://10.0.0.4:8081
     volumes:
       - ./uploads:/app/uploads
 
@@ -18,7 +16,7 @@ services:
       args:
         VITE_API_URL: /api
     restart: unless-stopped
-    ports:
-      - "23824:80"
+    expose:
+      - "80"
     depends_on:
       - backend

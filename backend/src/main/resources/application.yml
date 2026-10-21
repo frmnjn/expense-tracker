@@ -37,6 +37,7 @@ ai:
 
 notify:
   notifier-url: ${NOTIFIER_URL:}
+  notifier-token: ${NOTIFIER_TOKEN:}
   emails: ${NOTIFY_EMAILS:}
   test-mode: ${NOTIFY_TEST_MODE:false}
   test-email: ${NOTIFY_TEST_EMAIL:}

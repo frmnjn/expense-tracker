@@ -32,11 +32,11 @@ FORCE="${1:-}"
 # Kredensial: baca dari backend/.env jika ada (VPS menyimpan DB_USER/DB_PASSWORD
 # di sana); kalau tidak ada, pakai default lokal (expense/expense-pass).
 if [ -f "${PROJECT_ROOT}/backend/.env" ]; then
-    # shellcheck disable=SC1091
-    source "${PROJECT_ROOT}/backend/.env"
+    ENV_DB_USER="$(grep -E '^DB_USER=' "${PROJECT_ROOT}/backend/.env" | head -n1 | cut -d= -f2- | tr -d '\r')"
+    ENV_DB_PASSWORD="$(grep -E '^DB_PASSWORD=' "${PROJECT_ROOT}/backend/.env" | head -n1 | cut -d= -f2- | tr -d '\r')"
 fi
-DB_USER="${DB_USER:-expense}"
-DB_PASSWORD="${DB_PASSWORD:-expense-pass}"
+DB_USER="${DB_USER:-${ENV_DB_USER:-expense}}"
+DB_PASSWORD="${DB_PASSWORD:-${ENV_DB_PASSWORD:-expense-pass}}"
 
 confirm() {
     if [ "${FORCE}" = "-f" ]; then
