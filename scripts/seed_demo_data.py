@@ -3,16 +3,21 @@
 
 import argparse
 import datetime
+import json
 import os
 import random
+import shutil
 import subprocess
 import sys
 import uuid
+from pathlib import Path
 
 MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
+PROJECT_ROOT = Path(__file__).resolve().parent.parent
+ASSETS_DIR = Path(__file__).resolve().parent / 'demo-assets'
+UPLOAD_DIR = PROJECT_ROOT / 'uploads-demo'
 
 BUDGETS = [
-    # id, name, alert_threshold, description, categories
     (1, 'Household', 300_000, 'Kebutuhan rumah tangga', [
         (1, 'Utilities', 'Listrik, air, internet'),
         (2, 'Cleaning', 'Sabun, deterjen, kebersihan'),
@@ -54,6 +59,11 @@ ITEMS = {
 }
 
 TOPUP_DESCRIPTIONS = ['Alokasi bulanan', 'Top up budget', 'Tambahan saldo']
+INVOICE_ASSETS = {
+    'inv-demo-review': ('demo-receipt-review.png', 'demo_receipt_review.png'),
+    'inv-demo-submitted': ('demo-receipt-submitted.png', 'demo_receipt_submitted.png'),
+    'inv-demo-not-invoice': ('demo-not-invoice.png', 'demo_not_invoice.png'),
+}
 
 
 def period_of(d: datetime.date) -> str:
@@ -76,6 +86,35 @@ def period_start(d: datetime.date) -> str:
 
 def esc(value: str) -> str:
     return value.replace('\\', '\\\\').replace("'", "''")
+
+
+def copy_demo_assets() -> None:
+    UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+    for source_name, _target_name in INVOICE_ASSETS.values():
+        source = ASSETS_DIR / source_name
+        if not source.exists():
+            raise SystemExit(f'Asset demo tidak ditemukan: {source}')
+        shutil.copyfile(source, UPLOAD_DIR / source_name)
+
+
+def invoice_analysis(store: str, date_time: str, items: list[tuple[str, int, str, str]]) -> str:
+    payload = {
+        'storeName': store,
+        'total': sum(item[1] for item in items),
+        'dateTime': date_time,
+        'currency': 'IDR',
+        'originalTotal': None,
+        'items': [
+            {
+                'name': name,
+                'amount': amount,
+                'suggestedBudget': budget,
+                'suggestedCategory': category,
+            }
+            for name, amount, budget, category in items
+        ],
+    }
+    return json.dumps(payload, ensure_ascii=False)
 
 
 def build_sql(days: int, seed: int) -> str:
@@ -101,8 +140,24 @@ def build_sql(days: int, seed: int) -> str:
             minute = rng.choice([0, 10, 15, 30, 45])
             date_time = f'{d:%Y-%m-%d} {hour:02d}:{minute:02d}:00'
             expenses.append((uuid.uuid4().hex, period_of(d), period_start(d), date_time,
-                             budget[0], category_id, name, amount, date_time))
+                             budget[0], category_id, name, amount, date_time, None))
             total_expense[budget[0]] += amount
+
+    submitted_date = today - datetime.timedelta(days=1)
+    submitted_time = f'{submitted_date:%Y-%m-%d} 10:00:00'
+    fixed_expenses = [
+        ('exp-demo-submitted-groceries', submitted_date, 2, 4, 'Demo Fresh Market', 90_000,
+         'Sayur, buah, dan susu', 'inv-demo-submitted'),
+        ('exp-demo-submitted-household', submitted_date, 1, 2, 'Demo Fresh Market', 60_000,
+         'Sabun dan tissue rumah', 'inv-demo-submitted'),
+        ('exp-demo-email-imported', today - datetime.timedelta(days=2), 1, 3, 'Demo Grocery', 125_000,
+         'Transaksi kartu kredit', None),
+    ]
+    for expense_id, date_value, budget_id, category_id, name, amount, description, invoice_id in fixed_expenses:
+        date_time = f'{date_value:%Y-%m-%d} 10:00:00' if invoice_id else f'{date_value:%Y-%m-%d} 14:30:00'
+        expenses.append((expense_id, period_of(date_value), period_start(date_value), date_time,
+                         budget_id, category_id, name, amount, date_time, invoice_id))
+        total_expense[budget_id] += amount
 
     topup_total = {b[0]: 0 for b in BUDGETS}
     for topup in topups:
@@ -130,9 +185,9 @@ def build_sql(days: int, seed: int) -> str:
                  + ', '.join(budget_rows) + ';')
 
     category_rows = []
-    for _budget_id, _name, _threshold, _desc, categories in BUDGETS:
+    for budget_id, _name, _threshold, _desc, categories in BUDGETS:
         for category_id, name, description in categories:
-            category_rows.append(f"({category_id}, {_budget_id}, '{esc(name)}', '{esc(description)}', 1)")
+            category_rows.append(f"({category_id}, {budget_id}, '{esc(name)}', '{esc(description)}', 1)")
     parts.append('INSERT INTO categories (id, budget_id, name, description, is_active) VALUES '
                  + ', '.join(category_rows) + ';')
 
@@ -140,8 +195,73 @@ def build_sql(days: int, seed: int) -> str:
         parts.append('INSERT INTO top_ups (id, date_time, budget_id, amount, description) VALUES '
                      + ', '.join(f"('{t[0]}', '{t[1]}', {t[2]}, {t[3]}, '{esc(t[4])}')" for t in topups) + ';')
 
-    parts.append('INSERT INTO expenses (id, period, period_start, date_time, budget_id, category_id, name, amount, description, deleted, created_at) VALUES '
-                 + ',\n'.join(f"('{e[0]}', '{e[1]}', '{e[2]}', '{e[3]}', {e[4]}, {e[5]}, '{esc(e[6])}', {e[7]}, 'Demo data', 0, '{e[8]}')" for e in expenses) + ';')
+    review_date = f'{today:%Y-%m-%d} 09:15:00'
+    submitted_invoice_date = f'{submitted_date:%Y-%m-%d} 10:00:00'
+    not_invoice_date = f'{today - datetime.timedelta(days=2):%Y-%m-%d} 16:20:00'
+    review_analysis = invoice_analysis('Demo Mart', review_date, [
+        ('Sayur & Buah', 25_000, 'Groceries', 'Fresh Food'),
+        ('Susu', 30_000, 'Groceries', 'Beverages'),
+        ('Tissue', 32_500, 'Household', 'Home Supplies'),
+    ])
+    submitted_analysis = invoice_analysis('Demo Fresh Market', submitted_invoice_date, [
+        ('Sayur & Buah', 50_000, 'Groceries', 'Fresh Food'),
+        ('Susu', 40_000, 'Groceries', 'Beverages'),
+        ('Sabun & Tissue', 60_000, 'Household', 'Cleaning'),
+    ])
+    invoice_rows = [
+        f"('inv-demo-review', '{period_of(today)}', '{period_start(today)}', 'demo-receipt-review.png', 0, "
+        f"'TO_REVIEW', '{esc(review_analysis)}', NULL, 1, '{review_date}', 'demo-receipt-review.png', 0, 0, 'GEMINI')",
+        f"('inv-demo-submitted', '{period_of(submitted_date)}', '{period_start(submitted_date)}', "
+        f"'demo-receipt-submitted.png', 0, 'SUBMITTED', '{esc(submitted_analysis)}', NULL, 1, "
+        f"'{submitted_invoice_date}', 'demo-receipt-submitted.png', 0, 0, 'GEMINI')",
+        f"('inv-demo-not-invoice', '{period_of(today - datetime.timedelta(days=2))}', "
+        f"'{period_start(today - datetime.timedelta(days=2))}', 'demo-not-invoice.png', 0, "
+        f"'NOT_INVOICE', NULL, 'Bukan struk invoice', 1, '{not_invoice_date}', 'demo-not-invoice.png', 0, 0, NULL)",
+    ]
+    parts.append('INSERT INTO invoices (id, period, period_start, photo_path, deleted, status, analysis_json, '
+                 'error_message, scan_flow, created_at, original_name, retry_count, retry_max, ai_provider) VALUES '
+                 + ',\n'.join(invoice_rows) + ';')
+
+    parts.append('INSERT INTO expenses (id, period, period_start, date_time, budget_id, category_id, name, amount, description, deleted, created_at, invoice_id) VALUES '
+                 + ',\n'.join(f"('{e[0]}', '{e[1]}', '{e[2]}', '{e[3]}', {e[4]}, {e[5]}, '{esc(e[6])}', {e[7]}, 'Demo data', 0, '{e[8]}', {('NULL' if e[9] is None else repr(e[9]))})" for e in expenses) + ';')
+
+    email_rows = [
+        ('email-demo-qris', '<demo-qris@demo-bank.example>', 'notifikasi@demo-bank.example',
+         'Pembayaran QRIS Berhasil', f'{today:%Y-%m-%d} 08:10:00', f'{today:%Y-%m-%d} 08:00:00',
+         'Demo Coffee', 35_000, 'QRIS - DEMO COFFEE', 'Entertainment', 'Dining Out', 'REGEX',
+         'PENDING_REVIEW', None, None),
+        ('email-demo-cc', '<demo-cc@demo-bank.example>', 'notifikasi@demo-bank.example',
+         'Transaksi Kartu Kredit', f'{today - datetime.timedelta(days=2):%Y-%m-%d} 14:31:00',
+         f'{today - datetime.timedelta(days=2):%Y-%m-%d} 14:30:00', 'Demo Grocery', 125_000,
+         'Pembayaran kartu kredit', 'Household', 'Home Supplies', 'REGEX', 'IMPORTED', None,
+         'exp-demo-email-imported'),
+        ('email-demo-promo', '<demo-promo@demo-bank.example>', 'promo@demo-bank.example',
+         'Promo spesial bulan ini', f'{today - datetime.timedelta(days=3):%Y-%m-%d} 09:00:00', None,
+         'Demo Bank', None, 'Promo cashback dan diskon', None, None, 'REGEX', 'DISCARDED',
+         'Bukan transaksi pengeluaran', None),
+        ('email-demo-failed', '<demo-failed@demo-bank.example>', 'notifikasi@demo-bank.example',
+         'Notifikasi transaksi tidak dikenali', f'{today - datetime.timedelta(days=4):%Y-%m-%d} 11:30:00',
+         None, None, None, 'Email tidak dapat dibaca', None, None, 'AI', 'FAILED',
+         'Format email tidak dikenali', None),
+        ('email-demo-ereceipt', '<demo-ereceipt@demo-mart.example>', 'do-not-reply@demo-mart.example',
+         'E-Receipt Demo Mart', f'{submitted_date:%Y-%m-%d} 11:00:00', f'{submitted_date:%Y-%m-%d} 10:30:00',
+         'Demo Mart', 87_500, 'Struk digital dikirim ke Scan', 'Groceries', 'Fresh Food', 'SCAN',
+         'SCANNED', None, None),
+    ]
+    values = []
+    for row in email_rows:
+        (email_id, message_id, sender, subject, received_at, transaction_at, merchant, amount,
+         description, suggested_budget, suggested_category, parse_method, status, error_message, expense_id) = row
+        def q(value):
+            return 'NULL' if value is None else "'" + esc(str(value)) + "'"
+        values.append(
+            f"('{email_id}', '{message_id}', '{sender}', '{esc(subject)}', '{received_at}', "
+            f"{q(transaction_at)}, {q(merchant)}, {('NULL' if amount is None else amount)}, {q(description)}, "
+            f"{q(suggested_budget)}, {q(suggested_category)}, '{parse_method}', '{status}', {q(error_message)}, "
+            f"{q(expense_id)}, '{received_at}')")
+    parts.append('INSERT INTO email_imports (id, message_id, sender, subject, received_at, transaction_at, '
+                 'merchant, amount, description, suggested_budget, suggested_category, parse_method, status, '
+                 'error_message, expense_id, created_at) VALUES ' + ',\n'.join(values) + ';')
     return '\n'.join(parts)
 
 
@@ -169,7 +289,6 @@ def main() -> None:
     if not args.db_password:
         print('ERROR: DB password kosong (env DEMO_DB_PASSWORD/DB_PASSWORD atau --db-password).', file=sys.stderr)
         sys.exit(1)
-
     if not args.db.endswith('_demo') and not args.allow_non_demo:
         print('ERROR: script hanya untuk database berakhiran _demo.', file=sys.stderr)
         sys.exit(1)
@@ -178,8 +297,9 @@ def main() -> None:
     if args.dry_run:
         print(sql)
         return
+    copy_demo_assets()
     run_sql(args.container, args.db_user, args.db_password, args.db, sql)
-    print(f'==> Demo data seeded: {len(BUDGETS)} budgets, expenses {args.days} hari.')
+    print(f'==> Demo data seeded: {len(BUDGETS)} budgets, {len(INVOICE_ASSETS)} sample invoices, 5 sample emails.')
 
 
 if __name__ == '__main__':

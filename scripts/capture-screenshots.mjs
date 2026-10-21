@@ -10,6 +10,7 @@ const pages = [
   ['riwayat', 'riwayat'],
   ['scan', 'scan'],
   ['voice', 'voice'],
+  ['inbox', 'inbox'],
 ]
 
 await fs.mkdir(outDir, { recursive: true })
@@ -40,7 +41,7 @@ async function capture(viewport, suffix, mobile) {
       path: `${outDir}/${name}-${suffix}.jpg`,
       type: 'jpeg',
       quality: 84,
-      fullPage: name === 'catat' && !mobile,
+      fullPage: ['dashboard', 'catat', 'inbox', 'scan'].includes(name),
     })
     console.log(`captured ${name}-${suffix}`)
   }

@@ -14,30 +14,41 @@ Demo bersifat **read-only** (tidak bisa menambah/mengubah data), memakai data du
 
 ## Screenshots
 
+### Desktop
+
+Tampilan desktop memakai sidebar di kiri, konten lebar, dan tabel untuk daftar transaksi. Screenshot Dashboard di bawah ini memakai **long screenshot** agar seluruh kartu budget dan grafik tren terlihat.
+
 <p align="center">
-  <img src="docs/screenshots/dashboard-desktop.jpg" alt="Dashboard" width="100%" />
+  <img src="docs/screenshots/dashboard-desktop.jpg" alt="Dashboard desktop" width="100%" />
 </p>
 
-| Catat | Riwayat |
+| Catat Pengeluaran | Riwayat Pengeluaran |
 |---|---|
-| ![Catat](docs/screenshots/catat-desktop.jpg) | ![Riwayat](docs/screenshots/riwayat-desktop.jpg) |
+| ![Catat desktop](docs/screenshots/catat-desktop.jpg) | ![Riwayat desktop](docs/screenshots/riwayat-desktop.jpg) |
 
-| Scan Struk | Voice Assistant |
+| Scan Struk | Inbox Email |
 |---|---|
-| ![Scan](docs/screenshots/scan-desktop.jpg) | ![Voice](docs/screenshots/voice-desktop.jpg) |
+| ![Scan desktop](docs/screenshots/scan-desktop.jpg) | ![Inbox desktop](docs/screenshots/inbox-desktop.jpg) |
 
-<details>
-<summary><strong>Mobile screenshots</strong></summary>
+| Voice Assistant | Halaman PIN |
+|---|---|
+| ![Voice desktop](docs/screenshots/voice-desktop.jpg) | ![Lock desktop](docs/screenshots/lock-desktop.jpg) |
+
+### Mobile
+
+Tampilan mobile mengganti sidebar menjadi **bottom navigation**, form menjadi satu kolom, dan daftar transaksi berubah menjadi kartu agar tombol aksi tetap terlihat tanpa scroll horizontal.
 
 | Dashboard | Catat | Riwayat |
 |---|---|---|
-| <img src="docs/screenshots/dashboard-mobile.jpg" width="220" /> | <img src="docs/screenshots/catat-mobile.jpg" width="220" /> | <img src="docs/screenshots/riwayat-mobile.jpg" width="220" /> |
+| <img src="docs/screenshots/dashboard-mobile.jpg" width="100%" /> | <img src="docs/screenshots/catat-mobile.jpg" width="100%" /> | <img src="docs/screenshots/riwayat-mobile.jpg" width="100%" /> |
 
-| Scan | Voice | Lock |
+| Scan | Inbox | Voice |
 |---|---|---|
-| <img src="docs/screenshots/scan-mobile.jpg" width="220" /> | <img src="docs/screenshots/voice-mobile.jpg" width="220" /> | <img src="docs/screenshots/lock-mobile.jpg" width="220" /> |
+| <img src="docs/screenshots/scan-mobile.jpg" width="100%" /> | <img src="docs/screenshots/inbox-mobile.jpg" width="100%" /> | <img src="docs/screenshots/voice-mobile.jpg" width="100%" /> |
 
-</details>
+<p align="center">
+  <img src="docs/screenshots/lock-mobile.jpg" alt="PIN mobile" width="45%" />
+</p>
 
 ---
 
