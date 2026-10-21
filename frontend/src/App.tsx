@@ -15,9 +15,11 @@ function Protected() {
   return getAccessCode() ? <AppLayout /> : <Navigate to="/lock" replace />
 }
 
+const routerBasename = import.meta.env.BASE_URL.replace(/\/$/, '') || '/'
+
 function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={routerBasename}>
       <Routes>
         <Route path="/lock" element={<LockPage />} />
         <Route element={<Protected />}>

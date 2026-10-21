@@ -15,3 +15,9 @@ scripts/run-backend-local.sh
 *.bak*
 *.backup*
 backups/
+
+# demo environment
+.env.demo
+uploads-demo/
+__pycache__/
+*.pyc

@@ -21,8 +21,9 @@ if (new URLSearchParams(window.location.search).has('debug')) {
 }
 
 if ('serviceWorker' in navigator && import.meta.env.PROD) {
+  const baseUrl = import.meta.env.BASE_URL
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js')
+    navigator.serviceWorker.register(`${baseUrl}sw.js`, { scope: baseUrl })
   })
 }
 

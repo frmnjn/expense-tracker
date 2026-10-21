@@ -1,5 +1,7 @@
-const CACHE_NAME = 'expense-tracker-__BUILD_VERSION__'
-const APP_SHELL = ['/', '/index.html', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png']
+const BASE = new URL(self.registration.scope).pathname
+const CACHE_NAME = `expense-tracker${BASE.replace(/\//g, '_')}-__BUILD_VERSION__`
+const INDEX = `${BASE}index.html`
+const APP_SHELL = [BASE, INDEX, `${BASE}manifest.webmanifest`, `${BASE}icon-192.png`, `${BASE}icon-512.png`]
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
@@ -20,7 +22,7 @@ self.addEventListener('fetch', (event) => {
   const url = new URL(event.request.url)
 
   // API selalu lewat network (jangan pernah di-cache).
-  if (url.pathname.startsWith('/api/')) {
+  if (url.pathname.startsWith(`${BASE}api/`)) {
     return
   }
 
@@ -30,10 +32,10 @@ self.addEventListener('fetch', (event) => {
       fetch(event.request)
         .then((response) => {
           const clone = response.clone()
-          caches.open(CACHE_NAME).then((cache) => cache.put('/index.html', clone))
+          caches.open(CACHE_NAME).then((cache) => cache.put(INDEX, clone))
           return response
         })
-        .catch(() => caches.match('/index.html')),
+        .catch(() => caches.match(INDEX)),
     )
     return
   }

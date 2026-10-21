@@ -4,6 +4,43 @@ Aplikasi web untuk mencatat pengeluaran harian, memantau saldo per budget, dan m
 
 ---
 
+## Live Demo
+
+**https://frmnjn.my.id/expense-tracker-demo/**
+
+PIN demo: **2026**
+
+Demo bersifat **read-only** (tidak bisa menambah/mengubah data), memakai data dummy, dan tidak terhubung ke AI, email, atau notifier production.
+
+## Screenshots
+
+<p align="center">
+  <img src="docs/screenshots/dashboard-desktop.jpg" alt="Dashboard" width="100%" />
+</p>
+
+| Catat | Riwayat |
+|---|---|
+| ![Catat](docs/screenshots/catat-desktop.jpg) | ![Riwayat](docs/screenshots/riwayat-desktop.jpg) |
+
+| Scan Struk | Voice Assistant |
+|---|---|
+| ![Scan](docs/screenshots/scan-desktop.jpg) | ![Voice](docs/screenshots/voice-desktop.jpg) |
+
+<details>
+<summary><strong>Mobile screenshots</strong></summary>
+
+| Dashboard | Catat | Riwayat |
+|---|---|---|
+| <img src="docs/screenshots/dashboard-mobile.jpg" width="220" /> | <img src="docs/screenshots/catat-mobile.jpg" width="220" /> | <img src="docs/screenshots/riwayat-mobile.jpg" width="220" /> |
+
+| Scan | Voice | Lock |
+|---|---|---|
+| <img src="docs/screenshots/scan-mobile.jpg" width="220" /> | <img src="docs/screenshots/voice-mobile.jpg" width="220" /> | <img src="docs/screenshots/lock-mobile.jpg" width="220" /> |
+
+</details>
+
+---
+
 ## Fitur
 
 * Catat pengeluaran (waktu, nama, budget, nominal, deskripsi) + **foto invoice opsional** (kamera/galeri/pakai foto yang sudah ada di periode ini)
