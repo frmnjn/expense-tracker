@@ -3,9 +3,11 @@ package main
 import (
 	"bytes"
 	"crypto/rand"
+	"crypto/subtle"
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"net/mail"
 	"net/smtp"
 	"os"
 	"strings"
@@ -132,6 +134,10 @@ func resolveTraceID(r *http.Request) string {
 
 func main() {
 	provider := env("MAIL_PROVIDER", "smtp")
+	notifierToken := strings.TrimSpace(os.Getenv("NOTIFIER_TOKEN"))
+	if notifierToken == "" {
+		logWarn("notifier token not configured; /send will reject requests", "", "NOTIFIER_TOKEN empty", nil)
+	}
 
 	http.HandleFunc("/health", func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
@@ -146,6 +152,19 @@ func main() {
 			http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
 			return
 		}
+		if notifierToken == "" {
+			logError("send rejected", traceID, "notifier token not configured", nil)
+			http.Error(w, "notifier token not configured", http.StatusServiceUnavailable)
+			return
+		}
+		providedToken := strings.TrimSpace(r.Header.Get("X-Notifier-Token"))
+		if subtle.ConstantTimeCompare([]byte(providedToken), []byte(notifierToken)) != 1 {
+			logWarn("send rejected", traceID, "invalid notifier token", nil)
+			http.Error(w, "unauthorized", http.StatusUnauthorized)
+			return
+		}
+
+		r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
 		var req sendRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			logWarn("send validation error", traceID, err.Error(), nil)
@@ -156,6 +175,21 @@ func main() {
 			logWarn("send validation error", traceID, "to, subject, body required", nil)
 			http.Error(w, "to, subject, body required", http.StatusBadRequest)
 			return
+		}
+		req.Subject = sanitizeHeader(req.Subject)
+		if req.Subject == "" {
+			logWarn("send validation error", traceID, "invalid subject", nil)
+			http.Error(w, "invalid subject", http.StatusBadRequest)
+			return
+		}
+		for i, recipient := range req.To {
+			address, err := mail.ParseAddress(strings.TrimSpace(recipient))
+			if err != nil || strings.ContainsAny(recipient, "\r\n") {
+				logWarn("send validation error", traceID, "invalid recipient", nil)
+				http.Error(w, "invalid recipient", http.StatusBadRequest)
+				return
+			}
+			req.To[i] = address.Address
 		}
 
 		n := &ecsLogNotifier{Subject: req.Subject, To: req.To, Provider: provider}
@@ -191,10 +225,23 @@ func main() {
 
 	listen := ":" + env("PORT", "8081")
 	logInfo("notifier started", "", &ecsLogNotifier{Provider: provider})
-	if err := http.ListenAndServe(listen, nil); err != nil {
+	server := &http.Server{
+		Addr:              listen,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       15 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       60 * time.Second,
+	}
+	if err := server.ListenAndServe(); err != nil {
 		fmt.Fprintln(os.Stderr, "server error:", err)
 		os.Exit(1)
 	}
+}
+
+func sanitizeHeader(value string) string {
+	value = strings.ReplaceAll(value, "\r", " ")
+	value = strings.ReplaceAll(value, "\n", " ")
+	return strings.TrimSpace(value)
 }
 
 func smtpSend(req sendRequest) error {

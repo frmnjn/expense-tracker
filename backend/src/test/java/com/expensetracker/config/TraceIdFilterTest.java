@@ -56,6 +56,19 @@ class TraceIdFilterTest {
     }
 
     @Test
+    void invalidTraceId_shouldBeReplaced() throws Exception {
+        TraceIdFilter filter = new TraceIdFilter();
+        MockHttpServletRequest req = new MockHttpServletRequest("GET", "/expenses");
+        req.addHeader(TraceIdFilter.TRACE_HEADER, "bad trace id with spaces and newline\n");
+        MockHttpServletResponse res = new MockHttpServletResponse();
+
+        filter.doFilter(req, res, (request, response) -> chain.doFilter(request, response));
+
+        assertNotNull(res.getHeader(TraceIdFilter.TRACE_HEADER));
+        assertTrue(!res.getHeader(TraceIdFilter.TRACE_HEADER).contains(" "));
+    }
+
+    @Test
     void afterChain_shouldClearMdc() throws Exception {
         TraceIdFilter filter = new TraceIdFilter();
         MockHttpServletRequest req = new MockHttpServletRequest("GET", "/options");

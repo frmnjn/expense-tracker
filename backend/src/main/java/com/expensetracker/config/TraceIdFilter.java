@@ -40,11 +40,15 @@ public class TraceIdFilter extends OncePerRequestFilter {
         }
     }
 
+    private static final java.util.regex.Pattern SAFE_TRACE_ID =
+            java.util.regex.Pattern.compile("[A-Za-z0-9._-]{1,64}");
+
     private static String resolveTraceId(HttpServletRequest request) {
         String provided = request.getHeader(TRACE_HEADER);
         if (provided == null || provided.isBlank()) {
             return UUID.randomUUID().toString();
         }
-        return provided.trim();
+        String trimmed = provided.trim();
+        return SAFE_TRACE_ID.matcher(trimmed).matches() ? trimmed : UUID.randomUUID().toString();
     }
 }

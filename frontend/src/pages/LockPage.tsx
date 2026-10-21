@@ -37,6 +37,9 @@ export default function LockPage() {
       if (res.status === 200) {
         setAccessCode(pin)
         navigate('/', { replace: true })
+      } else if (res.status === 429) {
+        setError('Terlalu banyak percobaan. Coba lagi beberapa saat.')
+        setPin('')
       } else {
         setError('PIN salah, coba lagi')
         setPin('')

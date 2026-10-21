@@ -28,10 +28,10 @@ PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 MYSQL_CONTAINER="${MYSQL_CONTAINER:-wordpress-db-1}"
 DB_NAME="expense_tracker"
 
-# shellcheck disable=SC1091
-source "${PROJECT_ROOT}/backend/.env"
+DB_USER="$(grep -E '^DB_USER=' "${PROJECT_ROOT}/backend/.env" | head -n1 | cut -d= -f2- | tr -d '\r')"
+DB_PASSWORD="$(grep -E '^DB_PASSWORD=' "${PROJECT_ROOT}/backend/.env" | head -n1 | cut -d= -f2- | tr -d '\r')"
 
-if [ -z "${DB_USER:-}" ] || [ -z "${DB_PASSWORD:-}" ]; then
+if [ -z "${DB_USER}" ] || [ -z "${DB_PASSWORD}" ]; then
     echo "ERROR: DB_USER/DB_PASSWORD kosong di .env" >&2
     exit 1
 fi

@@ -34,15 +34,18 @@ public class NotificationService {
 
     private final HttpClient httpClient;
     private final String notifierUrl;
+    private final String notifierToken;
     private final List<String> emails;
     private final boolean testMode;
     private final ExecutorService executor = Executors.newFixedThreadPool(2);
 
     public NotificationService(@Value("${notify.notifier-url:}") String notifierUrl,
+                               @Value("${notify.notifier-token:}") String notifierToken,
                                @Value("${notify.emails:}") String emails,
                                @Value("${notify.test-mode:false}") boolean testMode,
                                @Value("${notify.test-email:}") String testEmail) {
         this.notifierUrl = notifierUrl;
+        this.notifierToken = notifierToken == null ? "" : notifierToken.trim();
         this.testMode = testMode;
         this.emails = resolveRecipients(emails, testMode, testEmail);
         this.httpClient = HttpClient.newBuilder()
@@ -148,6 +151,7 @@ public class NotificationService {
                     .uri(URI.create(notifierUrl + "/send"))
                     .timeout(Duration.ofSeconds(10))
                     .header("Content-Type", "application/json")
+                    .header("X-Notifier-Token", notifierToken)
                     .POST(HttpRequest.BodyPublishers.ofString(json));
             String traceId = MDC.get(TraceIdFilter.MDC_TRACE_ID);
             if (traceId != null && !traceId.isBlank()) {
