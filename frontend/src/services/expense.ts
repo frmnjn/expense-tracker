@@ -158,7 +158,19 @@ export async function getOptions(): Promise<OptionsResponse> {
 
 export async function getPeriods(): Promise<PeriodsResponse> {
   const response = await apiClient.get<ApiResponse<PeriodsResponse>>('/periods')
-  return response.data.data ?? { periods: [] }
+  return response.data.data ?? { periods: [], currentPeriod: '', calendar: [] }
+}
+
+export async function savePaydayOverride(period: string, date: string): Promise<ApiResponse<void>> {
+  const response = await apiClient.put<ApiResponse<void>>(`/payday-overrides/${encodeURIComponent(period)}`, {
+    date,
+  })
+  return response.data
+}
+
+export async function deletePaydayOverride(period: string): Promise<ApiResponse<void>> {
+  const response = await apiClient.delete<ApiResponse<void>>(`/payday-overrides/${encodeURIComponent(period)}`)
+  return response.data
 }
 
 export async function getExpenses(period: string): Promise<ExpensesResponse> {

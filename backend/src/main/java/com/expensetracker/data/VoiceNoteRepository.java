@@ -88,6 +88,12 @@ public class VoiceNoteRepository {
                 period, periodStart, id);
     }
 
+    public List<PeriodDateRow> findAllPeriodDates() {
+        return jdbcTemplate.query(
+                "SELECT id, DATE(reference_date) AS period_date FROM voice_notes",
+                (rs, rowNum) -> new PeriodDateRow(rs.getString("id"), rs.getDate("period_date").toLocalDate()));
+    }
+
     public void updateAnalysis(String id, String status, String analysisJson, String transcript) {
         jdbcTemplate.update(
                 "UPDATE voice_notes SET status = ?, analysis_json = ?, transcript = ?, error_message = NULL "

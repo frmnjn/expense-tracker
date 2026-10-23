@@ -114,7 +114,7 @@ Satu **invoice** adalah pemilik satu file foto/PDF dan dapat dirujuk oleh **bany
 
 Invoice hasil alur `/scan` ditandai `scan_flow = TRUE` dan memiliki state machine analisis AI: `ANALYZING` (upload sukses, AI berjalan async) → `TO_REVIEW` (AI selesai, menunggu konfirmasi user) → `SUBMITTED` (expense dibuat) atau `ERROR` (analisis gagal, bisa retry). Foto biasa pada form Catat berstatus langsung `SUBMITTED` (bukan alur AI).
 
-Periode (format `YYYY-MON-MON`, contoh `2026-JAN-FEB`) dihitung dari `date_time` dengan aturan cut-off tanggal 25. `period` disimpan untuk filter cepat.
+Periode (format `YYYY-MON-MON`, contoh `2026-JAN-FEB`) dihitung dari `date_time` dengan aturan tanggal gajian: default tanggal 25, digeser mundur ke hari kerja sebelumnya bila jatuh pada Sabtu/Minggu. Tanggal merah atau gajian yang maju/mundur dapat di-override manual per periode dari Dashboard (bulan berjalan s/d 6 bulan ke depan); override memicu hitung ulang periode data terkait. `period` disimpan untuk filter cepat.
 
 Penghapusan expense dilakukan dengan **soft delete** (`deleted = TRUE`); baris tetap ada di DB dan disaring saat ditampilkan.
 

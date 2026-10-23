@@ -2,6 +2,7 @@ package com.expensetracker.service;
 
 import com.expensetracker.data.InvoiceData;
 import com.expensetracker.data.InvoiceRepository;
+import com.expensetracker.data.PaydayOverrideRepository;
 import com.expensetracker.model.InvoicesResponse;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -46,12 +47,15 @@ class InvoiceServiceTest {
     private InvoiceRepository invoiceRepository;
     @Mock
     private com.expensetracker.data.ExpenseRepository expenseRepository;
+    @Mock
+    private PaydayOverrideRepository paydayOverrideRepository;
 
     private InvoiceService invoiceService;
 
     @BeforeEach
     void setUp() {
-        invoiceService = new InvoiceService(invoiceRepository, expenseRepository, new ObjectMapper());
+        invoiceService = new InvoiceService(invoiceRepository, expenseRepository, new ObjectMapper(),
+                new PeriodService(paydayOverrideRepository));
         ReflectionTestUtils.setField(invoiceService, "uploadDir", "/tmp");
     }
 

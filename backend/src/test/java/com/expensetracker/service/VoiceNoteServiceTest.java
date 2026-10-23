@@ -2,6 +2,7 @@ package com.expensetracker.service;
 
 import com.expensetracker.data.ExpenseData;
 import com.expensetracker.data.ExpenseRepository;
+import com.expensetracker.data.PaydayOverrideRepository;
 import com.expensetracker.data.VoiceNoteAnalysis;
 import com.expensetracker.data.VoiceNoteData;
 import com.expensetracker.data.VoiceNoteRepository;
@@ -36,12 +37,15 @@ class VoiceNoteServiceTest {
     private VoiceNoteRepository voiceNoteRepository;
     @Mock
     private ExpenseRepository expenseRepository;
+    @Mock
+    private PaydayOverrideRepository paydayOverrideRepository;
 
     private VoiceNoteService voiceNoteService;
 
     @BeforeEach
     void setUp() {
-        voiceNoteService = new VoiceNoteService(voiceNoteRepository, expenseRepository, new ObjectMapper());
+        voiceNoteService = new VoiceNoteService(voiceNoteRepository, expenseRepository, new ObjectMapper(),
+                new PeriodService(paydayOverrideRepository));
         ReflectionTestUtils.setField(voiceNoteService, "uploadDir", "/tmp");
     }
 

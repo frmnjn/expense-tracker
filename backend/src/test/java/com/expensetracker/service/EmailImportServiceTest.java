@@ -4,6 +4,7 @@ import com.expensetracker.data.EmailImportData;
 import com.expensetracker.data.EmailImportRepository;
 import com.expensetracker.data.ExpenseData;
 import com.expensetracker.data.ExpenseRepository;
+import com.expensetracker.data.PaydayOverrideRepository;
 import com.expensetracker.model.ExpenseRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -40,13 +41,16 @@ class EmailImportServiceTest {
     private EmailParserService emailParserService;
     @Mock
     private MerchantDiscardRule merchantDiscardRule;
+    @Mock
+    private PaydayOverrideRepository paydayOverrideRepository;
 
     private EmailImportService service;
 
     @BeforeEach
     void setUp() {
         service = new EmailImportService(emailImportRepository, expenseRepository, expenseService,
-                emailInboxService, emailParserService, merchantDiscardRule);
+                emailInboxService, emailParserService, merchantDiscardRule,
+                new PeriodService(paydayOverrideRepository));
     }
 
     private static ExpenseRequest request(long amount) {

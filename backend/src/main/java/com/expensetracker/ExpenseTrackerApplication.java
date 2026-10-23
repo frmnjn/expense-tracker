@@ -18,6 +18,8 @@ import com.expensetracker.model.InvoiceDetailResponse;
 import com.expensetracker.model.InvoiceResponse;
 import com.expensetracker.model.InvoicesResponse;
 import com.expensetracker.model.OptionsResponse;
+import com.expensetracker.model.PaydayOverrideRequest;
+import com.expensetracker.model.PeriodRange;
 import com.expensetracker.model.PeriodsResponse;
 import com.expensetracker.model.SummaryResponse;
 import com.expensetracker.model.TopUpRequest;
@@ -56,6 +58,8 @@ import org.springframework.scheduling.annotation.EnableScheduling;
         InvoiceResponse[].class,
         InvoicesResponse.class,
         OptionsResponse.class,
+        PaydayOverrideRequest.class,
+        PeriodRange.class,
         PeriodsResponse.class,
         SummaryResponse.class,
         TopUpRequest.class,
