@@ -3,11 +3,11 @@ import { Link } from 'react-router-dom'
 import {
   ActionIcon,
   Button,
+  Chip,
   Container,
   Divider,
   Group,
   Image,
-  Indicator,
   LoadingOverlay,
   Modal,
   NumberInput,
@@ -18,11 +18,9 @@ import {
   Text,
   TextInput,
   Title,
-  Tooltip,
 } from '@mantine/core'
 import { useMediaQuery } from '@mantine/hooks'
 import {
-  IconAdjustmentsHorizontal,
   IconArrowLeft,
   IconFileTypePdf,
   IconPhoto,
@@ -60,6 +58,8 @@ const SORT_LABELS: Record<string, string> = {
   'nominal-asc': 'Nominal terkecil',
 }
 
+const SORT_OPTIONS = Object.entries(SORT_LABELS).map(([value, label]) => ({ value, label }))
+
 const balanceColor = (value: number) => (value < 0 ? 'red' : undefined)
 
 function HistoryPage() {
@@ -83,27 +83,73 @@ function HistoryPage() {
   )
 
   const [search, setSearch] = useState('')
-  const [budgetFilter, setBudgetFilter] = useState<string | null>(null)
-  const [categoryFilter, setCategoryFilter] = useState<string | null>(null)
+  const [budgetFilters, setBudgetFilters] = useState<string[]>([])
+  const [categoryFilters, setCategoryFilters] = useState<string[]>([])
   const [sortBy, setSortBy] = useState<string>('waktu-desc')
-  const [filterOpened, setFilterOpened] = useState(false)
   const [viewingPhoto, setViewingPhoto] = useState<Expense | null>(null)
   const [viewingVoice, setViewingVoice] = useState<Expense | null>(null)
 
-  const categoryFilterOptions = useMemo(
-    () => [
+  const categoryFilterOptions = useMemo(() => {
+    const names = new Set<string>()
+    for (const budget of options?.budgets ?? []) {
+      if (!budgetFilters.includes(budget.name)) {
+        continue
+      }
+      for (const category of budget.categories ?? []) {
+        names.add(category.name)
+      }
+    }
+    return [
       { value: UNCATEGORIZED, label: 'Tanpa Kategori' },
-      ...(options?.budgets.find((b) => b.name === budgetFilter)?.categories ?? []).map((c) => ({
-        value: c.name,
-        label: c.name,
-      })),
-    ],
-    [options, budgetFilter],
-  )
+      ...[...names].map((name) => ({ value: name, label: name })),
+    ]
+  }, [options, budgetFilters])
 
-  const hasActiveFilters = budgetFilter !== null || categoryFilter !== null || sortBy !== 'waktu-desc'
-  const activeFilterCount =
-    (budgetFilter ? 1 : 0) + (categoryFilter ? 1 : 0) + (sortBy !== 'waktu-desc' ? 1 : 0)
+  const hasActiveFilters =
+    search.trim() !== '' ||
+    budgetFilters.length > 0 ||
+    categoryFilters.length > 0 ||
+    sortBy !== 'waktu-desc'
+
+  const handleBudgetFiltersChange = (next: string[]) => {
+    setBudgetFilters(next)
+    if (next.length === 0) {
+      setCategoryFilters([])
+      return
+    }
+    const available = new Set<string>()
+    for (const budget of options?.budgets ?? []) {
+      if (!next.includes(budget.name)) {
+        continue
+      }
+      for (const category of budget.categories ?? []) {
+        available.add(category.name)
+      }
+    }
+    setCategoryFilters((current) =>
+      current.filter((value) => value === UNCATEGORIZED || available.has(value)),
+    )
+  }
+
+  const toggleBudgetFilter = (name: string) => {
+    const next = budgetFilters.includes(name)
+      ? budgetFilters.filter((value) => value !== name)
+      : [...budgetFilters, name]
+    handleBudgetFiltersChange(next)
+  }
+
+  const toggleCategoryFilter = (name: string) => {
+    setCategoryFilters((current) =>
+      current.includes(name) ? current.filter((value) => value !== name) : [...current, name],
+    )
+  }
+
+  const resetFilters = () => {
+    setSearch('')
+    setBudgetFilters([])
+    setCategoryFilters([])
+    setSortBy('waktu-desc')
+  }
 
   const visibleExpenses = useMemo(() => {
     const q = search.trim().toLowerCase()
@@ -111,15 +157,16 @@ function HistoryPage() {
     if (q) {
       list = list.filter((e) => e.name.toLowerCase().includes(q))
     }
-    if (budgetFilter) {
-      list = list.filter((e) => e.budget === budgetFilter)
+    if (budgetFilters.length > 0) {
+      const selectedBudgets = new Set(budgetFilters)
+      list = list.filter((e) => selectedBudgets.has(e.budget))
     }
-    if (categoryFilter) {
-      if (categoryFilter === UNCATEGORIZED) {
-        list = list.filter((e) => !e.category)
-      } else {
-        list = list.filter((e) => e.category === categoryFilter)
-      }
+    if (categoryFilters.length > 0) {
+      const selectedCategories = new Set(categoryFilters.filter((value) => value !== UNCATEGORIZED))
+      const includeUncategorized = categoryFilters.includes(UNCATEGORIZED)
+      list = list.filter((e) =>
+        e.category ? selectedCategories.has(e.category) : includeUncategorized,
+      )
     }
     const sorted = [...list]
     switch (sortBy) {
@@ -136,7 +183,7 @@ function HistoryPage() {
         sorted.sort((a, b) => b.dateTime.localeCompare(a.dateTime))
     }
     return sorted
-  }, [expensesData, search, budgetFilter, categoryFilter, sortBy])
+  }, [expensesData, search, budgetFilters, categoryFilters, sortBy])
 
   const [editing, setEditing] = useState<Expense | null>(null)
   const [deleting, setDeleting] = useState<Expense | null>(null)
@@ -205,66 +252,94 @@ function HistoryPage() {
                 size="md"
                 style={{ flex: 1, minWidth: 0 }}
               />
-              <Tooltip label="Filter & Urut">
-                <Indicator
-                  disabled={activeFilterCount === 0}
-                  label={activeFilterCount}
-                  size={16}
-                  offset={4}
-                  color="red"
-                >
-                  <ActionIcon
-                    size="lg"
-                    variant={hasActiveFilters ? 'filled' : 'light'}
-                    color="blue"
-                    onClick={() => setFilterOpened(true)}
-                    aria-label="Filter & Urut"
-                    style={{ flexShrink: 0 }}
-                  >
-                    <IconAdjustmentsHorizontal size={18} />
-                  </ActionIcon>
-                </Indicator>
-              </Tooltip>
+              <Select
+                data={SORT_OPTIONS}
+                value={sortBy}
+                onChange={(value) => setSortBy(value ?? 'waktu-desc')}
+                size="md"
+                w={{ base: 140, sm: 180 }}
+                aria-label="Urutkan"
+                allowDeselect={false}
+                comboboxProps={{ withinPortal: false }}
+                style={{ flexShrink: 0 }}
+              />
             </Group>
 
-            {hasActiveFilters && (
-              <Group gap="xs" wrap="wrap">
-                {budgetFilter && (
-                  <Button
-                    size="xs"
+            <Stack gap={6}>
+              <Text size="xs" fw={700} c="blue.7" tt="uppercase">
+                Budget
+              </Text>
+              <Group gap={6} wrap="wrap" py={2}>
+                <Chip
+                  checked={budgetFilters.length === 0}
+                  onChange={() => handleBudgetFiltersChange([])}
+                  size="sm"
+                  radius="xl"
+                  variant="light"
+                  color="blue"
+                >
+                  Semua Budget
+                </Chip>
+                {budgetOptions.map((budget) => (
+                  <Chip
+                    key={budget.value}
+                    checked={budgetFilters.includes(budget.value)}
+                    onChange={() => toggleBudgetFilter(budget.value)}
+                    size="sm"
+                    radius="xl"
                     variant="light"
                     color="blue"
-                    rightSection={<IconX size={12} />}
-                    onClick={() => {
-                      setBudgetFilter(null)
-                      setCategoryFilter(null)
-                    }}
                   >
-                    Budget: {budgetFilter}
-                  </Button>
-                )}
-                {categoryFilter && (
-                  <Button
-                    size="xs"
+                    {budget.label}
+                  </Chip>
+                ))}
+              </Group>
+            </Stack>
+
+            {budgetFilters.length > 0 && (
+              <Stack gap={6}>
+                <Text size="xs" fw={700} c="grape.7" tt="uppercase">
+                  Kategori
+                </Text>
+                <Group gap={6} wrap="wrap" py={2}>
+                  <Chip
+                    checked={categoryFilters.length === 0}
+                    onChange={() => setCategoryFilters([])}
+                    size="sm"
+                    radius="xl"
                     variant="light"
                     color="grape"
-                    rightSection={<IconX size={12} />}
-                    onClick={() => setCategoryFilter(null)}
                   >
-                    Kategori: {categoryFilter === UNCATEGORIZED ? 'Tanpa Kategori' : categoryFilter}
-                  </Button>
-                )}
-                {sortBy !== 'waktu-desc' && (
-                  <Button
-                    size="xs"
-                    variant="light"
-                    color="gray"
-                    rightSection={<IconX size={12} />}
-                    onClick={() => setSortBy('waktu-desc')}
-                  >
-                    {SORT_LABELS[sortBy] ?? sortBy}
-                  </Button>
-                )}
+                    Semua Kategori
+                  </Chip>
+                  {categoryFilterOptions.map((category) => (
+                    <Chip
+                      key={category.value}
+                      checked={categoryFilters.includes(category.value)}
+                      onChange={() => toggleCategoryFilter(category.value)}
+                      size="sm"
+                      radius="xl"
+                      variant="light"
+                      color="grape"
+                    >
+                      {category.label}
+                    </Chip>
+                  ))}
+                </Group>
+              </Stack>
+            )}
+
+            {hasActiveFilters && (
+              <Group justify="flex-end">
+                <Button
+                  size="compact-xs"
+                  variant="subtle"
+                  color="gray"
+                  leftSection={<IconX size={12} />}
+                  onClick={resetFilters}
+                >
+                  Reset filter
+                </Button>
               </Group>
             )}
           </Stack>
@@ -275,7 +350,7 @@ function HistoryPage() {
         ) : (
           <AppPagination
             data={visibleExpenses}
-            key={`${search}|${budgetFilter}|${categoryFilter}|${sortBy}|${period}`}
+            key={`${search}|${budgetFilters.join(',')}|${categoryFilters.join(',')}|${sortBy}|${period}`}
           >
             {(pageExpenses) => (
               <Paper withBorder p={{ base: 'sm', sm: 'lg' }} radius="xl" pos="relative">
@@ -386,63 +461,6 @@ function HistoryPage() {
             <EditExpenseForm expense={editing} onClose={() => setEditing(null)} />
           </Modal>
         )}
-
-        <Modal
-          opened={filterOpened}
-          onClose={() => setFilterOpened(false)}
-          title="Filter & Urut"
-          centered
-          fullScreen={isMobile}
-          size="sm"
-          zIndex={1200}
-        >
-          <Stack gap="lg">
-            <Select
-              label="Budget"
-              placeholder="Semua budget"
-              data={budgetOptions}
-              value={budgetFilter}
-              onChange={(value) => {
-                setBudgetFilter(value)
-                setCategoryFilter(null)
-              }}
-              clearable
-              searchable
-              size="md"
-              comboboxProps={{ withinPortal: false }}
-            />
-            <Select
-              label="Kategori"
-              placeholder={budgetFilter ? 'Semua kategori' : 'Pilih budget dulu'}
-              data={categoryFilterOptions}
-              value={categoryFilter}
-              onChange={setCategoryFilter}
-              clearable
-              searchable
-              disabled={!budgetFilter || categoryFilterOptions.length === 0}
-              size="md"
-              comboboxProps={{ withinPortal: false }}
-            />
-            <Select
-              label="Urutkan"
-              data={[
-                { value: 'waktu-desc', label: 'Waktu terbaru' },
-                { value: 'waktu-asc', label: 'Waktu terlama' },
-                { value: 'nominal-desc', label: 'Nominal terbesar' },
-                { value: 'nominal-asc', label: 'Nominal terkecil' },
-              ]}
-              value={sortBy}
-              onChange={(value) => setSortBy(value ?? 'waktu-desc')}
-              size="md"
-              comboboxProps={{ withinPortal: false }}
-            />
-            <Group justify="flex-end" mt="sm">
-              <Button fullWidth={isMobile} onClick={() => setFilterOpened(false)}>
-                Terapkan
-              </Button>
-            </Group>
-          </Stack>
-        </Modal>
 
         <Modal
           opened={!!viewingPhoto}
