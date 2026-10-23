@@ -60,7 +60,7 @@ Target: sederhana, mudah dijalankan dengan Docker, mudah dikembangkan.
 * `/voice` — **Catat dengan Suara** (rekam voice note, AI membuat draft expense, review & simpan, playback dari Riwayat).
 * `/inbox` — **Inbox Email** (transaksi dari email notifikasi bank, hasil pembacaan IMAP, review & import jadi expense).
 * `/dashboard` — ringkasan saldo per budget, top-up, riwayat top-up, dan 3 bulan terakhir.
-* `/riwayat` — daftar pengeluaran per periode, dengan filter/sort, pagination, edit, hapus, dan lihat foto (termasuk PDF).
+* `/riwayat` — daftar pengeluaran per periode, dengan filter budget & kategori multi-select, sort, pagination, edit, hapus, dan lihat foto (termasuk PDF).
 * `/catat` — alias halaman Catat.
 
 Saat aplikasi dibuka, user langsung melihat halaman Catat.
@@ -211,7 +211,11 @@ Detail teknis:
 ### Riwayat
 
 * Dropdown periode.
-* Search nama, filter budget, dan sort (waktu/nominal) — muncul setelah periode dipilih.
+* Search nama dan sort (waktu/nominal) — muncul setelah periode dipilih. Kontrol sort selalu terlihat, tidak di dalam modal.
+* Filter **budget** dan **kategori** berupa chip multi-select (bisa pilih lebih dari satu).
+* Chip kategori menampilkan gabungan kategori dari budget yang dipilih, plus opsi **Tanpa Kategori**; pilihan kategori yang tidak lagi valid otomatis dibuang saat budget berubah.
+* Filter bersifat **OR dalam satu dimensi** (budget A atau B; kategori X atau Y) dan **AND antar dimensi** (budget AND kategori).
+* Section **BUDGET** dan **KATEGORI** dipisah dengan heading; chip **wrap ke bawah** di desktop maupun mobile (tanpa scroll horizontal).
 * Tabel (desktop) / kartu (mobile) daftar expense aktif.
 * Tombol lihat foto (📷) jika expense memiliki foto.
 * Tombol edit (modal) dan hapus (konfirmasi, soft delete).
@@ -607,7 +611,7 @@ Untuk **produksi**, `docker-compose.prod.yml` memakai MySQL VPS dan image backen
 * User dapat mencatat pengeluaran (dengan/ tanpa foto invoice).
 * User dapat melihat saldo per budget dan menambah saldo (top-up).
 * User dapat mengelola budget (tambah/edit/hapus).
-* User dapat melihat riwayat per periode, filter/sort, edit, hapus, dan lihat foto.
+* User dapat melihat riwayat per periode, filter budget & kategori multi-select, sort, edit, hapus, dan lihat foto.
 * User dapat mencatat pengeluaran dengan rekaman suara, mereview hasil AI, dan memutar kembali rekamannya dari Riwayat.
 * Data tersimpan di MySQL.
 * Aplikasi dapat dijalankan dengan Docker Compose.

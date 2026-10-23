@@ -257,7 +257,7 @@ function HistoryPage() {
                 value={sortBy}
                 onChange={(value) => setSortBy(value ?? 'waktu-desc')}
                 size="md"
-                w={{ base: 140, sm: 180 }}
+                w={{ base: 160, sm: 180 }}
                 aria-label="Urutkan"
                 allowDeselect={false}
                 comboboxProps={{ withinPortal: false }}
@@ -296,11 +296,15 @@ function HistoryPage() {
               </Group>
             </Stack>
 
-            {budgetFilters.length > 0 && (
-              <Stack gap={6}>
-                <Text size="xs" fw={700} c="grape.7" tt="uppercase">
-                  Kategori
+            <Stack gap={6}>
+              <Text size="xs" fw={700} c="grape.7" tt="uppercase">
+                Kategori
+              </Text>
+              {budgetFilters.length === 0 ? (
+                <Text size="xs" c="dimmed">
+                  Pilih budget dulu untuk melihat kategori.
                 </Text>
+              ) : (
                 <Group gap={6} wrap="wrap" py={2}>
                   <Chip
                     checked={categoryFilters.length === 0}
@@ -326,8 +330,8 @@ function HistoryPage() {
                     </Chip>
                   ))}
                 </Group>
-              </Stack>
-            )}
+              )}
+            </Stack>
 
             {hasActiveFilters && (
               <Group justify="flex-end">

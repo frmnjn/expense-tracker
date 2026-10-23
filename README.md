@@ -41,7 +41,7 @@ Tampilan desktop memakai sidebar di kiri, konten lebar, dan tabel untuk daftar t
 
 ### Mobile
 
-Tampilan mobile mengganti sidebar menjadi **bottom navigation**, form menjadi satu kolom, dan daftar transaksi berubah menjadi kartu agar tombol aksi tetap terlihat tanpa scroll horizontal. Screenshot Dashboard mobile juga memakai long screenshot sampai bagian paling bawah.
+Tampilan mobile mengganti sidebar menjadi **bottom navigation**, form menjadi satu kolom, dan daftar transaksi berubah menjadi kartu agar tombol aksi tetap terlihat tanpa scroll horizontal. Filter budget & kategori ditampilkan sebagai chip yang **wrap ke bawah** (bukan scroll horizontal), dengan section **BUDGET** dan **KATEGORI** yang terpisah. Screenshot Dashboard mobile juga memakai long screenshot sampai bagian paling bawah.
 
 | Dashboard | Catat | Riwayat |
 |---|---|---|
@@ -63,7 +63,7 @@ Tampilan mobile mengganti sidebar menjadi **bottom navigation**, form menjadi sa
 * **Scan Struk dengan AI** (`/scan`): upload foto/PDF → AI (Gemini) baca struk → review & assign budget → auto-create banyak expense per budget
 * Saldo per budget (berkurang saat pengeluaran, bertambah via top-up)
 * Dashboard: saldo per budget, pengeluaran terbesar, 3 bulan terakhir
-* Riwayat per periode: search, filter, sort, **pagination**, edit (termasuk ganti/hapus foto), hapus, lihat foto (termasuk PDF)
+* Riwayat per periode: search, **filter budget & kategori multi-select**, sort, **pagination**, edit (termasuk ganti/hapus foto), hapus, lihat foto (termasuk PDF)
 * Kelola budget (tambah/edit/hapus, soft delete) — termasuk ambang notifikasi "budget menipis" per budget
 * Idempotensi POST (header `Idempotency-Key`) untuk mencegah duplikat
 * Notifikasi email (Gmail SMTP via microservice `notifier`): konfirmasi expense/top-up/budget + peringatan budget menipis (threshold per budget)
