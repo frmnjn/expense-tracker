@@ -10,6 +10,7 @@ const HistoryPage = lazy(() => import('./pages/HistoryPage'))
 const InboxPage = lazy(() => import('./pages/InboxPage'))
 const ScanPage = lazy(() => import('./pages/ScanPage'))
 const VoicePage = lazy(() => import('./pages/VoicePage'))
+const ReportsPage = lazy(() => import('./pages/ReportsPage'))
 
 function Protected() {
   return getAccessCode() ? <AppLayout /> : <Navigate to="/lock" replace />
@@ -30,6 +31,7 @@ function App() {
           <Route path="/inbox" element={<InboxPage />} />
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/riwayat" element={<HistoryPage />} />
+          <Route path="/laporan" element={<ReportsPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

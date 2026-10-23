@@ -131,13 +131,13 @@ public class VoiceNoteRepository {
 
     private VoiceNoteData mapRow(ResultSet rs, int rowNum) throws SQLException {
         java.sql.Timestamp createdAt = rs.getTimestamp("created_at");
-        java.sql.Timestamp referenceDate = rs.getTimestamp("reference_date");
+        LocalDateTime referenceDate = rs.getObject("reference_date", LocalDateTime.class);
         int rawDuration = rs.getInt("duration_ms");
         Integer duration = rs.wasNull() ? null : rawDuration;
         return new VoiceNoteData(
                 rs.getString("id"),
                 rs.getString("period"),
-                referenceDate == null ? "" : referenceDate.toLocalDateTime().format(PeriodSheetName.FORMATTER),
+                referenceDate == null ? "" : referenceDate.format(PeriodSheetName.FORMATTER),
                 rs.getString("file_path"),
                 rs.getString("mime_type"),
                 duration,

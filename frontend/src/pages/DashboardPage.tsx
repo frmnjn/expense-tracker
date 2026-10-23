@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Button, Container, Group, Select, SimpleGrid, Stack } from '@mantine/core'
-import { IconCalendarEvent } from '@tabler/icons-react'
+import { useMediaQuery } from '@mantine/hooks'
+import { Link } from 'react-router-dom'
+import { IconCalendarEvent, IconFileText } from '@tabler/icons-react'
 import { PageHeader } from '../components/PageHeader'
 import { useExpenses, usePeriods, useSummary, useTrend } from '../hooks/useExpenses'
 import { useOptions } from '../hooks/useOptions'
@@ -31,6 +33,7 @@ function DashboardPage() {
   const [manageCategoriesBudget, setManageCategoriesBudget] = useState<string | null>(null)
   const [editBudget, setEditBudget] = useState<{ name: string; balance: number | undefined; alertThreshold: number | undefined; description: string | undefined } | null>(null)
   const [paydaySettingsOpened, setPaydaySettingsOpened] = useState(false)
+  const isMobile = useMediaQuery('(max-width: 48em)')
 
   useEffect(() => {
     if (!period && periodsData && periodsData.periods.length > 0) {
@@ -106,27 +109,69 @@ function DashboardPage() {
           title="Dashboard"
           subtitle="Ringkasan keuangan dan budget kamu."
           right={
-            <Group align="flex-end" gap="xs" wrap="nowrap">
-              <Select
-                w={{ base: 'auto', sm: 190 }}
-                style={{ flex: 1, minWidth: 0 }}
-                placeholder={periodsLoading ? 'Memuat...' : 'Pilih periode'}
-                data={periods}
-                value={period}
-                onChange={setPeriod}
-                searchable
-                size="sm"
-                aria-label="Periode"
-              />
-              <Button
-                variant="light"
-                size="sm"
-                leftSection={<IconCalendarEvent size={16} />}
-                onClick={() => setPaydaySettingsOpened(true)}
-              >
-                Atur gajian
-              </Button>
-            </Group>
+            isMobile ? (
+              <Stack gap="xs">
+                <Select
+                  w="100%"
+                  placeholder={periodsLoading ? 'Memuat...' : 'Pilih periode'}
+                  data={periods}
+                  value={period}
+                  onChange={setPeriod}
+                  searchable
+                  size="sm"
+                  aria-label="Periode"
+                />
+                <Group grow gap="xs">
+                  <Button
+                    variant="light"
+                    size="sm"
+                    leftSection={<IconCalendarEvent size={16} />}
+                    onClick={() => setPaydaySettingsOpened(true)}
+                  >
+                    Atur gajian
+                  </Button>
+                  <Button
+                    component={Link}
+                    to="/laporan"
+                    variant="light"
+                    size="sm"
+                    leftSection={<IconFileText size={16} />}
+                  >
+                    Laporan
+                  </Button>
+                </Group>
+              </Stack>
+            ) : (
+              <Group align="flex-end" gap="xs" wrap="nowrap">
+                <Select
+                  w={190}
+                  placeholder={periodsLoading ? 'Memuat...' : 'Pilih periode'}
+                  data={periods}
+                  value={period}
+                  onChange={setPeriod}
+                  searchable
+                  size="sm"
+                  aria-label="Periode"
+                />
+                <Button
+                  variant="light"
+                  size="sm"
+                  leftSection={<IconCalendarEvent size={16} />}
+                  onClick={() => setPaydaySettingsOpened(true)}
+                >
+                  Atur gajian
+                </Button>
+                <Button
+                  component={Link}
+                  to="/laporan"
+                  variant="light"
+                  size="sm"
+                  leftSection={<IconFileText size={16} />}
+                >
+                  Laporan
+                </Button>
+              </Group>
+            )
           }
         />
 

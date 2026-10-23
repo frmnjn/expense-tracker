@@ -78,6 +78,17 @@ class PaydayCalendarTest {
         assertEquals(LocalDate.of(2026, 11, 20), overridden.parseStartDate("2026-NOV-DEC").orElseThrow());
     }
 
+
+    @Test
+    void previousPeriod_shouldMoveToPreviousMonth() {
+        assertEquals("2026-SEP-OCT", calendar.previousPeriod("2026-OCT-NOV"));
+    }
+
+    @Test
+    void previousPeriod_shouldHandleYearRollover() {
+        assertEquals("2025-DEC-JAN", calendar.previousPeriod("2026-JAN-FEB"));
+    }
+
     @Test
     void parseStartDate_shouldHandleYearRollover() {
         assertEquals(LocalDate.of(2025, 12, 25), calendar.parseStartDate("2025-DEC-JAN").orElseThrow());

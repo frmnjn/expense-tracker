@@ -114,6 +114,12 @@ public final class PaydayCalendar {
         return periodName(month.plusMonths(1));
     }
 
+    public String previousPeriod(String period) {
+        YearMonth month = parsePeriod(period)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid period: " + period));
+        return periodName(month.minusMonths(1));
+    }
+
     public Optional<LocalDate> parseStartDate(String period) {
         return parsePeriod(period).map(month -> paydayForPeriod(periodName(month)));
     }

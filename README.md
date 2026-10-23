@@ -67,6 +67,7 @@ Tampilan mobile mengganti sidebar menjadi **bottom navigation**, form menjadi sa
 * Kelola budget (tambah/edit/hapus, soft delete) — termasuk ambang notifikasi "budget menipis" per budget
 * Idempotensi POST (header `Idempotency-Key`) untuk mencegah duplikat
 * Notifikasi email (Gmail SMTP via microservice `notifier`): konfirmasi expense/top-up/budget + peringatan budget menipis (threshold per budget)
+* **Report PDF otomatis per periode**: saat periode baru dimulai, laporan lengkap periode sebelumnya (ringkasan, rincian budget/kategori, analisis, seluruh transaksi) dibuat via HTML/CSS → PDF dalam Bahasa Indonesia (email report tetap Bahasa Inggris), disimpan di `uploads/reports/`, dikirim sebagai lampiran email, dan bisa dilihat/diunduh lewat halaman **Laporan** (tombol di Dashboard)
 * Trace id end-to-end (header `X-Trace-Id` FE → BE → notifier) untuk menelusuri log satu request
 * Dark mode (default gelap)
 
@@ -77,7 +78,8 @@ Tampilan mobile mengganti sidebar menjadi **bottom navigation**, form menjadi sa
 * **Frontend:** React 19 + Vite + TypeScript, React Router, TanStack Query, Axios, Mantine UI
 * **Backend:** Java 25 + Spring Boot 4, Spring JDBC (JdbcTemplate), Flyway; runtime **JVM** (`Dockerfile`, default) atau GraalVM Native Image (`Dockerfile.native`, opsional/legacy)
 * **AI:** Google Gemini (`gemini-3.5-flash-lite`) via JDK HttpClient untuk analisis struk (gambar/PDF)
-* **Notifier:** Go (std lib `net/smtp`), kirim email via SMTP (Gmail), fallback Resend
+* **Report PDF:** HTML/CSS → PDF via Flying Saucer + OpenPDF; PDFBox untuk render invoice PDF & stempel nomor halaman
+* **Notifier:** Go (std lib `net/smtp`), kirim email via SMTP (Gmail), fallback Resend, mendukung lampiran PDF
 * **Storage:** MySQL 8+
 
 ---
@@ -141,6 +143,11 @@ NOTIFIER_URL=http://notifier:8081
 NOTIFY_EMAILS=email1@example.com,email2@example.com
 NOTIFY_TEST_MODE=false
 NOTIFY_TEST_EMAIL=your-email@gmail.com
+REPORT_ENABLED=true               # opsional, default true
+REPORT_CRON=0 5 0 * * *           # opsional, default cek tiap 00:05
+REPORT_GRACE_DAYS=1               # opsional, toleransi hari setelah periode baru mulai
+REPORT_ZONE=Asia/Jakarta          # opsional, zona waktu report
+TZ=Asia/Jakarta                   # zona waktu container
 ```
 
 ### Notifier (STB Armbian, `docker-compose.stb.yml`)

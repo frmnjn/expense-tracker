@@ -7,6 +7,8 @@ services:
     mem_limit: 512m
     env_file:
       - ./backend/.env.demo
+    environment:
+      TZ: Asia/Jakarta
     extra_hosts:
       - "host.docker.internal:host-gateway"
     volumes:

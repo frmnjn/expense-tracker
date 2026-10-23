@@ -148,11 +148,11 @@ public class ExpenseRepository {
         if (photoPath != null) {
             photoType = photoPath.toLowerCase().endsWith(".pdf") ? "pdf" : "image";
         }
+        LocalDateTime dateTime = rs.getObject("date_time", LocalDateTime.class);
         return new ExpenseData(
                 rs.getString("id"),
                 rs.getString("period"),
-                rs.getTimestamp("date_time") == null ? "" : rs.getTimestamp("date_time").toLocalDateTime()
-                        .format(PeriodSheetName.FORMATTER),
+                dateTime == null ? "" : dateTime.format(PeriodSheetName.FORMATTER),
                 rs.getString("name"),
                 rs.getString("budget_name"),
                 rs.getLong("amount"),

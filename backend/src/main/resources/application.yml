@@ -42,6 +42,12 @@ notify:
   test-mode: ${NOTIFY_TEST_MODE:false}
   test-email: ${NOTIFY_TEST_EMAIL:}
 
+report:
+  enabled: ${REPORT_ENABLED:true}
+  cron: ${REPORT_CRON:0 5 0 * * *}
+  grace-days: ${REPORT_GRACE_DAYS:1}
+  zone: ${REPORT_ZONE:Asia/Jakarta}
+
 inbox:
   enabled: ${INBOX_ENABLED:false}
   host: ${INBOX_HOST:imap.gmail.com}
