@@ -12,6 +12,8 @@ import org.apache.pdfbox.Loader;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
+import org.apache.pdfbox.pdmodel.font.PDFont;
+import org.apache.pdfbox.pdmodel.font.PDType0Font;
 import org.apache.pdfbox.pdmodel.font.PDType1Font;
 import org.apache.pdfbox.pdmodel.font.Standard14Fonts;
 import org.springframework.stereotype.Service;
@@ -19,11 +21,16 @@ import org.xhtmlrenderer.pdf.ITextRenderer;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
 
 @Service
 public class PeriodReportPdfRenderer {
+
+    private static final String FONT_DIRECTORY = "/usr/share/fonts/truetype/dejavu";
 
     public byte[] render(PeriodReportData data, PeriodReportStatistics stats) {
         String html = buildHtml(data, stats);
@@ -38,7 +45,7 @@ public class PeriodReportPdfRenderer {
                 .append("<title>Laporan Pengeluaran</title>")
                 .append("<style>")
                 .append("@page { size: A4; margin: 16mm 13mm 18mm 13mm; }")
-                .append("body { font-family: Helvetica, Arial, sans-serif; font-size: 9pt; color: #222222; line-height: 1.35; }")
+                .append("body { font-family: 'DejaVu Sans', Helvetica, Arial, sans-serif; font-size: 9pt; color: #222222; line-height: 1.35; }")
                 .append("h1 { font-size: 20pt; margin: 0 0 4pt 0; }")
                 .append("h2 { font-size: 12pt; margin: 14pt 0 6pt 0; border-bottom: 1pt solid #d0d0d0; padding-bottom: 3pt; }")
                 .append("h3 { font-size: 10pt; margin: 10pt 0 4pt 0; }")
@@ -207,11 +214,11 @@ public class PeriodReportPdfRenderer {
                 .append("</table></div>");
 
         html.append("<p class=\"note\"><strong>Cara membaca angka:</strong> ")
-                .append("<em>Saldo awal periode</em> adalah saldo budget pada awal periode, sama dengan ")
-                .append("saldo akhir periode sebelumnya. <em>Uang yang ditambahkan</em> adalah dana yang ")
+                .append("<strong>Saldo awal periode</strong> adalah saldo budget pada awal periode, sama dengan ")
+                .append("saldo akhir periode sebelumnya. <strong>Uang yang ditambahkan</strong> adalah dana yang ")
                 .append("dialokasikan ke budget tersebut selama periode laporan, bukan pengeluaran atau ")
-                .append("pemasukan. <em>Uang yang dipakai</em> adalah pengeluaran dari budget tersebut selama ")
-                .append("periode laporan. <em>Sisa saldo akhir periode</em> adalah saldo budget pada hari ")
+                .append("pemasukan. <strong>Uang yang dipakai</strong> adalah pengeluaran dari budget tersebut selama ")
+                .append("periode laporan. <strong>Sisa saldo akhir periode</strong> adalah saldo budget pada hari ")
                 .append("terakhir periode, sebelum transaksi periode berikutnya. Dengan begitu: ")
                 .append("saldo awal + uang ditambahkan - uang dipakai = saldo akhir periode. ")
                 .append("Penyesuaian saldo manual tidak dapat dilacak. ")
@@ -354,6 +361,8 @@ public class PeriodReportPdfRenderer {
     private static byte[] renderPdf(String html) {
         try (ByteArrayOutputStream output = new ByteArrayOutputStream()) {
             ITextRenderer renderer = new ITextRenderer();
+            registerFont(renderer, "DejaVuSans.ttf");
+            registerFont(renderer, "DejaVuSans-Bold.ttf");
             renderer.setDocumentFromString(html);
             renderer.layout();
             renderer.createPDF(output);
@@ -363,11 +372,18 @@ public class PeriodReportPdfRenderer {
         }
     }
 
+    private static void registerFont(ITextRenderer renderer, String fileName) throws IOException {
+        Path path = Path.of(FONT_DIRECTORY, fileName);
+        if (Files.isRegularFile(path)) {
+            renderer.getFontResolver().addFont(path.toString(), true);
+        }
+    }
+
     private static byte[] stampPageNumbers(byte[] pdf) {
         try (PDDocument document = Loader.loadPDF(pdf);
              ByteArrayOutputStream output = new ByteArrayOutputStream()) {
             int pageCount = document.getNumberOfPages();
-            PDType1Font font = new PDType1Font(Standard14Fonts.FontName.HELVETICA);
+            PDFont font = pageNumberFont(document);
             for (int i = 0; i < pageCount; i++) {
                 PDPage page = document.getPage(i);
                 String text = "Halaman " + (i + 1) + " dari " + pageCount;
@@ -386,6 +402,16 @@ public class PeriodReportPdfRenderer {
         } catch (IOException e) {
             throw new IllegalStateException("Gagal menambahkan nomor halaman laporan", e);
         }
+    }
+
+    private static PDFont pageNumberFont(PDDocument document) throws IOException {
+        Path path = Path.of(FONT_DIRECTORY, "DejaVuSans.ttf");
+        if (Files.isRegularFile(path)) {
+            try (InputStream input = Files.newInputStream(path)) {
+                return PDType0Font.load(document, input, true);
+            }
+        }
+        return new PDType1Font(Standard14Fonts.FontName.HELVETICA);
     }
 
     private static String h(String value) {

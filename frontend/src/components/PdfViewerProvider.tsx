@@ -62,8 +62,14 @@ function PdfViewerModal({
         if (cancelled) return
 
         setState({ status: 'loading', pages: pdf.numPages, rendered: 0 })
-        const width = Math.min(Math.max(container.clientWidth || 360, 280), 900)
-        const pixelRatio = Math.min(window.devicePixelRatio || 1, 2)
+        const containerStyle = window.getComputedStyle(container)
+        const horizontalPadding = parseFloat(containerStyle.paddingLeft)
+          + parseFloat(containerStyle.paddingRight)
+        const width = Math.min(
+          Math.max((container.clientWidth || 360) - horizontalPadding, 280),
+          900,
+        )
+        const pixelRatio = Math.min(window.devicePixelRatio || 1, 3)
 
         for (let pageNumber = 1; pageNumber <= pdf.numPages; pageNumber++) {
           if (cancelled) return
