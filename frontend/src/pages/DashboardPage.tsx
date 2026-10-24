@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Button, Container, Group, Select, SimpleGrid, Stack } from '@mantine/core'
+import { Button, Container, Grid, Group, Select, SimpleGrid, Stack } from '@mantine/core'
 import { useMediaQuery } from '@mantine/hooks'
 import { Link } from 'react-router-dom'
 import { IconCalendarEvent, IconFileText } from '@tabler/icons-react'
@@ -128,7 +128,7 @@ function DashboardPage() {
                     leftSection={<IconCalendarEvent size={16} />}
                     onClick={() => setPaydaySettingsOpened(true)}
                   >
-                    Atur gajian
+                    Atur Gajian
                   </Button>
                   <Button
                     component={Link}
@@ -159,7 +159,7 @@ function DashboardPage() {
                   leftSection={<IconCalendarEvent size={16} />}
                   onClick={() => setPaydaySettingsOpened(true)}
                 >
-                  Atur gajian
+                  Atur Gajian
                 </Button>
                 <Button
                   component={Link}
@@ -184,26 +184,30 @@ function DashboardPage() {
           hasPeriod={!!period}
         />
 
-        <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="xl">
-          <BudgetHealth
-            budgets={budgets}
-            byBudget={byBudget}
-            isLoading={optionsLoading}
-            isError={optionsError}
-            onAddBudget={() => setAddBudgetOpened(true)}
-            onTopUp={(name) => setSelectedTopUpBudget(name)}
-            onHistory={(name) => setSelectedTopUpHistoryBudget(name)}
-            onManageCategories={(name) => setManageCategoriesBudget(name)}
-            onEdit={setEditBudget}
-            onDelete={(name) => setDeleteBudgetName(name)}
-          />
-          <SpendingTrend
-            periods={trend?.periods ?? []}
-            selectedPeriod={period}
-            isLoading={trendLoading}
-            isError={trendError}
-          />
-        </SimpleGrid>
+        <Grid gap="xl">
+          <Grid.Col span={{ base: 12, sm: 8 }}>
+            <BudgetHealth
+              budgets={budgets}
+              byBudget={byBudget}
+              isLoading={optionsLoading}
+              isError={optionsError}
+              onAddBudget={() => setAddBudgetOpened(true)}
+              onTopUp={(name) => setSelectedTopUpBudget(name)}
+              onHistory={(name) => setSelectedTopUpHistoryBudget(name)}
+              onManageCategories={(name) => setManageCategoriesBudget(name)}
+              onEdit={setEditBudget}
+              onDelete={(name) => setDeleteBudgetName(name)}
+            />
+          </Grid.Col>
+          <Grid.Col span={{ base: 12, sm: 4 }}>
+            <SpendingTrend
+              periods={trend?.periods ?? []}
+              selectedPeriod={period}
+              isLoading={trendLoading}
+              isError={trendError}
+            />
+          </Grid.Col>
+        </Grid>
 
         <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="xl">
           <SpendingByBudget
