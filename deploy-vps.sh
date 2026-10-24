@@ -27,6 +27,7 @@ set -euo pipefail
 VPS_HOST="${VPS_HOST:?set VPS_HOST (hostname/IP VPS)}"
 VPS_DIR="${VPS_DIR:-/root/expense-tracker}"
 IMAGE="${IMAGE:-expense-tracker-backend-jvm:latest}"
+PUBLIC_BASE_URL="${PUBLIC_BASE_URL:-}"
 TOTAL_MS=0
 
 # step <label> <bash-cmd...>
@@ -83,6 +84,12 @@ step "[6/6] bersihkan image dangling di VPS" \
 echo ""
 printf 'Total semua step: %d.%03ds\n' $((TOTAL_MS / 1000)) $((TOTAL_MS % 1000))
 echo ""
-echo "Deploy VPS selesai. Cek health:"
-echo "  curl -s https://expense.frmnjn.my.id/api/health"
+echo "Deploy VPS selesai."
+if [ -n "${PUBLIC_BASE_URL}" ]; then
+    echo "Cek health:"
+    echo "  curl -s ${PUBLIC_BASE_URL%/}/api/health"
+else
+    echo "Cek health dari VPS:"
+    echo "  docker compose -f docker-compose.prod.yml exec -T backend curl -fsS http://localhost:8080/health"
+fi
 echo "Rollback: gunakan image ${IMAGE%-latest}:rollback-<timestamp> lalu compose up -d."

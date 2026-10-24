@@ -2,6 +2,8 @@
 
 Aplikasi web untuk mencatat pengeluaran harian, memantau saldo per budget, dan mengelola riwayat. Backend memakai **MySQL**.
 
+**Versi:** `v1.0.0`
+
 ---
 
 ## Live Demo
@@ -115,12 +117,23 @@ GEMINI_API_KEY=AIza... docker compose up -d --build
 
 ## Menjalankan (produksi)
 
-Topologi produksi saat ini:
+Produksi memakai dua host:
 
-* Host nginx di VPS meneruskan `https://expense.frmnjn.my.id` ke container `expense-tracker-frontend-1:80` (config nginx berada di repo infrastruktur terpisah).
-* `docker-compose.prod.yml` menjalankan frontend + backend JVM (`expense-tracker-backend-jvm:latest`); MySQL memakai instance bersama WordPress di `10.8.0.1:33060` lewat WireGuard.
-* Notifier berjalan terpisah di STB Armbian (`10.8.0.4:8081`).
-* Image backend dibuild langsung di VPS via `./deploy-vps.sh` (backup DB dulu, tag commit + `latest`, health gate `/ready`).
+* **VPS** — nginx/reverse proxy, frontend, backend JVM, dan MySQL. Image backend dibuild langsung di VPS via `./deploy-vps.sh` (backup DB dulu, tag commit + `latest`, health gate `/ready`).
+* **STB Armbian** — microservice notifier email yang menyala 24/7. VPS menjangkaunya lewat WireGuard. Notifier dipisah karena SMTP keluar dari VPS diblokir.
+
+```text
+Internet
+   |
+   v
+nginx (VPS) -> frontend + backend (VPS) -> MySQL (VPS)
+                              |
+                              | WireGuard
+                              v
+                      notifier (STB Armbian) -> SMTP / Resend
+```
+
+Konfigurasi domain, IP, dan kredensial sengaja tidak disimpan di repo ini. Isi lewat environment variable saat deploy, misalnya `PUBLIC_BASE_URL=https://<domain-produksi-anda>`.
 
 Setup database (sekali):
 
@@ -148,7 +161,7 @@ mysql -u expense_tracker_user -p expense_tracker < seed.sql
 
 ```text
 PORT=8080
-DB_URL=jdbc:mysql://host.docker.internal:33060/expense_tracker?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+DB_URL=jdbc:mysql://<mysql-host>:<mysql-port>/expense_tracker?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
 DB_USER=expense_tracker_user
 DB_PASSWORD=password-kuat
 UPLOAD_DIR=/app/uploads
@@ -171,10 +184,10 @@ TZ=Asia/Jakarta                   # zona waktu container
 
 ### Notifier (STB Armbian, `docker-compose.stb.yml`)
 
-Di produksi, microservice notifier dijalankan di **perangkat STB (Armbian)** yang menyala 24/7, diakses VPS lewat **WireGuard** (`10.8.0.4:8081`). Jalankan di STB:
+Di produksi, microservice notifier dijalankan di **perangkat STB (Armbian)** yang menyala 24/7, diakses VPS lewat **WireGuard** (`<stb-wireguard-ip>:8081`). Jalankan di STB:
 
 ```bash
-git clone https://github.com/your-user/expense-tracker.git
+git clone <repo-url>
 export STB_BIND_IP=<ip-wireguard-stb>
 cd expense-tracker
 # buat .env (SMTP + Resend fallback)
@@ -263,8 +276,9 @@ Status HTTP: create `201`, sukses `200`, validasi `400`, tidak ditemukan `404`, 
 Jalur produksi adalah **JVM** dan dibuild langsung di VPS:
 
 ```bash
+PUBLIC_BASE_URL=https://<domain-produksi-anda> \
 VPS_HOST=<host-vps> VPS_DIR=/root/expense-tracker ./deploy-vps.sh  # backup -> build -> up -> health gate
-STB_HOST=10.8.0.4 STB_DIR=/root/expense-tracker ./deploy-stb.sh  # deploy notifier ke STB
+STB_HOST=<stb-wireguard-ip> STB_DIR=/root/expense-tracker ./deploy-stb.sh  # deploy notifier ke STB
 ```
 
 `deploy-vps.sh` melakukan backup DB sebelum migrasi, membuat tag image per commit + `rollback-<timestamp>`, lalu memverifikasi `/ready`. Native build (`build-native.sh`, `deploy-native.sh`) hanya opsional/legacy.
@@ -272,7 +286,7 @@ STB_HOST=10.8.0.4 STB_DIR=/root/expense-tracker ./deploy-stb.sh  # deploy notifi
 * Cleanup data (expense/invoice/voice/email/topup/report/idempotency + folder upload, **budget dipertahankan**): `scripts/clean_data.sh`
 * CI (`.github/workflows/ci.yml`) menjalankan test backend, lint/build frontend, build notifier, dan validasi compose.
 * Checklist rilis & rollback: `docs/release.md`.
-* `deploy-vps.sh` mengasumsikan SSH key `root@$VPS_HOST` terdaftar; `deploy-stb.sh` mengasumsikan SSH key `root@10.8.0.4` (WireGuard) terdaftar.
+* `deploy-vps.sh` mengasumsikan SSH key `root@$VPS_HOST` terdaftar; `deploy-stb.sh` mengasumsikan SSH key `root@$STB_HOST` (WireGuard) terdaftar.
 
 ---
 
@@ -287,7 +301,7 @@ scripts/    # backup, restore, seed, clean_data
 docker-compose.yml       # lokal (dengan mysql + notifier service, backend JVM default)
 docker-compose.local.yml # override dev: backend JVM (build dari backend/Dockerfile)
 docker-compose.prod.yml  # produksi (MySQL VPS, backend JVM)
-docker-compose.stb.yml   # notifier di STB Armbian (WireGuard 10.8.0.4)
+docker-compose.stb.yml   # notifier di STB Armbian via WireGuard
 .github/workflows/       # CI (test/build) + CodeQL
 docs/                    # referensi tambahan
 uploads/                 # foto/PDF invoice (bind mount)

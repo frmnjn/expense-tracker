@@ -1,4 +1,4 @@
-# Release Checklist (v1)
+# Release Checklist (v1.0.0)
 
 Dokumen ini merangkum gerbang rilis v1 untuk aplikasi Expense Tracker.
 
@@ -7,7 +7,7 @@ Dokumen ini merangkum gerbang rilis v1 untuk aplikasi Expense Tracker.
 - `ACCESS_CODE` terisi. API **fail-closed** (503) bila kosong; jangan set
   `ACCESS_ALLOW_BLANK=true` di produksi.
 - `backend/.env` berisi kredensial DB, AI, dan notifier yang valid.
-- Container MySQL (`wordpress-db-1`) dan notifier STB (`10.8.0.4:8081`) sehat.
+- Container MySQL di VPS dan notifier STB (`<stb-wireguard-ip>:8081`) sehat.
 - Backup terakhir ada dan bisa di-restore.
 
 ## Gerbang otomatis
@@ -22,6 +22,7 @@ CI (`.github/workflows/ci.yml`) wajib hijau:
 ## Deploy
 
 ```bash
+PUBLIC_BASE_URL=https://<domain-produksi-anda> \
 VPS_HOST=<host-vps> VPS_DIR=/root/expense-tracker ./deploy-vps.sh
 ```
 
@@ -37,7 +38,7 @@ Script melakukan:
 
 ## Smoke test setelah deploy
 
-- `https://expense.frmnjn.my.id/api/health` mengembalikan `{"success":true}`.
+- `https://<domain-produksi-anda>/api/health` mengembalikan `{"success":true}`.
 - Login dengan access code berhasil.
 - Catat pengeluaran manual + foto.
 - Scan struk → review → submit; tanggal tidak boleh future.
