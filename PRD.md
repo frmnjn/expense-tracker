@@ -66,6 +66,14 @@ Target: sederhana, mudah dijalankan dengan Docker, mudah dikembangkan.
 
 Saat aplikasi dibuka, user langsung melihat halaman Catat.
 
+### Tutorial In-App
+
+* Panduan singkat berbentuk modal slide di tiap halaman utama (`/catat`, `/scan`, `/voice`, `/inbox`, `/dashboard`, `/riwayat`, `/laporan`).
+* Muncul otomatis sekali per halaman per browser (localStorage `expense-tutorial-v1`); tombol bantuan (`?`) di header membuka ulang.
+* Navigasi: **Kembali**, **Lanjut**, dan **Lewati/Selesai**. Konten terpusat di `frontend/src/utils/tutorialSteps.ts`.
+* Di mode demo, tutorial `/catat` menambahkan satu slide penjelasan mode read-only.
+* Tidak membutuhkan backend atau endpoint baru.
+
 ---
 
 ## Database (MySQL)

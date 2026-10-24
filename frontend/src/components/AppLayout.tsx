@@ -1,6 +1,7 @@
 import { Suspense, useEffect, useRef } from 'react'
-import { AppShell, Badge, Box, Center, Group, Loader, Stack, Text, Tooltip, UnstyledButton } from '@mantine/core'
+import { ActionIcon, AppShell, Badge, Box, Center, Group, Loader, Stack, Text, Tooltip, UnstyledButton } from '@mantine/core'
 import {
+  IconHelpCircle,
   IconHome,
   IconPlus,
   IconReceipt,
@@ -13,7 +14,9 @@ import ColorSchemeToggle from './ColorSchemeToggle'
 import InstallButton from './InstallButton'
 import { OfflineBanner } from './OfflineBanner'
 import { PullToRefresh } from './PullToRefresh'
+import { TutorialModal } from './TutorialModal'
 import { useScrollMemory } from '../hooks/useScrollMemory'
+import { useTutorial } from '../hooks/useTutorial'
 import { isDemoMode } from '../utils/demo'
 
 const navItems = [
@@ -27,6 +30,7 @@ const navItems = [
 
 function AppLayout() {
   const mainRef = useRef<HTMLDivElement>(null)
+  const tutorial = useTutorial()
   useScrollMemory(mainRef)
 
   // Saat keyboard HP muncul dan menyusutkan viewport, field yang difokus bisa
@@ -45,75 +49,100 @@ function AppLayout() {
   }, [])
 
   return (
-    <AppShell
-      header={{ height: 64 }}
-      navbar={{ width: 240, breakpoint: 'sm' }}
-      padding={{ base: 'md', sm: 'xl' }}
-      className="app-shell"
-    >
-      <AppShell.Header className="app-header">
-        <Group h="100%" px={{ base: 'md', sm: 'xl' }} justify="space-between" wrap="nowrap">
-          <Group gap="sm" wrap="nowrap" style={{ minWidth: 0 }}>
-            <Box className="brand-mark">Rp</Box>
-            <Stack gap={0} visibleFrom="sm">
-              <Text fw={800} lh={1.1}>Expense Tracker</Text>
-              <Text size="xs" c="dimmed">Keuangan pribadi</Text>
-            </Stack>
-            <Text fw={800} hiddenFrom="sm" truncate style={{ minWidth: 0 }}>Expense Tracker</Text>
+    <>
+      <AppShell
+        header={{ height: 64 }}
+        navbar={{ width: 240, breakpoint: 'sm' }}
+        padding={{ base: 'md', sm: 'xl' }}
+        className="app-shell"
+      >
+        <AppShell.Header className="app-header">
+          <Group h="100%" px={{ base: 'md', sm: 'xl' }} justify="space-between" wrap="nowrap">
+            <Group gap="sm" wrap="nowrap" style={{ minWidth: 0 }}>
+              <Box className="brand-mark">Rp</Box>
+              <Stack gap={0} visibleFrom="sm">
+                <Text fw={800} lh={1.1}>Expense Tracker</Text>
+                <Text size="xs" c="dimmed">Keuangan pribadi</Text>
+              </Stack>
+              <Text fw={800} hiddenFrom="sm" truncate style={{ minWidth: 0 }}>Expense Tracker</Text>
+            </Group>
+            <Group gap="xs" wrap="nowrap" style={{ flexShrink: 0 }}>
+              {isDemoMode && (
+                <Tooltip label="Ini cuma demo — data nggak bisa diubah.">
+                  <Badge color="yellow" variant="light" size="sm" tt="uppercase">
+                    DEMO
+                  </Badge>
+                </Tooltip>
+              )}
+              {tutorial.canOpen && (
+                <Tooltip label="Buka panduan halaman ini">
+                  <ActionIcon
+                    variant="default"
+                    size="lg"
+                    radius="md"
+                    onClick={tutorial.open}
+                    aria-label="Buka panduan halaman ini"
+                  >
+                    <IconHelpCircle size={18} />
+                  </ActionIcon>
+                </Tooltip>
+              )}
+              <InstallButton />
+              <ColorSchemeToggle />
+            </Group>
           </Group>
-          <Group gap="xs" wrap="nowrap" style={{ flexShrink: 0 }}>
-            {isDemoMode && (
-              <Tooltip label="Ini cuma demo — data nggak bisa diubah.">
-                <Badge color="yellow" variant="light" size="sm" tt="uppercase">
-                  DEMO
-                </Badge>
-              </Tooltip>
-            )}
-            <InstallButton />
-            <ColorSchemeToggle />
-          </Group>
-        </Group>
-      </AppShell.Header>
+        </AppShell.Header>
 
-      <AppShell.Navbar p="md" className="app-navbar">
-        <Stack gap={6}>
-          <Text size="xs" fw={700} c="dimmed" tt="uppercase" px="sm" mb={4} visibleFrom="sm">
-            Menu
-          </Text>
-          {navItems.map((item) => {
-            const Icon = item.icon
-            return (
-              <UnstyledButton key={item.to} component={NavLink} to={item.to} className="nav-item">
-                <span className="nav-icon">
-                  <Icon size={18} stroke={1.8} />
-                </span>
-                <span>{item.label}</span>
-              </UnstyledButton>
-            )
-          })}
-        </Stack>
+        <AppShell.Navbar p="md" className="app-navbar">
+          <Stack gap={6}>
+            <Text size="xs" fw={700} c="dimmed" tt="uppercase" px="sm" mb={4} visibleFrom="sm">
+              Menu
+            </Text>
+            {navItems.map((item) => {
+              const Icon = item.icon
+              return (
+                <UnstyledButton key={item.to} component={NavLink} to={item.to} className="nav-item">
+                  <span className="nav-icon">
+                    <Icon size={18} stroke={1.8} />
+                  </span>
+                  <span>{item.label}</span>
+                </UnstyledButton>
+              )
+            })}
+          </Stack>
 
-        <Box mt="auto" px="sm" pb="sm" visibleFrom="sm">
-          <Text size="xs" c="dimmed">Kelola pengeluaran tanpa ribet.</Text>
-        </Box>
-      </AppShell.Navbar>
+          <Box mt="auto" px="sm" pb="sm" visibleFrom="sm">
+            <Text size="xs" c="dimmed">Kelola pengeluaran tanpa ribet.</Text>
+          </Box>
+        </AppShell.Navbar>
 
-      <AppShell.Main ref={mainRef}>
-        <Box className="page-shell">
-          <OfflineBanner />
-          <Suspense
-            fallback={
-              <Center py="xl">
-                <Loader />
-              </Center>
-            }
-          >
-            <Outlet />
-          </Suspense>
-        </Box>
-        <PullToRefresh scrollRef={mainRef} />
-      </AppShell.Main>
-    </AppShell>
+        <AppShell.Main ref={mainRef}>
+          <Box className="page-shell">
+            <OfflineBanner />
+            <Suspense
+              fallback={
+                <Center py="xl">
+                  <Loader />
+                </Center>
+              }
+            >
+              <Outlet />
+            </Suspense>
+          </Box>
+          <PullToRefresh scrollRef={mainRef} />
+        </AppShell.Main>
+      </AppShell>
+
+      <TutorialModal
+        opened={tutorial.opened}
+        label={tutorial.label}
+        steps={tutorial.steps}
+        stepIndex={tutorial.stepIndex}
+        onClose={tutorial.close}
+        onNext={tutorial.next}
+        onBack={tutorial.back}
+      />
+    </>
   )
 }
 
