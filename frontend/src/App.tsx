@@ -1,6 +1,7 @@
 import { lazy } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import AppLayout from './components/AppLayout'
+import { PdfViewerProvider } from './components/PdfViewerProvider'
 import ExpensePage from './pages/ExpensePage'
 import LockPage from './pages/LockPage'
 import { getAccessCode } from './utils/access'
@@ -22,20 +23,22 @@ const routerBasename = import.meta.env.BASE_URL.replace(/\/$/, '') || '/'
 function App() {
   return (
     <BrowserRouter basename={routerBasename}>
-      <Routes>
-        <Route path="/lock" element={isDemoMode ? <Navigate to="/catat" replace /> : <LockPage />} />
-        <Route element={<Protected />}>
-          <Route path="/" element={<Navigate to="/catat" replace />} />
-          <Route path="/catat" element={<ExpensePage />} />
-          <Route path="/scan" element={<ScanPage />} />
-          <Route path="/voice" element={<VoicePage />} />
-          <Route path="/inbox" element={<InboxPage />} />
-          <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/riwayat" element={<HistoryPage />} />
-          <Route path="/laporan" element={<ReportsPage />} />
-          <Route path="*" element={<Navigate to="/catat" replace />} />
-        </Route>
-      </Routes>
+      <PdfViewerProvider>
+        <Routes>
+          <Route path="/lock" element={isDemoMode ? <Navigate to="/catat" replace /> : <LockPage />} />
+          <Route element={<Protected />}>
+            <Route path="/" element={<Navigate to="/catat" replace />} />
+            <Route path="/catat" element={<ExpensePage />} />
+            <Route path="/scan" element={<ScanPage />} />
+            <Route path="/voice" element={<VoicePage />} />
+            <Route path="/inbox" element={<InboxPage />} />
+            <Route path="/dashboard" element={<DashboardPage />} />
+            <Route path="/riwayat" element={<HistoryPage />} />
+            <Route path="/laporan" element={<ReportsPage />} />
+            <Route path="*" element={<Navigate to="/catat" replace />} />
+          </Route>
+        </Routes>
+      </PdfViewerProvider>
     </BrowserRouter>
   )
 }

@@ -29,6 +29,7 @@ import DeleteInvoiceModal from '../components/DeleteInvoiceModal'
 import SubmittedExpensesModal from '../components/SubmittedExpensesModal'
 import { AppPagination } from '../components/AppPagination'
 import { ErrorState } from '../components/ErrorState'
+import { usePdfViewer } from '../components/PdfViewerContext'
 import { useToast } from '../components/Toast'
 import type { Invoice } from '../types/expense'
 
@@ -39,6 +40,7 @@ function ScanPage() {
   const [viewingInvoice, setViewingInvoice] = useState<Invoice | null>(null)
   const [deleting, setDeleting] = useState<Invoice | null>(null)
   const [viewingSubmitted, setViewingSubmitted] = useState<Invoice | null>(null)
+  const { openPdf } = usePdfViewer()
   const cameraRef = useRef<HTMLInputElement>(null)
   const galleryRef = useRef<HTMLInputElement>(null)
   const isMobile = useMediaQuery('(max-width: 48em)')
@@ -284,7 +286,18 @@ function ScanPage() {
           (viewingInvoice.type === 'pdf' ? (
             <Stack align="center" gap="sm">
               <IconFileTypePdf size={48} aria-hidden />
-              <Button component="a" href={getInvoicePhotoUrl(viewingInvoice.id)} target="_blank" variant="light">
+              <Button
+                onClick={() => {
+                  const invoice = viewingInvoice
+                  setViewingInvoice(null)
+                  openPdf({
+                    url: getInvoicePhotoUrl(invoice.id),
+                    title: invoice.name ?? 'Invoice',
+                    fileName: invoice.name ?? undefined,
+                  })
+                }}
+                variant="light"
+              >
                 Buka PDF
               </Button>
             </Stack>

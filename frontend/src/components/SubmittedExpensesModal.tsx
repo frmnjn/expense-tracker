@@ -6,10 +6,12 @@ import { useInvoiceDetail } from '../hooks/useScan'
 import { getInvoicePhotoUrl } from '../services/expense'
 import { formatCurrency } from '../utils/currency'
 import { InvoiceThumb } from './InvoiceThumb'
+import { usePdfViewer } from './PdfViewerContext'
 
 function SubmittedExpensesModal({ invoiceId, type, onClose }: { invoiceId: string; type: 'image' | 'pdf'; onClose: () => void }) {
   const { data, isPending } = useInvoiceDetail(invoiceId)
   const [viewingPhoto, setViewingPhoto] = useState(false)
+  const { openPdf } = usePdfViewer()
   const isMobile = useMediaQuery('(max-width: 48em)')
 
   const expenses = data?.expenses ?? []
@@ -91,7 +93,19 @@ function SubmittedExpensesModal({ invoiceId, type, onClose }: { invoiceId: strin
         {viewingPhoto && (type === 'pdf' ? (
           <Stack align="center" gap="sm">
             <IconFileTypePdf size={48} aria-hidden />
-            <Button component="a" href={getInvoicePhotoUrl(invoiceId)} target="_blank" variant="light">Buka PDF</Button>
+            <Button
+              onClick={() => {
+                setViewingPhoto(false)
+                openPdf({
+                  url: getInvoicePhotoUrl(invoiceId),
+                  title: data?.name ?? 'Invoice',
+                  fileName: data?.name ?? undefined,
+                })
+              }}
+              variant="light"
+            >
+              Buka PDF
+            </Button>
           </Stack>
         ) : (
           <img

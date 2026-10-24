@@ -1,5 +1,6 @@
-import { Anchor, Image, Stack } from '@mantine/core'
+import { Button, Image, Stack } from '@mantine/core'
 import { IconFileTypePdf } from '@tabler/icons-react'
+import { usePdfViewer } from './PdfViewerContext'
 
 export function InvoiceThumb({
   type,
@@ -14,6 +15,8 @@ export function InvoiceThumb({
   h?: number
   onClick?: () => void
 }) {
+  const { openPdf } = usePdfViewer()
+
   if (type === 'pdf') {
     return (
       <Stack
@@ -25,9 +28,16 @@ export function InvoiceThumb({
         style={{ cursor: onClick ? 'pointer' : undefined }}
       >
         <IconFileTypePdf size={28} aria-hidden />
-        <Anchor href={url} target="_blank" size="xs" onClick={(e) => e.stopPropagation()}>
+        <Button
+          variant="subtle"
+          size="compact-xs"
+          onClick={(event) => {
+            event.stopPropagation()
+            openPdf({ url, title: alt ?? 'Invoice' })
+          }}
+        >
           Lihat PDF
-        </Anchor>
+        </Button>
       </Stack>
     )
   }

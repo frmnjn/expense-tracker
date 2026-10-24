@@ -40,6 +40,7 @@ import PhotoInput, { type PhotoSelection } from '../components/PhotoInput'
 import { TransactionCard } from '../components/TransactionCard'
 import { AppPagination } from '../components/AppPagination'
 import { ErrorState } from '../components/ErrorState'
+import { usePdfViewer } from '../components/PdfViewerContext'
 import { useToast } from '../components/Toast'
 import { getPhotoUrl } from '../services/expense'
 import { getVoiceNoteAudioUrl } from '../services/voiceNotes'
@@ -85,6 +86,19 @@ function HistoryPage() {
   const [categoryFilters, setCategoryFilters] = useState<string[]>([])
   const [sortBy, setSortBy] = useState<string>('waktu-desc')
   const [viewingPhoto, setViewingPhoto] = useState<Expense | null>(null)
+  const { openPdf } = usePdfViewer()
+
+  const openExpensePhoto = (expense: Expense) => {
+    if (expense.photoType === 'pdf') {
+      openPdf({
+        url: getPhotoUrl(expense.id),
+        title: expense.photoName || expense.name,
+        fileName: expense.photoName || undefined,
+      })
+      return
+    }
+    setViewingPhoto(expense)
+  }
   const [viewingVoice, setViewingVoice] = useState<Expense | null>(null)
 
   const categoryFilterOptions = useMemo(() => {
@@ -391,7 +405,7 @@ function HistoryPage() {
                 <TransactionCard
                   key={expense.id}
                   expense={expense}
-                  onViewPhoto={setViewingPhoto}
+                  onViewPhoto={openExpensePhoto}
                   onViewVoice={setViewingVoice}
                   onEdit={setEditing}
                   onDelete={setDeleting}
@@ -426,7 +440,7 @@ function HistoryPage() {
                     <Table.Td ta="right">
                       <Group gap="xs" justify="flex-end" wrap="nowrap">
                         {expense.hasPhoto && (
-                          <ActionIcon variant="light" color="gray" size="md" onClick={() => setViewingPhoto(expense)} aria-label="Lihat foto">
+                          <ActionIcon variant="light" color="gray" size="md" onClick={() => openExpensePhoto(expense)} aria-label="Lihat foto">
                             <IconPhoto size={16} />
                           </ActionIcon>
                         )}
@@ -479,7 +493,18 @@ function HistoryPage() {
             (viewingPhoto.photoType === 'pdf' ? (
               <Stack align="center" gap="sm">
                 <IconFileTypePdf size={48} aria-hidden />
-                <Button component="a" href={getPhotoUrl(viewingPhoto.id)} target="_blank" variant="light">
+                <Button
+                  onClick={() => {
+                    const expense = viewingPhoto
+                    setViewingPhoto(null)
+                    openPdf({
+                      url: getPhotoUrl(expense.id),
+                      title: expense.photoName || expense.name,
+                      fileName: expense.photoName || undefined,
+                    })
+                  }}
+                  variant="light"
+                >
                   Buka PDF
                 </Button>
               </Stack>
@@ -605,6 +630,7 @@ function EditExpenseForm({
   const [description, setDescription] = useState(expense.description ?? '')
   const [photo, setPhoto] = useState<PhotoSelection | null>(null)
   const [removePhoto, setRemovePhoto] = useState(false)
+  const { openPdf } = usePdfViewer()
 
   const budgetOptions = useMemo(
     () => (options?.budgets ?? []).map((b) => ({ value: b.name, label: b.name })),
@@ -767,7 +793,16 @@ function EditExpenseForm({
           <Stack gap={4}>
             <Group align="flex-start">
               {expense.photoType === 'pdf' ? (
-                <Button component="a" href={getPhotoUrl(expense.id)} target="_blank" variant="light" size="xs" leftSection={<IconFileTypePdf size={14} />}>
+                <Button
+                  onClick={() => openPdf({
+                    url: getPhotoUrl(expense.id),
+                    title: expense.photoName || expense.name,
+                    fileName: expense.photoName || undefined,
+                  })}
+                  variant="light"
+                  size="xs"
+                  leftSection={<IconFileTypePdf size={14} />}
+                >
                   Lihat PDF
                 </Button>
               ) : (

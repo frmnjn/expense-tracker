@@ -15,6 +15,7 @@ import { PageHeader } from '../components/PageHeader'
 import { AppPagination } from '../components/AppPagination'
 import { ErrorState } from '../components/ErrorState'
 import { useReports } from '../hooks/useReports'
+import { usePdfViewer } from '../components/PdfViewerContext'
 import { getReportDownloadUrl, getReportViewUrl } from '../services/reports'
 import type { PeriodReport } from '../types/report'
 
@@ -25,14 +26,11 @@ function formatSize(bytes: number): string {
   return `${Math.max(1, Math.round(bytes / 1024))} KB`
 }
 
-function ReportActions({ report }: { report: PeriodReport }) {
+function ReportActions({ report, onView }: { report: PeriodReport; onView: () => void }) {
   return (
     <Group gap="xs" justify="flex-end" wrap="nowrap">
       <Button
-        component="a"
-        href={getReportViewUrl(report.period)}
-        target="_blank"
-        rel="noreferrer"
+        onClick={onView}
         variant="light"
         size="xs"
         leftSection={<IconEye size={15} />}
@@ -57,8 +55,18 @@ function ReportActions({ report }: { report: PeriodReport }) {
 
 function ReportsPage() {
   const { data, isPending, isError, refetch } = useReports()
+  const { openPdf } = usePdfViewer()
   const isMobile = useMediaQuery('(max-width: 48em)')
   const reports = data?.reports ?? []
+
+  const viewReport = (report: PeriodReport) => {
+    openPdf({
+      url: getReportViewUrl(report.period),
+      downloadUrl: getReportDownloadUrl(report.period),
+      fileName: report.fileName,
+      title: `Laporan ${report.period}`,
+    })
+  }
 
   return (
     <Container
@@ -114,10 +122,7 @@ function ReportsPage() {
                           </Group>
                           <Group grow gap="xs">
                             <Button
-                              component="a"
-                              href={getReportViewUrl(report.period)}
-                              target="_blank"
-                              rel="noreferrer"
+                              onClick={() => viewReport(report)}
                               variant="light"
                               leftSection={<IconEye size={16} />}
                             >
@@ -161,7 +166,7 @@ function ReportsPage() {
                             </Table.Td>
                             <Table.Td>{formatSize(report.sizeBytes)}</Table.Td>
                             <Table.Td ta="right">
-                              <ReportActions report={report} />
+                              <ReportActions report={report} onView={() => viewReport(report)} />
                             </Table.Td>
                           </Table.Tr>
                         ))}
