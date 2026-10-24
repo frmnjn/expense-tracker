@@ -250,6 +250,37 @@ class EmailParserServiceTest {
     }
 
     @Test
+    void parsesEnglishMonthNameFromJago() {
+        assertEquals(LocalDateTime.of(2026, 10, 20, 19, 27),
+                EmailParserService.parseDateTime("20 October 2026, 19:27 WIB"));
+        assertEquals(LocalDateTime.of(2026, 8, 15, 9, 5),
+                EmailParserService.parseDateTime("15 August 2026, 09:05 WIB"));
+    }
+
+    @Test
+    void parsesJagoPaymentWithEnglishMonth() {
+        String html = """
+                <html><body><div>Transaction Summary</div>
+                <div>To</div>
+                <div>LANCAR JAYA GAJAHMADA</div>
+                <div>Amount</div>
+                <div>Rp 69.500</div>
+                <div>Transaction Date</div>
+                <div>20 October 2026, 19:27 WIB</div>
+                <div>Transaction Status</div>
+                <div>Successful</div>
+                </body></html>
+                """;
+
+        ParsedTransaction result = parser().parse(
+                "noreply@jago.com", "You have made a payment to LANCAR JAYA GAJAHMADA", html);
+
+        assertEquals("LANCAR JAYA GAJAHMADA", result.merchant());
+        assertEquals(69_500L, result.amount());
+        assertEquals(LocalDateTime.of(2026, 10, 20, 19, 27), result.transactionAt());
+    }
+
+    @Test
     void rejectsUnknownFormatWithoutAi() {
         assertThrows(ValidationException.class, () -> parser().parse("someone@example.com", "<p>hello</p>"));
     }

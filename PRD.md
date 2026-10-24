@@ -60,10 +60,19 @@ Target: sederhana, mudah dijalankan dengan Docker, mudah dikembangkan.
 * `/voice` — **Catat dengan Suara** (rekam voice note, AI membuat draft expense, review & simpan, playback dari Riwayat).
 * `/inbox` — **Inbox Email** (transaksi dari email notifikasi bank, hasil pembacaan IMAP, review & import jadi expense).
 * `/dashboard` — ringkasan saldo per budget, top-up, riwayat top-up, dan 3 bulan terakhir.
-* `/riwayat` — daftar pengeluaran per periode, dengan filter/sort, pagination, edit, hapus, dan lihat foto (termasuk PDF).
+* `/riwayat` — daftar pengeluaran per periode, dengan filter budget & kategori multi-select, sort, pagination, edit, hapus, dan lihat foto (termasuk PDF).
+* `/laporan` — daftar semua report PDF periode yang sudah dibuat, dengan tombol unduh (diakses lewat tombol **Laporan** di Dashboard).
 * `/catat` — alias halaman Catat.
 
 Saat aplikasi dibuka, user langsung melihat halaman Catat.
+
+### Tutorial In-App
+
+* Panduan singkat berbentuk modal slide di tiap halaman utama (`/catat`, `/scan`, `/voice`, `/inbox`, `/dashboard`, `/riwayat`, `/laporan`).
+* Muncul otomatis sekali per halaman per browser (localStorage `expense-tutorial-v1`); tombol bantuan (`?`) di header membuka ulang.
+* Navigasi: **Kembali**, **Lanjut**, dan **Lewati/Selesai**. Konten terpusat di `frontend/src/utils/tutorialSteps.ts`.
+* Di mode demo, tutorial `/catat` menambahkan satu slide penjelasan mode read-only.
+* Tidak membutuhkan backend atau endpoint baru.
 
 ---
 
@@ -107,6 +116,9 @@ Migration saat ini:
 * `V20__invoice_ai_provider.sql` — kolom `invoices.ai_provider` (GEMINI/DEEPSEEK).
 * `V21__categories.sql` — tabel `categories` (sub-kategori per budget), kolom `expenses.category_id`, kolom `email_imports.suggested_category`.
 * `V22__voice_notes.sql` — tabel `voice_notes` (rekaman suara + hasil AI) dan kolom `expenses.voice_note_id`.
+* `V23__payday_overrides.sql` — tabel `payday_overrides` (override tanggal gajian per periode).
+* `V24__reclassify_periods.sql` — hitung ulang `period` data lama dengan aturan tanggal gajian.
+* `V25__period_reports.sql` — tabel `period_reports` (penanda report PDF periode sudah dibuat/dikirim).
 
 Index yang ada: `budgets` PK(id) + UNIQUE(name); `expenses` PK(id), `budget_id` FK, `deleted`, `invoice_id`, `voice_note_id`, komposit `(period, deleted)`; `invoices` PK(id) + `period`; `voice_notes` PK(id) + `period` + `status`; `top_ups` PK(id) + `budget_id`; `idempotency_keys` PK(id_key) + `created_at`.
 
@@ -114,7 +126,7 @@ Satu **invoice** adalah pemilik satu file foto/PDF dan dapat dirujuk oleh **bany
 
 Invoice hasil alur `/scan` ditandai `scan_flow = TRUE` dan memiliki state machine analisis AI: `ANALYZING` (upload sukses, AI berjalan async) → `TO_REVIEW` (AI selesai, menunggu konfirmasi user) → `SUBMITTED` (expense dibuat) atau `ERROR` (analisis gagal, bisa retry). Foto biasa pada form Catat berstatus langsung `SUBMITTED` (bukan alur AI).
 
-Periode (format `YYYY-MON-MON`, contoh `2026-JAN-FEB`) dihitung dari `date_time` dengan aturan cut-off tanggal 25. `period` disimpan untuk filter cepat.
+Periode (format `YYYY-MON-MON`, contoh `2026-JAN-FEB`) dihitung dari `date_time` dengan aturan tanggal gajian: default tanggal 25, digeser mundur ke hari kerja sebelumnya bila jatuh pada Sabtu/Minggu. Tanggal merah atau gajian yang maju/mundur dapat di-override manual per periode dari Dashboard (bulan berjalan s/d 6 bulan ke depan); override memicu hitung ulang periode data terkait. `period` disimpan untuk filter cepat.
 
 Penghapusan expense dilakukan dengan **soft delete** (`deleted = TRUE`); baris tetap ada di DB dan disaring saat ditampilkan.
 
@@ -211,7 +223,11 @@ Detail teknis:
 ### Riwayat
 
 * Dropdown periode.
-* Search nama, filter budget, dan sort (waktu/nominal) — muncul setelah periode dipilih.
+* Search nama dan sort (waktu/nominal) — muncul setelah periode dipilih. Kontrol sort selalu terlihat, tidak di dalam modal.
+* Filter **budget** dan **kategori** berupa chip multi-select (bisa pilih lebih dari satu).
+* Chip kategori menampilkan gabungan kategori dari budget yang dipilih, plus opsi **Tanpa Kategori**; pilihan kategori yang tidak lagi valid otomatis dibuang saat budget berubah.
+* Filter bersifat **OR dalam satu dimensi** (budget A atau B; kategori X atau Y) dan **AND antar dimensi** (budget AND kategori).
+* Section **BUDGET** dan **KATEGORI** dipisah dengan heading; chip **wrap ke bawah** di desktop maupun mobile (tanpa scroll horizontal).
 * Tabel (desktop) / kartu (mobile) daftar expense aktif.
 * Tombol lihat foto (📷) jika expense memiliki foto.
 * Tombol edit (modal) dan hapus (konfirmasi, soft delete).
@@ -239,7 +255,7 @@ Mode terang/gelap, toggle tersimpan di perangkat (localStorage), default gelap.
 
 Notifikasi dikirim via **microservice `notifier`** (Go) yang memakai **Gmail SMTP** (App Password). Backend memanggil notifier via HTTP (JDK HttpClient), **fire-and-log**: kalau gagal kirim hanya dicatat di log, tidak menggagalkan operasi utama. Penerima diambil dari env `NOTIFY_EMAILS` (comma-separated, mis. 2 alamat).
 
-Pemicu (realtime, tanpa scheduler):
+Pemicu realtime (selain report periode terjadwal):
 
 * **Expense tercatat** → konfirmasi pengeluaran.
 * **Budget menipis** → setelah saldo berubah, jika `budgets.alert_threshold > 0` dan `balance < alert_threshold`. Threshold diset per budget **dari UI** (modal Tambah/Edit Budget, input "Ambang notifikasi"); nilai `0` = nonaktif.
@@ -252,6 +268,31 @@ Konfigurasi (env): di sisi backend `NOTIFIER_URL`, `NOTIFIER_TOKEN`, `NOTIFY_EMA
 * **Resend** — `RESEND_API_KEY`/`RESEND_FROM`, dipakai sebagai **fallback** (`RESEND_FALLBACK=true`) bila SMTP gagal. Jika limit Resend tercapai (respons `429`), email **dilewati** (tidak dikirim, tidak retry).
 
 Email dikirim sebagai **HTML** (inline-style, aksen `#863bff`), dengan nominal terformat Rupiah (mis. `Rp35.000`), body menampilkan sisa saldo budget, dan bahasa **Inggris**. Subjek singkat dengan emoji subtil per jenis notifikasi. Pengiriman dijalankan **async** (thread pool) sehingga tidak memperlambat request.
+
+Notifier juga mendukung **lampiran** (`attachments: [{ filename, contentBase64 }]`) untuk mengirim report PDF. Batas body request dinaikkan menjadi 20MB (maksimal 10MB per lampiran, total 15MB, maksimal 5 lampiran). SMTP mengirim `multipart/mixed` (HTML + attachment); Resend memakai field `attachments`.
+
+### Report PDF Periode Otomatis
+
+Saat **periode baru dimulai**, backend otomatis membuat report PDF untuk **periode sebelumnya** lalu mengirimkannya ke email.
+
+* Pemicu: scheduler harian (`REPORT_CRON`, default `0 5 0 * * *`) memeriksa pergantian periode berdasarkan tanggal gajian/override. Report hanya dibuat bila awal periode berjalan masih dalam `REPORT_GRACE_DAYS` (default 1 hari) dan periode tersebut belum pernah dicatat di `period_reports`.
+* Bahasa **PDF report: Bahasa Indonesia**; **subject + body email report tetap Bahasa Inggris** (sama seperti notifikasi email lain).
+* Isi PDF:
+  * **Ringkasan Eksekutif** — total pengeluaran, jumlah transaksi, rata-rata per hari, kategori terbesar, kondisi budget, dan 3–5 temuan utama;
+  * **Rincian Pengeluaran** — agregasi per budget + kategori dan peringkat kategori dengan nominal, jumlah transaksi, dan persentase;
+  * **Ringkasan Budget** — top-up periode, pengeluaran periode, perubahan bersih, saldo berjalan, ambang peringatan, dan status `NEGATIF`/`RENDAH`/`OK`/`TANPA AMBANG`;
+  * **Analisis Keuangan** — observasi faktual, rekomendasi, dan transaksi terbesar;
+  * **Lampiran A: Daftar Transaksi** — seluruh transaksi periode (tanggal, nama, deskripsi, budget, kategori, nominal);
+  * **Lampiran B: Top-up** — seluruh top-up periode.
+* Budget tanpa kategori adalah kondisi normal. Transaksi tanpa kategori tetap ditampilkan sebagai **"Tanpa Kategori"** di tabel agar total tetap akurat, tetapi tidak dijadikan temuan khusus, rekomendasi, atau section tersendiri.
+* Opening balance dan period-end closing balance **tidak direkonstruksi** karena `budgets.balance` adalah saldo running yang dapat diedit dan tidak ada ledger riwayat saldo. Report memakai carry-over/current balance saat report dibuat dan menjelaskan batasan ini. Budget utilization tidak tersedia karena tidak ada field limit budget; `alert_threshold` hanya peringatan saldo rendah.
+* Report memakai **HTML/CSS → PDF** via Flying Saucer + OpenPDF (open source) dan tetap memakai PDFBox untuk stempel nomor halaman; tabel header berulang antar halaman, nominal right-aligned, persentase, dan deskripsi panjang di-wrap.
+* Report menampilkan status rekonsiliasi total/count terhadap database serta peringatan bila ada transaksi di luar rentang periode atau period tidak cocok.
+* PDF disimpan di `$UPLOAD_DIR/reports/report-<periode>.pdf` dan dilampirkan ke email (`NOTIFY_EMAILS`) dengan subject `📊 Period report: <periode>`.
+* Report dilewati bila periode sebelumnya tidak punya expense maupun top-up.
+* Bisa diunduh ulang lewat `GET /reports/{period}` (memakai kode akses seperti endpoint lain).
+* Pengiriman mengikuti pola **fire-and-log** notifikasi lain; jika notifier gagal, PDF tetap tersimpan.
+* Zona waktu report memakai `REPORT_ZONE` (default `Asia/Jakarta`); container produksi juga memakai `TZ=Asia/Jakarta`.
 
 Mode testing: jika `NOTIFY_TEST_MODE=true`, email hanya dikirim ke `NOTIFY_TEST_EMAIL` (mengabaikan `NOTIFY_EMAILS`). Default `false`.
 
@@ -543,6 +584,14 @@ Memproses ulang baris `FAILED`: ambil ulang email dari inbox (IMAP, by Message-I
 
 Memicu pembacaan inbox IMAP secara manual (dipakai tombol Refresh). Mengembalikan `{ "count": N }`.
 
+### GET /reports
+
+Daftar report PDF yang sudah dibuat, urut periode terbaru (bukan tanggal generate). Setiap item: `{ period, fileName, sizeBytes, generatedAt }` (waktu WIB).
+
+### GET /reports/{period}
+
+Mengambil report PDF periode yang sudah dibuat (`application/pdf`). Default `Content-Disposition: attachment` (unduh); tambahkan `?inline=true` untuk membuka PDF langsung di browser. `404` bila report belum ada. Mendukung query `access_code` seperti endpoint media lain.
+
 ### Traceability (X-Trace-Id)
 
 Setiap request membawa header `X-Trace-Id` (UUID) untuk menelusuri satu request end-to-end di log (frontend → backend → notifier). Detail di `AGENTS.md` → *Trace ID end-to-end*. Header bersifat opsional dari sisi client (backend & notifier generate sendiri bila kosong), dan selalu dikembalikan sebagai response header `X-Trace-Id`.
@@ -577,6 +626,11 @@ INBOX_DISCARD_MERCHANTS=superindo # opsional, keyword merchant auto-discard (com
 INBOX_SCAN_SENDERS=superindo.co.id # opsional, sender yang lampirannya auto dikirim ke Scan Struk
 NOTIFIER_URL=http://10.0.0.4:8081  # backend -> notifier (WireGuard)
 NOTIFIER_TOKEN=<random-panjang>   # shared secret backend -> notifier
+REPORT_ENABLED=true               # opsional, aktifkan report PDF periode (default true)
+REPORT_CRON=0 5 0 * * *           # opsional, jadwal cek pergantian periode (default 00:05)
+REPORT_GRACE_DAYS=1               # opsional, toleransi hari setelah periode baru mulai
+REPORT_ZONE=Asia/Jakarta          # opsional, zona waktu report (default Asia/Jakarta)
+TZ=Asia/Jakarta                   # zona waktu container (batas periode & scheduler)
 ```
 
 ### Frontend
@@ -607,7 +661,7 @@ Untuk **produksi**, `docker-compose.prod.yml` memakai MySQL VPS dan image backen
 * User dapat mencatat pengeluaran (dengan/ tanpa foto invoice).
 * User dapat melihat saldo per budget dan menambah saldo (top-up).
 * User dapat mengelola budget (tambah/edit/hapus).
-* User dapat melihat riwayat per periode, filter/sort, edit, hapus, dan lihat foto.
+* User dapat melihat riwayat per periode, filter budget & kategori multi-select, sort, edit, hapus, dan lihat foto.
 * User dapat mencatat pengeluaran dengan rekaman suara, mereview hasil AI, dan memutar kembali rekamannya dari Riwayat.
 * Data tersimpan di MySQL.
 * Aplikasi dapat dijalankan dengan Docker Compose.
@@ -620,7 +674,7 @@ Untuk **produksi**, `docker-compose.prod.yml` memakai MySQL VPS dan image backen
 * Multi-user
 * Kategori/tag
 * Grafik detail
-* Export PDF/Excel
+* Export PDF/Excel manual (report PDF otomatis per periode sudah tersedia)
 * Notifikasi via WhatsApp (email sudah ada; WhatsApp bisa ditambahkan via Twilio/Meta Cloud API bila diperlukan)
 
 ---
@@ -630,5 +684,5 @@ Untuk **produksi**, `docker-compose.prod.yml` memakai MySQL VPS dan image backen
 * Authentication & multi-user
 * Grafik tren yang lebih detail
 * Export CSV/Excel
-* Ringkasan notifikasi harian/bulanan terjadwal
+* Ringkasan notifikasi harian/mingguan terjadwal
 * Notifikasi via WhatsApp (Twilio / Meta Cloud API)

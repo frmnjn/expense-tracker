@@ -430,7 +430,11 @@ public class EmailParserService {
                 formatter("dd MMMM yyyy HH:mm:ss"),
                 formatter("dd MMMM yyyy HH:mm"),
                 formatter("dd MMMM yyyy, HH:mm:ss"),
-                formatter("dd MMMM yyyy, HH:mm"));
+                formatter("dd MMMM yyyy, HH:mm"),
+                formatter("dd MMMM yyyy HH:mm:ss", Locale.ENGLISH),
+                formatter("dd MMMM yyyy HH:mm", Locale.ENGLISH),
+                formatter("dd MMMM yyyy, HH:mm:ss", Locale.ENGLISH),
+                formatter("dd MMMM yyyy, HH:mm", Locale.ENGLISH));
         for (DateTimeFormatter f : formatters) {
             try {
                 return LocalDateTime.parse(value, f);
@@ -442,10 +446,14 @@ public class EmailParserService {
     }
 
     private static DateTimeFormatter formatter(String pattern) {
+        return formatter(pattern, Locale.of("id", "ID"));
+    }
+
+    private static DateTimeFormatter formatter(String pattern, Locale locale) {
         return new DateTimeFormatterBuilder()
                 .parseCaseInsensitive()
                 .appendPattern(pattern)
-                .toFormatter(Locale.of("id", "ID"));
+                .toFormatter(locale);
     }
 
     private ParsedTransaction parseWithAi(String text) {

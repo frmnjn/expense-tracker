@@ -4,6 +4,7 @@ import com.expensetracker.model.ApiResponse;
 import com.expensetracker.service.IdempotencyService;
 import com.expensetracker.service.InvoiceAnalysisService;
 import com.expensetracker.service.InvoiceService;
+import com.expensetracker.service.PeriodService;
 import com.expensetracker.service.PeriodSheetName;
 import com.expensetracker.service.ValidationException;
 import org.slf4j.Logger;
@@ -36,13 +37,16 @@ public class InvoiceController {
     private final InvoiceService invoiceService;
     private final InvoiceAnalysisService invoiceAnalysisService;
     private final IdempotencyService idempotencyService;
+    private final PeriodService periodService;
 
     public InvoiceController(InvoiceService invoiceService,
                              InvoiceAnalysisService invoiceAnalysisService,
-                             IdempotencyService idempotencyService) {
+                             IdempotencyService idempotencyService,
+                             PeriodService periodService) {
         this.invoiceService = invoiceService;
         this.invoiceAnalysisService = invoiceAnalysisService;
         this.idempotencyService = idempotencyService;
+        this.periodService = periodService;
     }
 
     @GetMapping("/invoices")
@@ -87,8 +91,8 @@ public class InvoiceController {
         }
         try {
             LocalDateTime dateTime = PeriodSheetName.parseLenient(date);
-            String period = PeriodSheetName.forDate(dateTime.toLocalDate());
-            LocalDate periodStart = PeriodSheetName.periodStart(dateTime.toLocalDate());
+            String period = periodService.forDate(dateTime.toLocalDate());
+            LocalDate periodStart = periodService.periodStart(dateTime.toLocalDate());
             String invoiceId = invoiceService.createInvoiceForAi(period, periodStart, file);
             invoiceAnalysisService.trigger(invoiceId);
             ApiResponse response = ApiResponse.ok(Map.of("invoiceId", invoiceId));

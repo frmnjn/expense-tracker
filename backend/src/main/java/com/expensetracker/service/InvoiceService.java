@@ -47,14 +47,17 @@ public class InvoiceService {
     private final InvoiceRepository invoiceRepository;
     private final ExpenseRepository expenseRepository;
     private final ObjectMapper objectMapper;
+    private final PeriodService periodService;
 
     @Value("${upload.dir:/app/uploads}")
     private String uploadDir;
 
-    public InvoiceService(InvoiceRepository invoiceRepository, ExpenseRepository expenseRepository, ObjectMapper objectMapper) {
+    public InvoiceService(InvoiceRepository invoiceRepository, ExpenseRepository expenseRepository,
+                          ObjectMapper objectMapper, PeriodService periodService) {
         this.invoiceRepository = invoiceRepository;
         this.expenseRepository = expenseRepository;
         this.objectMapper = objectMapper;
+        this.periodService = periodService;
     }
 
     public InvoicesResponse listByDate(String dateTime, boolean scanOnly, String period) {
@@ -76,7 +79,7 @@ public class InvoiceService {
         } catch (DateTimeParseException e) {
             throw new ValidationException("Date must be in yyyy-MM-dd HH:mm format");
         }
-        String periodFromDate = PeriodSheetName.forDate(parsed.toLocalDate());
+        String periodFromDate = periodService.forDate(parsed.toLocalDate());
         List<InvoiceResponse> list = invoiceRepository.findByPeriod(periodFromDate).stream()
                 .map(this::toResponse)
                 .toList();
@@ -208,7 +211,7 @@ public class InvoiceService {
 
     /** Perbarui periode invoice agar sesuai tanggal belanja yang dipilih. */
     public void updatePeriod(String id, LocalDate date) {
-        invoiceRepository.updatePeriod(id, PeriodSheetName.forDate(date), PeriodSheetName.periodStart(date));
+        invoiceRepository.updatePeriod(id, periodService.forDate(date), periodService.periodStart(date));
     }
 
     public void setAnalyzing(String id) {

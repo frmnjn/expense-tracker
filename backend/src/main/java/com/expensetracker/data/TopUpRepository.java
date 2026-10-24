@@ -7,7 +7,6 @@ import org.springframework.stereotype.Repository;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -23,7 +22,7 @@ public class TopUpRepository {
     public void insert(String id, LocalDateTime dateTime, long budgetId, long amount, String description) {
         jdbcTemplate.update(
                 "INSERT INTO top_ups (id, date_time, budget_id, amount, description) VALUES (?, ?, ?, ?, ?)",
-                id, Timestamp.valueOf(dateTime), budgetId, amount, description == null ? "" : description);
+                id, dateTime, budgetId, amount, description == null ? "" : description);
     }
 
     public List<TopUpResponse> getTopUps() {
@@ -33,11 +32,20 @@ public class TopUpRepository {
                 this::mapRow);
     }
 
+    public List<TopUpResponse> findByDateRange(LocalDateTime from, LocalDateTime toExclusive) {
+        return jdbcTemplate.query(
+                "SELECT t.id, t.date_time, b.name AS budget_name, t.amount, t.description "
+                        + "FROM top_ups t JOIN budgets b ON b.id = t.budget_id "
+                        + "WHERE t.date_time >= ? AND t.date_time < ? ORDER BY t.date_time ASC",
+                this::mapRow,
+                from, toExclusive);
+    }
+
     private TopUpResponse mapRow(ResultSet rs, int rowNum) throws SQLException {
+        LocalDateTime dateTime = rs.getObject("date_time", LocalDateTime.class);
         return new TopUpResponse(
                 rs.getString("id"),
-                rs.getTimestamp("date_time") == null ? "" : rs.getTimestamp("date_time").toLocalDateTime()
-                        .format(PeriodSheetName.FORMATTER),
+                dateTime == null ? "" : dateTime.format(PeriodSheetName.FORMATTER),
                 rs.getString("budget_name"),
                 rs.getLong("amount"),
                 rs.getString("description"));

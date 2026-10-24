@@ -8,9 +8,15 @@ Aplikasi web untuk mencatat pengeluaran harian, memantau saldo per budget, dan m
 
 **https://frmnjn.my.id/expense-tracker-demo/**
 
-PIN demo: **2026**
+Demo bersifat **read-only** (tidak bisa menambah/mengubah data), memakai data dummy, dan tidak terhubung ke AI, email, atau notifier production. Badge **DEMO** di kanan atas menandakan mode read-only. Demo berjalan **tanpa backend/MySQL**: frontend mengambil data dari `frontend/public/demo/data.json` dan report PDF statis. Data dan PDF digenerate harian (tanggal mengikuti hari generate) dengan:
 
-Demo bersifat **read-only** (tidak bisa menambah/mengubah data), memakai data dummy, dan tidak terhubung ke AI, email, atau notifier production. Badge **DEMO** di kanan atas menandakan mode read-only. Demo berisi contoh invoice (`TO_REVIEW`/`SUBMITTED`/`NOT_INVOICE`), email inbox, dan voice note (`TO_REVIEW`/`SUBMITTED`/`NOT_EXPENSE`).
+```bash
+./scripts/generate_demo.sh        # generate data.json + report PDF
+./scripts/install_demo_cron.sh    # pasang cron harian 00:05 WIB
+docker compose -f docker-compose.demo.yml up -d --build
+```
+
+Demo berisi contoh invoice (`TO_REVIEW`/`SUBMITTED`/`NOT_INVOICE`), email inbox, voice note (`TO_REVIEW`/`SUBMITTED`/`NOT_EXPENSE`), dan tiga report PDF periode sebelumnya.
 
 ## Screenshots
 
@@ -24,36 +30,36 @@ Tampilan desktop memakai sidebar di kiri, konten lebar, dan tabel untuk daftar t
 
 
 <p align="center">
-  <img src="docs/screenshots/dashboard-desktop.jpg" alt="Dashboard desktop" width="100%" />
+  <img src="docs/screenshots/dashboard-desktop.jpg" alt="Dashboard desktop" width="900" />
 </p>
 
 | Catat Pengeluaran | Riwayat Pengeluaran |
 |---|---|
-| ![Catat desktop](docs/screenshots/catat-desktop.jpg) | ![Riwayat desktop](docs/screenshots/riwayat-desktop.jpg) |
+| <img src="docs/screenshots/catat-desktop.jpg" alt="Catat desktop" width="480" /> | <img src="docs/screenshots/riwayat-desktop.jpg" alt="Riwayat desktop" width="480" /> |
 
 | Scan Struk | Inbox Email |
 |---|---|
-| ![Scan desktop](docs/screenshots/scan-desktop.jpg) | ![Inbox desktop](docs/screenshots/inbox-desktop.jpg) |
+| <img src="docs/screenshots/scan-desktop.jpg" alt="Scan desktop" width="480" /> | <img src="docs/screenshots/inbox-desktop.jpg" alt="Inbox desktop" width="480" /> |
 
-| Voice Assistant | Halaman PIN |
+| Voice Assistant | Laporan |
 |---|---|
-| ![Voice desktop](docs/screenshots/voice-desktop.jpg) | ![Lock desktop](docs/screenshots/lock-desktop.jpg) |
+| <img src="docs/screenshots/voice-desktop.jpg" alt="Voice desktop" width="480" /> | <img src="docs/screenshots/laporan-desktop.jpg" alt="Laporan desktop" width="480" /> |
 
 ### Mobile
 
-Tampilan mobile mengganti sidebar menjadi **bottom navigation**, form menjadi satu kolom, dan daftar transaksi berubah menjadi kartu agar tombol aksi tetap terlihat tanpa scroll horizontal. Screenshot Dashboard mobile juga memakai long screenshot sampai bagian paling bawah.
+Tampilan mobile mengganti sidebar menjadi **bottom navigation**, form menjadi satu kolom, dan daftar transaksi berubah menjadi kartu agar tombol aksi tetap terlihat tanpa scroll horizontal. Filter budget & kategori ditampilkan sebagai chip yang **wrap ke bawah** (bukan scroll horizontal), dengan section **BUDGET** dan **KATEGORI** yang terpisah. Screenshot Dashboard mobile juga memakai long screenshot sampai bagian paling bawah.
 
 | Dashboard | Catat | Riwayat |
 |---|---|---|
-| <img src="docs/screenshots/dashboard-mobile.jpg" width="100%" /> | <img src="docs/screenshots/catat-mobile.jpg" width="100%" /> | <img src="docs/screenshots/riwayat-mobile.jpg" width="100%" /> |
+| <img src="docs/screenshots/dashboard-mobile.jpg" width="200" /> | <img src="docs/screenshots/catat-mobile.jpg" width="200" /> | <img src="docs/screenshots/riwayat-mobile.jpg" width="200" /> |
 
 | Scan | Inbox | Voice |
 |---|---|---|
-| <img src="docs/screenshots/scan-mobile.jpg" width="100%" /> | <img src="docs/screenshots/inbox-mobile.jpg" width="100%" /> | <img src="docs/screenshots/voice-mobile.jpg" width="100%" /> |
+| <img src="docs/screenshots/scan-mobile.jpg" width="200" /> | <img src="docs/screenshots/inbox-mobile.jpg" width="200" /> | <img src="docs/screenshots/voice-mobile.jpg" width="200" /> |
 
-<p align="center">
-  <img src="docs/screenshots/lock-mobile.jpg" alt="PIN mobile" width="45%" />
-</p>
+| Laporan |
+|---|
+| <img src="docs/screenshots/laporan-mobile.jpg" width="200" /> |
 
 ---
 
@@ -63,10 +69,11 @@ Tampilan mobile mengganti sidebar menjadi **bottom navigation**, form menjadi sa
 * **Scan Struk dengan AI** (`/scan`): upload foto/PDF → AI (Gemini) baca struk → review & assign budget → auto-create banyak expense per budget
 * Saldo per budget (berkurang saat pengeluaran, bertambah via top-up)
 * Dashboard: saldo per budget, pengeluaran terbesar, 3 bulan terakhir
-* Riwayat per periode: search, filter, sort, **pagination**, edit (termasuk ganti/hapus foto), hapus, lihat foto (termasuk PDF)
+* Riwayat per periode: search, **filter budget & kategori multi-select**, sort, **pagination**, edit (termasuk ganti/hapus foto), hapus, lihat foto (termasuk PDF)
 * Kelola budget (tambah/edit/hapus, soft delete) — termasuk ambang notifikasi "budget menipis" per budget
 * Idempotensi POST (header `Idempotency-Key`) untuk mencegah duplikat
 * Notifikasi email (Gmail SMTP via microservice `notifier`): konfirmasi expense/top-up/budget + peringatan budget menipis (threshold per budget)
+* **Report PDF otomatis per periode**: saat periode baru dimulai, laporan lengkap periode sebelumnya (ringkasan, rincian budget/kategori, analisis, seluruh transaksi) dibuat via HTML/CSS → PDF dalam Bahasa Indonesia (email report tetap Bahasa Inggris), disimpan di `uploads/reports/`, dikirim sebagai lampiran email, dan bisa dilihat/diunduh lewat halaman **Laporan** (tombol di Dashboard)
 * Trace id end-to-end (header `X-Trace-Id` FE → BE → notifier) untuk menelusuri log satu request
 * Dark mode (default gelap)
 
@@ -77,7 +84,8 @@ Tampilan mobile mengganti sidebar menjadi **bottom navigation**, form menjadi sa
 * **Frontend:** React 19 + Vite + TypeScript, React Router, TanStack Query, Axios, Mantine UI
 * **Backend:** Java 25 + Spring Boot 4, Spring JDBC (JdbcTemplate), Flyway; runtime **JVM** (`Dockerfile`, default) atau GraalVM Native Image (`Dockerfile.native`, opsional/legacy)
 * **AI:** Google Gemini (`gemini-3.5-flash-lite`) via JDK HttpClient untuk analisis struk (gambar/PDF)
-* **Notifier:** Go (std lib `net/smtp`), kirim email via SMTP (Gmail), fallback Resend
+* **Report PDF:** HTML/CSS → PDF via Flying Saucer + OpenPDF; PDFBox untuk render invoice PDF & stempel nomor halaman
+* **Notifier:** Go (std lib `net/smtp`), kirim email via SMTP (Gmail), fallback Resend, mendukung lampiran PDF
 * **Storage:** MySQL 8+
 
 ---
@@ -141,6 +149,11 @@ NOTIFIER_URL=http://notifier:8081
 NOTIFY_EMAILS=email1@example.com,email2@example.com
 NOTIFY_TEST_MODE=false
 NOTIFY_TEST_EMAIL=your-email@gmail.com
+REPORT_ENABLED=true               # opsional, default true
+REPORT_CRON=0 5 0 * * *           # opsional, default cek tiap 00:05
+REPORT_GRACE_DAYS=1               # opsional, toleransi hari setelah periode baru mulai
+REPORT_ZONE=Asia/Jakarta          # opsional, zona waktu report
+TZ=Asia/Jakarta                   # zona waktu container
 ```
 
 ### Notifier (STB Armbian, `docker-compose.stb.yml`)

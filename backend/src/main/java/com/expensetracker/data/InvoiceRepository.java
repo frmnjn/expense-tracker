@@ -113,6 +113,14 @@ public class InvoiceRepository {
         jdbcTemplate.update("UPDATE invoices SET period = ?, period_start = ? WHERE id = ?", period, periodStart, id);
     }
 
+    public List<PeriodDateRow> findAllPeriodDates() {
+        return jdbcTemplate.query(
+                "SELECT i.id, COALESCE(MAX(DATE(e.date_time)), DATE(i.created_at)) AS period_date "
+                        + "FROM invoices i LEFT JOIN expenses e ON e.invoice_id = i.id "
+                        + "GROUP BY i.id, i.created_at",
+                (rs, rowNum) -> new PeriodDateRow(rs.getString("id"), rs.getDate("period_date").toLocalDate()));
+    }
+
     public void updateAnalysis(String id, String status, String analysisJson) {
         jdbcTemplate.update(
                 "UPDATE invoices SET status = ?, analysis_json = ?, error_message = NULL WHERE id = ?",

@@ -1,11 +1,13 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   deleteExpense,
+  deletePaydayOverride,
   getExpense,
   getExpenses,
   getPeriods,
   getSummary,
   getTrend,
+  savePaydayOverride,
   updateExpense,
 } from '../services/expense'
 import type { ExpensesResponse, ExpenseRequest } from '../types/expense'
@@ -17,8 +19,7 @@ export function usePeriods() {
   })
 }
 
-export function useExpenses(period: string | null) {
-  return useQuery({
+export function useExpenses(period: string | null) {  return useQuery({
     queryKey: ['expenses', period],
     queryFn: () => getExpenses(period ?? ''),
     enabled: !!period,
@@ -81,5 +82,21 @@ export function useDeleteExpense() {
       queryClient.invalidateQueries({ queryKey: ['voice-notes'] })
       queryClient.invalidateQueries({ queryKey: ['voice-note-detail'] })
     },
+  })
+}
+
+export function useSavePaydayOverride() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ period, date }: { period: string; date: string }) => savePaydayOverride(period, date),
+    onSuccess: () => queryClient.invalidateQueries(),
+  })
+}
+
+export function useDeletePaydayOverride() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (period: string) => deletePaydayOverride(period),
+    onSuccess: () => queryClient.invalidateQueries(),
   })
 }

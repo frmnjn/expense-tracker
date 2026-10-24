@@ -19,6 +19,7 @@ import dayjs from 'dayjs'
 import { useScanInvoices, useUploadInvoice, useRetryAnalysis } from '../hooks/useScan'
 import { usePeriods } from '../hooks/useExpenses'
 import { getInvoicePhotoUrl } from '../services/expense'
+import { currentPeriod as fallbackCurrentPeriod } from '../utils/period'
 import { getErrorMessage } from '../utils/error'
 import { toUploadableImage } from '../utils/image'
 import { PageHeader } from '../components/PageHeader'
@@ -31,20 +32,6 @@ import { useToast } from '../components/Toast'
 import type { Invoice } from '../types/expense'
 
 const DATE_TIME_FORMAT = 'YYYY-MM-DD HH:mm'
-const PERIOD_MONTHS = ['JAN', 'FEB', 'MAR', 'APR', 'MAY', 'JUN', 'JUL', 'AUG', 'SEP', 'OCT', 'NOV', 'DEC']
-
-function periodOf(date: Date): string {
-  let y = date.getFullYear()
-  let m = date.getMonth()
-  if (date.getDate() < 25) {
-    m -= 1
-    if (m < 0) {
-      m = 11
-      y -= 1
-    }
-  }
-  return `${y}-${PERIOD_MONTHS[m]}-${PERIOD_MONTHS[(m + 1) % 12]}`
-}
 
 function ScanPage() {
   const [reviewId, setReviewId] = useState<string | null>(null)
@@ -56,11 +43,12 @@ function ScanPage() {
   const isMobile = useMediaQuery('(max-width: 48em)')
 
   // Periode berjalan (default). Tanggal belanja diambil otomatis dari struk oleh AI (fallback ke waktu sistem).
-  const currentPeriod = periodOf(new Date())
   const nowDate = dayjs().format(DATE_TIME_FORMAT)
   const { data: periodsData } = usePeriods()
-  const [period, setPeriod] = useState<string>(currentPeriod)
-  const { data, isPending } = useScanInvoices(period)
+  const currentPeriod = periodsData?.currentPeriod || fallbackCurrentPeriod()
+  const [period, setPeriod] = useState<string | null>(null)
+  const activePeriod = period ?? currentPeriod
+  const { data, isPending } = useScanInvoices(activePeriod)
   const upload = useUploadInvoice()
   const retry = useRetryAnalysis()
   const toast = useToast()
@@ -150,8 +138,8 @@ function ScanPage() {
             label="Periode"
             placeholder="Pilih periode"
             data={periodOptions}
-            value={period}
-            onChange={(v) => setPeriod(v ?? currentPeriod)}
+            value={activePeriod}
+            onChange={setPeriod}
             searchable
             size="sm"
           />
@@ -204,7 +192,7 @@ function ScanPage() {
               <Text size="sm" c="dimmed">
                 {visible.length} struk
               </Text>
-              <AppPagination data={visible} key={`${statusFilter}|${sortBy}|${period}`}>
+              <AppPagination data={visible} key={`${statusFilter}|${sortBy}|${activePeriod}`}>
                 {(pageData) =>
                   pageData.length === 0 ? (
                     <Text size="sm" c="dimmed">

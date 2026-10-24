@@ -70,8 +70,17 @@ export interface Expense {
   voiceNoteId?: string
 }
 
+export interface PeriodRange {
+  period: string
+  start: string
+  end: string
+  overridden: boolean
+}
+
 export interface PeriodsResponse {
   periods: string[]
+  currentPeriod: string
+  calendar: PeriodRange[]
 }
 
 export interface ExpensesResponse {

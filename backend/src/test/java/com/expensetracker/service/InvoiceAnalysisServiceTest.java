@@ -3,6 +3,7 @@ package com.expensetracker.service;
 import com.expensetracker.data.BudgetRepository;
 import com.expensetracker.data.InvoiceData;
 import com.expensetracker.data.InvoiceRepository;
+import com.expensetracker.data.PaydayOverrideRepository;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.junit.jupiter.api.BeforeEach;
@@ -36,6 +37,8 @@ class InvoiceAnalysisServiceTest {
     private InvoiceRepository invoiceRepository;
     @Mock
     private BudgetRepository budgetRepository;
+    @Mock
+    private PaydayOverrideRepository paydayOverrideRepository;
 
     /**
      * Subclass yang menimpa callGemini agar tidak memanggil HTTP sungguhan.
@@ -49,9 +52,9 @@ class InvoiceAnalysisServiceTest {
         byte[] lastDeepSeekBytes = null;
         String lastDeepSeekMime = null;
 
-        TestService(InvoiceRepository repo, BudgetRepository budgetRepo) {
+        TestService(InvoiceRepository repo, BudgetRepository budgetRepo, PeriodService periodService) {
             super(repo, budgetRepo, new ObjectMapper(), new ExchangeRateService(new ObjectMapper(), "", 8000L),
-                    "key", "gemini-test", 600L, 50, 0L,
+                    periodService, "key", "gemini-test", 600L, 50, 0L,
                     "dsk-key", "deepseek-flash", "https://api.deepseek.com", 120000L);
         }
 
@@ -91,7 +94,8 @@ class InvoiceAnalysisServiceTest {
 
     @BeforeEach
     void setUp() throws IOException {
-        service = new TestService(invoiceRepository, budgetRepository);
+        service = new TestService(invoiceRepository, budgetRepository,
+                new PeriodService(paydayOverrideRepository));
         ReflectionTestUtils.setField(service, "uploadDir", "/tmp");
         Files.write(Path.of("/tmp", "inv.jpg"), new byte[]{1, 2, 3});
     }

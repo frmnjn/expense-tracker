@@ -31,19 +31,22 @@ public class EmailImportService {
     private final EmailInboxService emailInboxService;
     private final EmailParserService emailParserService;
     private final MerchantDiscardRule merchantDiscardRule;
+    private final PeriodService periodService;
 
     public EmailImportService(EmailImportRepository emailImportRepository,
                               ExpenseRepository expenseRepository,
                               ExpenseService expenseService,
                               EmailInboxService emailInboxService,
                               EmailParserService emailParserService,
-                              MerchantDiscardRule merchantDiscardRule) {
+                              MerchantDiscardRule merchantDiscardRule,
+                              PeriodService periodService) {
         this.emailImportRepository = emailImportRepository;
         this.expenseRepository = expenseRepository;
         this.expenseService = expenseService;
         this.emailInboxService = emailInboxService;
         this.emailParserService = emailParserService;
         this.merchantDiscardRule = merchantDiscardRule;
+        this.periodService = periodService;
     }
 
     public List<EmailImportData> list(String status) {
@@ -111,13 +114,13 @@ public class EmailImportService {
         }
     }
 
-    private static String periodOf(String dateTime) {
+    private String periodOf(String dateTime) {
         if (dateTime == null || dateTime.isBlank()) {
             return null;
         }
         try {
             LocalDateTime parsed = PeriodSheetName.parseLenient(dateTime);
-            return PeriodSheetName.forDate(parsed.toLocalDate());
+            return periodService.forDate(parsed.toLocalDate());
         } catch (DateTimeParseException e) {
             return null;
         }

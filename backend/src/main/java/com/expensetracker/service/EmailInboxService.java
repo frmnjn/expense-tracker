@@ -56,6 +56,7 @@ public class EmailInboxService {
     private final MerchantDiscardRule merchantDiscardRule;
     private final InvoiceService invoiceService;
     private final InvoiceAnalysisService invoiceAnalysisService;
+    private final PeriodService periodService;
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private final AtomicBoolean polling = new AtomicBoolean(false);
 
@@ -75,6 +76,7 @@ public class EmailInboxService {
                              MerchantDiscardRule merchantDiscardRule,
                              InvoiceService invoiceService,
                              InvoiceAnalysisService invoiceAnalysisService,
+                             PeriodService periodService,
                              @Value("${inbox.enabled:false}") boolean enabled,
                              @Value("${inbox.host:imap.gmail.com}") String host,
                              @Value("${inbox.port:993}") int port,
@@ -90,6 +92,7 @@ public class EmailInboxService {
         this.merchantDiscardRule = merchantDiscardRule;
         this.invoiceService = invoiceService;
         this.invoiceAnalysisService = invoiceAnalysisService;
+        this.periodService = periodService;
         this.enabled = enabled;
         this.host = host;
         this.port = port;
@@ -251,8 +254,8 @@ public class EmailInboxService {
                 EmailAttachment attachment = extractAttachment(message);
                 if (attachment != null) {
                     try {
-                        String period = PeriodSheetName.forDate(receivedAt.toLocalDate());
-                        LocalDate periodStart = PeriodSheetName.periodStart(receivedAt.toLocalDate());
+                        String period = periodService.forDate(receivedAt.toLocalDate());
+                        LocalDate periodStart = periodService.periodStart(receivedAt.toLocalDate());
                         String invoiceId = invoiceService.createInvoiceForAi(period, periodStart,
                                 attachment.content(), attachment.filename());
                         invoiceAnalysisService.trigger(invoiceId);

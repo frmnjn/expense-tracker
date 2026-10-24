@@ -63,15 +63,17 @@ public class VoiceNoteService {
     private final VoiceNoteRepository voiceNoteRepository;
     private final ExpenseRepository expenseRepository;
     private final ObjectMapper objectMapper;
+    private final PeriodService periodService;
 
     @Value("${upload.dir:/app/uploads}")
     private String uploadDir;
 
     public VoiceNoteService(VoiceNoteRepository voiceNoteRepository, ExpenseRepository expenseRepository,
-                            ObjectMapper objectMapper) {
+                            ObjectMapper objectMapper, PeriodService periodService) {
         this.voiceNoteRepository = voiceNoteRepository;
         this.expenseRepository = expenseRepository;
         this.objectMapper = objectMapper;
+        this.periodService = periodService;
     }
 
     public String createForAi(MultipartFile file, String date, Integer durationMs) {
@@ -111,7 +113,7 @@ public class VoiceNoteService {
 
         Integer safeDuration = durationMs == null || durationMs <= 0 ? null : durationMs;
         LocalDate dateValue = referenceDate.toLocalDate();
-        voiceNoteRepository.insert(id, PeriodSheetName.forDate(dateValue), PeriodSheetName.periodStart(dateValue),
+        voiceNoteRepository.insert(id, periodService.forDate(dateValue), periodService.periodStart(dateValue),
                 referenceDate, filename, mimeType, safeDuration);
         return id;
     }
@@ -235,7 +237,7 @@ public class VoiceNoteService {
 
     /** Tandai rekaman selesai dan samakan periodenya dengan tanggal expense. */
     public void markSubmitted(String id, LocalDate date) {
-        voiceNoteRepository.updatePeriod(id, PeriodSheetName.forDate(date), PeriodSheetName.periodStart(date));
+        voiceNoteRepository.updatePeriod(id, periodService.forDate(date), periodService.periodStart(date));
         voiceNoteRepository.updateStatus(id, VoiceNoteStatus.SUBMITTED.value());
     }
 
