@@ -12,7 +12,7 @@ PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 DEMO_URL="${DEMO_URL:-https://frmnjn.my.id/expense-tracker-demo/}"
 OUT_DIR="${OUT_DIR:-${PROJECT_ROOT}/docs/screenshots}"
 PLAYWRIGHT_IMAGE="${PLAYWRIGHT_IMAGE:-mcr.microsoft.com/playwright:v1.55.0-noble}"
-PLAYWRIGHT_VERSION="${PLAYWRIGHT_VERSION:-1.55.0}"
+PLAYWRIGHT_VERSION="${PLAYWRIGHT_VERSION:-1.64.1}"
 
 if ! command -v docker >/dev/null 2>&1; then
     echo "ERROR: docker tidak ditemukan" >&2
