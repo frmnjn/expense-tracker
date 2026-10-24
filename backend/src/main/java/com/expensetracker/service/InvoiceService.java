@@ -219,7 +219,7 @@ public class InvoiceService {
             return;
         }
         if (!InvoiceStatus.TO_REVIEW.value().equals(invoice.status())) {
-            throw new ValidationException("Struk ini sudah diproses dan tidak bisa dipakai lagi");
+            throw new ConflictException("Struk ini sudah diproses dan tidak bisa dipakai lagi");
         }
     }
 
@@ -245,10 +245,10 @@ public class InvoiceService {
     public void deleteScanInvoice(String id) {
         InvoiceData invoice = requireInvoice(id);
         if (!DELETABLE_SCAN_STATUSES.contains(invoice.status())) {
-            throw new ValidationException("Struk yang masih diproses atau sudah disubmit tidak dapat dihapus");
+            throw new ConflictException("Struk yang masih diproses atau sudah disubmit tidak dapat dihapus");
         }
         if (!deleteIfUnused(id)) {
-            throw new ValidationException("Invoice is used by expense and cannot be deleted");
+            throw new ConflictException("Invoice is used by expense and cannot be deleted");
         }
     }
 
@@ -277,7 +277,7 @@ public class InvoiceService {
         }
         InvoiceData invoice = invoiceRepository.findById(id);
         if (invoice == null) {
-            throw new ValidationException("Invoice not found");
+            throw new NotFoundException("Invoice not found");
         }
         return invoice;
     }

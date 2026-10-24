@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Alert, Button, Group, Modal, NumberInput, Select, Stack, Text, TextInput } from '@mantine/core'
 import { DateTimePicker } from '@mantine/dates'
 import dayjs from 'dayjs'
@@ -25,27 +25,23 @@ function ImportEmailModal({ item, onClose }: { item: EmailImport; onClose: () =>
   const [description, setDescription] = useState(item.description ?? '')
   const [duplicateMessage, setDuplicateMessage] = useState<string | null>(null)
 
-  const budgets = options?.budgets
+  const budgets = options?.budgets ?? []
+  const defaultBudget =
+    budgets.find((b) => b.name === item.suggestedBudget)?.name ?? budgets[0]?.name ?? ''
+  const effectiveBudget = budget || defaultBudget
 
-  useEffect(() => {
-    if (!budget && budgets && budgets.length > 0) {
-      const suggested = budgets.find((b) => b.name === item.suggestedBudget)
-      setBudget(suggested?.name ?? budgets[0].name)
-    }
-  }, [budget, budgets, item.suggestedBudget])
-
-  const categoryOptions = (budgets?.find((b) => b.name === budget)?.categories ?? []).map((c) => ({
+  const categoryOptions = (budgets.find((b) => b.name === effectiveBudget)?.categories ?? []).map((c) => ({
     value: c.name,
     label: c.name,
   }))
 
-  const submitDisabled = !name.trim() || !budget || Number(amount) <= 0 || !dateTime || importMutation.isPending
+  const submitDisabled = !name.trim() || !effectiveBudget || Number(amount) <= 0 || !dateTime || importMutation.isPending
 
   const submit = (force: boolean) => {
     const request: ExpenseRequest = {
       dateTime: dayjs(dateTime).format('YYYY-MM-DD HH:mm'),
       name: name.trim(),
-      budget,
+      budget: effectiveBudget,
       category: category ?? undefined,
       amount: Number(amount),
       description: description.trim() === '' ? undefined : description.trim(),
@@ -122,7 +118,7 @@ function ImportEmailModal({ item, onClose }: { item: EmailImport; onClose: () =>
           label="Budget"
           placeholder="Pilih budget"
           data={(budgets ?? []).map((b) => b.name)}
-          value={budget}
+          value={effectiveBudget}
           onChange={(v) => {
             setBudget(v ?? '')
             setCategory(null)

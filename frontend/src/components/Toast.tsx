@@ -111,6 +111,8 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   )
 }
 
+// Hook tinggal bersama provider agar context tidak diekspor ke file lain.
+// oxlint-disable-next-line react/only-export-components
 export function useToast(): ToastApi {
   const ctx = useContext(ToastContext)
   if (!ctx) {

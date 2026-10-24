@@ -3,8 +3,10 @@ package com.expensetracker.service;
 import com.expensetracker.data.PaydayOverrideRepository;
 import com.expensetracker.model.PeriodRange;
 import com.expensetracker.model.PeriodsResponse;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.Clock;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.util.ArrayList;
@@ -18,9 +20,16 @@ public class PeriodService {
     private static final int CALENDAR_MONTHS_AHEAD = 6;
 
     private final PaydayOverrideRepository paydayOverrideRepository;
+    private final Clock clock;
 
     public PeriodService(PaydayOverrideRepository paydayOverrideRepository) {
+        this(paydayOverrideRepository, Clock.systemDefaultZone());
+    }
+
+    @Autowired
+    public PeriodService(PaydayOverrideRepository paydayOverrideRepository, Clock clock) {
         this.paydayOverrideRepository = paydayOverrideRepository;
+        this.clock = clock;
     }
 
     public PaydayCalendar calendar() {
@@ -36,12 +45,12 @@ public class PeriodService {
     }
 
     public String currentPeriod() {
-        return forDate(LocalDate.now());
+        return forDate(LocalDate.now(clock));
     }
 
     public PeriodsResponse buildPeriods(List<String> storedPeriods) {
         PaydayCalendar calendar = calendar();
-        String current = calendar.forDate(LocalDate.now());
+        String current = calendar.forDate(LocalDate.now(clock));
 
         List<String> periods = new ArrayList<>();
         periods.add(current);
@@ -51,7 +60,7 @@ public class PeriodService {
             }
         }
 
-        YearMonth now = YearMonth.now();
+        YearMonth now = YearMonth.now(clock);
         Set<YearMonth> months = new LinkedHashSet<>();
         months.add(now.minusMonths(1));
         for (int i = 0; i <= CALENDAR_MONTHS_AHEAD; i++) {

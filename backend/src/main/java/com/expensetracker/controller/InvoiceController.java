@@ -3,7 +3,9 @@ package com.expensetracker.controller;
 import com.expensetracker.model.ApiResponse;
 import com.expensetracker.service.IdempotencyService;
 import com.expensetracker.service.InvoiceAnalysisService;
+import com.expensetracker.service.ConflictException;
 import com.expensetracker.service.InvoiceService;
+import com.expensetracker.service.NotFoundException;
 import com.expensetracker.service.PeriodService;
 import com.expensetracker.service.PeriodSheetName;
 import com.expensetracker.service.ValidationException;
@@ -55,6 +57,12 @@ public class InvoiceController {
                                                    @RequestParam(value = "period", required = false) String period) {
         try {
             return ResponseEntity.ok(ApiResponse.ok(invoiceService.listByDate(date, scan, period)));
+        } catch (NotFoundException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.NOT_FOUND.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(e.getMessage()));
+        } catch (ConflictException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.CONFLICT.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.error(e.getMessage()));
         } catch (ValidationException e) {
             LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -70,6 +78,12 @@ public class InvoiceController {
     public ResponseEntity<ApiResponse> getInvoice(@PathVariable String id) {
         try {
             return ResponseEntity.ok(ApiResponse.ok(invoiceService.getDetail(id)));
+        } catch (NotFoundException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.NOT_FOUND.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(e.getMessage()));
+        } catch (ConflictException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.CONFLICT.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.error(e.getMessage()));
         } catch (ValidationException e) {
             LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -85,7 +99,7 @@ public class InvoiceController {
     public ResponseEntity<ApiResponse> createInvoice(@RequestParam("file") MultipartFile file,
                                                      @RequestParam("date") String date,
                                                      @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
-        Optional<ApiResponse> cached = idempotencyService.begin(idempotencyKey);
+        Optional<ApiResponse> cached = idempotencyService.begin("invoices", idempotencyKey);
         if (cached.isPresent()) {
             return ResponseEntity.ok(cached.get());
         }
@@ -96,15 +110,21 @@ public class InvoiceController {
             String invoiceId = invoiceService.createInvoiceForAi(period, periodStart, file);
             invoiceAnalysisService.trigger(invoiceId);
             ApiResponse response = ApiResponse.ok(Map.of("invoiceId", invoiceId));
-            idempotencyService.complete(idempotencyKey, response);
-            return ResponseEntity.ok(response);
+            idempotencyService.complete("invoices", idempotencyKey, response);
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        } catch (NotFoundException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.NOT_FOUND.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(e.getMessage()));
+        } catch (ConflictException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.CONFLICT.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.error(e.getMessage()));
         } catch (ValidationException e) {
-            idempotencyService.abort(idempotencyKey);
+            idempotencyService.abort("invoices", idempotencyKey);
             LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
-            idempotencyService.abort(idempotencyKey);
+            idempotencyService.abort("invoices", idempotencyKey);
             LOGGER.error("internal error creating invoice", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("Internal server error"));
@@ -118,6 +138,12 @@ public class InvoiceController {
             invoiceService.setAnalyzing(id);
             invoiceAnalysisService.trigger(id);
             return ResponseEntity.ok(ApiResponse.ok());
+        } catch (NotFoundException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.NOT_FOUND.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(e.getMessage()));
+        } catch (ConflictException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.CONFLICT.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.error(e.getMessage()));
         } catch (ValidationException e) {
             LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -134,6 +160,12 @@ public class InvoiceController {
         try {
             invoiceService.deleteScanInvoice(id);
             return ResponseEntity.ok(ApiResponse.ok());
+        } catch (NotFoundException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.NOT_FOUND.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(e.getMessage()));
+        } catch (ConflictException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.CONFLICT.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.error(e.getMessage()));
         } catch (ValidationException e) {
             LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -146,21 +178,30 @@ public class InvoiceController {
     }
 
     @GetMapping("/invoices/{id}/photo")
-    public ResponseEntity<byte[]> getInvoicePhoto(@PathVariable String id) {
+    public ResponseEntity<?> getInvoicePhoto(@PathVariable String id) {
         try {
             String photoPath = invoiceService.getInvoicePhotoPath(id);
             if (photoPath == null) {
-                return ResponseEntity.notFound().build();
+                throw new NotFoundException("Invoice photo not found");
             }
             Path file = Path.of(photoPath);
+            if (!Files.isRegularFile(file)) {
+                throw new NotFoundException("Invoice photo not found");
+            }
             byte[] bytes = Files.readAllBytes(file);
             MediaType mediaType = mediaTypeFor(photoPath);
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_TYPE, mediaType.toString())
                     .body(bytes);
+        } catch (NotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
             LOGGER.error("internal error getting invoice photo", e);
-            return ResponseEntity.notFound().build();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(ApiResponse.error("Internal server error"));
         }
     }
 

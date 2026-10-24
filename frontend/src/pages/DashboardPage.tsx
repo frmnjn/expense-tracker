@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Button, Container, Grid, Group, Select, SimpleGrid, Stack } from '@mantine/core'
 import { useMediaQuery } from '@mantine/hooks'
 import { Link } from 'react-router-dom'
@@ -25,7 +25,7 @@ import { buildInsights } from '../utils/insights'
 function DashboardPage() {
   const { data: periodsData, isPending: periodsLoading, isError: periodsError } = usePeriods()
   const { data: options, isPending: optionsLoading, isError: optionsError } = useOptions()
-  const [period, setPeriod] = useState<string | null>(null)
+  const [periodSelection, setPeriodSelection] = useState<string | null>(null)
   const [selectedTopUpBudget, setSelectedTopUpBudget] = useState<string | null>(null)
   const [selectedTopUpHistoryBudget, setSelectedTopUpHistoryBudget] = useState<string | null>(null)
   const [addBudgetOpened, setAddBudgetOpened] = useState(false)
@@ -35,11 +35,8 @@ function DashboardPage() {
   const [paydaySettingsOpened, setPaydaySettingsOpened] = useState(false)
   const isMobile = useMediaQuery('(max-width: 48em)')
 
-  useEffect(() => {
-    if (!period && periodsData && periodsData.periods.length > 0) {
-      setPeriod(periodsData.periods[0])
-    }
-  }, [period, periodsData])
+  const period = periodSelection ?? periodsData?.periods[0] ?? null
+  const setPeriod = setPeriodSelection
 
   const calendar = useMemo(() => periodsData?.calendar ?? [], [periodsData])
   const prevPeriod = period ? previousPeriod(period) : null
@@ -75,6 +72,7 @@ function DashboardPage() {
       return { prevTotal: total > 0 ? total : null, partial: false, days: null }
     }
 
+    // oxlint-disable-next-line react/purity -- butuh tanggal berjalan saat render untuk hitung elapsed days
     const days = elapsedDayCount(period, new Date(), calendar)
     const prevStart = parsePeriodStart(prevPeriod, calendar)
     if (days === null || !prevStart) return { prevTotal: null, partial: false, days: null }
@@ -244,6 +242,7 @@ function DashboardPage() {
         />
         <AddBudgetModal opened={addBudgetOpened} onClose={() => setAddBudgetOpened(false)} />
         <EditBudgetModal
+          key={editBudget?.name ?? 'closed'}
           budget={editBudget?.name ?? null}
           balance={editBudget?.balance}
           alertThreshold={editBudget?.alertThreshold}
@@ -258,6 +257,7 @@ function DashboardPage() {
           />
         )}
         <PaydaySettingsModal
+          key={paydaySettingsOpened ? 'open' : 'closed'}
           opened={paydaySettingsOpened}
           calendar={calendar}
           currentPeriod={periodsData?.currentPeriod ?? period ?? ''}

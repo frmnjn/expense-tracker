@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useState } from 'react'
 import { Box, Button, Divider, Group, Loader, Modal, Paper, Stack, Text } from '@mantine/core'
 import { useMediaQuery } from '@mantine/hooks'
 import { IconFileTypePdf } from '@tabler/icons-react'
@@ -13,11 +13,7 @@ function SubmittedExpensesModal({ invoiceId, type, onClose }: { invoiceId: strin
   const isMobile = useMediaQuery('(max-width: 48em)')
 
   const expenses = data?.expenses ?? []
-  const total = useMemo(() => expenses.reduce((s, e) => s + Number(e.amount || 0), 0), [expenses])
-
-  useEffect(() => {
-    setViewingPhoto(false)
-  }, [invoiceId])
+  const total = expenses.reduce((s, e) => s + Number(e.amount || 0), 0)
 
   return (
     <Modal

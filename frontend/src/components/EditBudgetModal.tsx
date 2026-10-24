@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Button, Group, Modal, NumberInput, Stack, TextInput } from '@mantine/core'
 import { useUpdateBudget } from '../hooks/useBudgets'
 import { useToast } from '../components/Toast'
@@ -18,19 +18,10 @@ function EditBudgetModal({
 }) {
   const updateBudget = useUpdateBudget()
   const toast = useToast()
-  const [name, setName] = useState('')
-  const [newBalance, setNewBalance] = useState<string | number>('')
-  const [newThreshold, setNewThreshold] = useState<string | number>('')
-  const [newDescription, setNewDescription] = useState('')
-
-  useEffect(() => {
-    if (budget) {
-      setName(budget)
-      setNewBalance(balance ?? '')
-      setNewThreshold(alertThreshold ?? '')
-      setNewDescription(description ?? '')
-    }
-  }, [budget, balance, alertThreshold, description])
+  const [name, setName] = useState(budget ?? '')
+  const [newBalance, setNewBalance] = useState<string | number>(balance ?? '')
+  const [newThreshold, setNewThreshold] = useState<string | number>(alertThreshold ?? '')
+  const [newDescription, setNewDescription] = useState(description ?? '')
 
   const submitDisabled = name.trim() === '' || updateBudget.isPending
 

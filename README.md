@@ -252,7 +252,9 @@ Dokumentasi lengkap ada di `PRD.md`. Ringkasan endpoint (`/api`):
 * `GET/POST/DELETE /reports...`
 * `GET/POST/DELETE /payday-overrides...`
 
-Endpoint yang mengubah data menerima header `Idempotency-Key` opsional (uuid) untuk mencegah duplikat.
+Endpoint yang mengubah data menerima header `Idempotency-Key` opsional (uuid) untuk mencegah duplikat; key di-scope per endpoint.
+
+Status HTTP: create `201`, sukses `200`, validasi `400`, tidak ditemukan `404`, konflik `409`, poll email `202`.
 
 ---
 

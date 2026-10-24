@@ -48,7 +48,7 @@ function loadDraft(): ExpenseDraft | null {
 function ExpenseForm() {
   const [mode, setMode] = useState('now')
   const [dateTime, setDateTime] = useState<string>(dayjs().format(DATE_TIME_SECONDS_FORMAT))
-  const draft = useMemo(loadDraft, [])
+  const draft = useMemo(() => loadDraft(), [])
   const [name, setName] = useState(draft?.name ?? '')
   const [budget, setBudget] = useState<string | null>(draft?.budget ?? null)
   const [category, setCategory] = useState<string | null>(draft?.category ?? null)

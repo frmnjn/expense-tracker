@@ -123,7 +123,7 @@ class EmailImportServiceTest {
     void rejectsImportWhenAlreadyProcessed() {
         when(emailImportRepository.findByIdForUpdate("e1")).thenReturn(importRow("IMPORTED"));
 
-        assertThrows(ValidationException.class,
+        assertThrows(ConflictException.class,
                 () -> service.importToExpense("e1", request(57_500L), false));
 
         verify(expenseService, never()).createExpense(any());
@@ -187,7 +187,7 @@ class EmailImportServiceTest {
     void retryRejectedWhenNotFailed() {
         when(emailImportRepository.findById("e1")).thenReturn(importRow("PENDING_REVIEW"));
 
-        assertThrows(ValidationException.class, () -> service.retry("e1"));
+        assertThrows(ConflictException.class, () -> service.retry("e1"));
 
         verify(emailInboxService, never()).fetchByMessageId(anyString());
     }
@@ -197,7 +197,7 @@ class EmailImportServiceTest {
         when(emailImportRepository.findById("e1")).thenReturn(importRow("FAILED"));
         when(emailInboxService.fetchByMessageId(anyString())).thenReturn(null);
 
-        assertThrows(ValidationException.class, () -> service.retry("e1"));
+        assertThrows(NotFoundException.class, () -> service.retry("e1"));
 
         verify(emailImportRepository).markFailed("e1", "Email tidak ditemukan di inbox");
     }

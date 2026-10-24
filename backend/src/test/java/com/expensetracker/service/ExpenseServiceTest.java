@@ -24,8 +24,11 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.time.Clock;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
@@ -63,13 +66,16 @@ class ExpenseServiceTest {
     @Mock
     private PaydayOverrideRepository paydayOverrideRepository;
 
+    private static final Clock FIXED_CLOCK =
+            Clock.fixed(Instant.parse("2026-10-24T03:00:00Z"), ZoneId.of("Asia/Jakarta"));
+
     private ExpenseService expenseService;
 
     @BeforeEach
     void setUp() {
         expenseService = new ExpenseService(budgetRepository, categoryRepository, expenseRepository, topUpRepository,
                 invoiceService, voiceNoteService, notificationService,
-                new PeriodService(paydayOverrideRepository));
+                new PeriodService(paydayOverrideRepository, FIXED_CLOCK));
     }
 
     private static ExpenseRequest validRequest() {
@@ -101,7 +107,7 @@ class ExpenseServiceTest {
     void getExpense_unknownId_shouldThrow() {
         when(expenseRepository.findById("nope")).thenReturn(null);
 
-        assertThrows(ValidationException.class, () -> expenseService.getExpense("nope"));
+        assertThrows(NotFoundException.class, () -> expenseService.getExpense("nope"));
     }
 
     @Test
@@ -216,7 +222,7 @@ class ExpenseServiceTest {
         ExpenseRequest request = new ExpenseRequest("2026-08-06 14:30", "Belanja sayur", "Daily", null,
                 35000L, null, null, "vn-1");
 
-        ValidationException ex = assertThrows(ValidationException.class, () -> expenseService.createExpense(request));
+        ConflictException ex = assertThrows(ConflictException.class, () -> expenseService.createExpense(request));
         assertEquals("Voice note is not ready for review or already submitted", ex.getMessage());
         verify(expenseRepository, never()).insert(anyString(), anyString(), any(), any(), anyLong(), any(),
                 anyString(), anyLong(), any());
@@ -246,7 +252,7 @@ class ExpenseServiceTest {
     @Test
     void updateExpense_notFound_shouldReject() {
         when(expenseRepository.findById("missing")).thenReturn(null);
-        ValidationException ex = assertThrows(ValidationException.class,
+        NotFoundException ex = assertThrows(NotFoundException.class,
                 () -> expenseService.updateExpense("missing", validRequest()));
         assertEquals("Expense not found", ex.getMessage());
     }
@@ -264,7 +270,7 @@ class ExpenseServiceTest {
     void deleteExpense_alreadyDeleted_shouldRejectWithoutRefund() {
         when(expenseRepository.findById("id123")).thenReturn(null);
 
-        assertThrows(ValidationException.class, () -> expenseService.deleteExpense("id123"));
+        assertThrows(NotFoundException.class, () -> expenseService.deleteExpense("id123"));
         verify(budgetRepository, never()).adjustBalance(anyString(), anyLong());
         verify(expenseRepository, never()).softDelete("id123");
     }
@@ -331,18 +337,24 @@ class ExpenseServiceTest {
     }
 
     @Test
-    void getTrend_shouldReturnNewestPeriodsAscending() {
-        when(expenseRepository.getPeriods()).thenReturn(List.of("2026-AUG-SEP", "2026-JUL-AUG"));
-        when(expenseRepository.totalForPeriod("2026-JUL-AUG")).thenReturn(3000L);
-        when(expenseRepository.countForPeriod("2026-JUL-AUG")).thenReturn(2);
-        when(expenseRepository.totalForPeriod("2026-AUG-SEP")).thenReturn(5000L);
-        when(expenseRepository.countForPeriod("2026-AUG-SEP")).thenReturn(1);
+    void getTrend_shouldReturnLastThreePeriodsIncludingEmptyOnes() {
+        when(expenseRepository.totalForPeriod("2026-AUG-SEP")).thenReturn(3000L);
+        when(expenseRepository.countForPeriod("2026-AUG-SEP")).thenReturn(2);
+        when(expenseRepository.totalForPeriod("2026-SEP-OCT")).thenReturn(0L);
+        when(expenseRepository.countForPeriod("2026-SEP-OCT")).thenReturn(0);
+        when(expenseRepository.totalForPeriod("2026-OCT-NOV")).thenReturn(5000L);
+        when(expenseRepository.countForPeriod("2026-OCT-NOV")).thenReturn(1);
+
         var trend = expenseService.getTrend(3);
-        assertEquals(2, trend.periods().size());
-        assertEquals("2026-JUL-AUG", trend.periods().get(0).period());
+
+        assertEquals(3, trend.periods().size());
+        assertEquals("2026-AUG-SEP", trend.periods().get(0).period());
         assertEquals(3000L, trend.periods().get(0).total());
-        assertEquals("2026-AUG-SEP", trend.periods().get(1).period());
-        assertEquals(5000L, trend.periods().get(1).total());
+        assertEquals("2026-SEP-OCT", trend.periods().get(1).period());
+        assertEquals(0L, trend.periods().get(1).total());
+        assertEquals(0, trend.periods().get(1).count());
+        assertEquals("2026-OCT-NOV", trend.periods().get(2).period());
+        assertEquals(5000L, trend.periods().get(2).total());
     }
 
     @Test
@@ -386,7 +398,7 @@ class ExpenseServiceTest {
     @Test
     void createBudget_duplicate_shouldReject() {
         doThrow(new IllegalStateException("dup")).when(budgetRepository).create("Gadget", 0L, 0L, null);
-        ValidationException ex = assertThrows(ValidationException.class,
+        ConflictException ex = assertThrows(ConflictException.class,
                 () -> expenseService.createBudget(new BudgetCreateRequest("Gadget", null, null, null)));
         assertEquals("Budget already exists", ex.getMessage());
     }
@@ -401,7 +413,7 @@ class ExpenseServiceTest {
     @Test
     void deleteBudget_notFound_shouldReject() {
         when(budgetRepository.softDelete("Gadget")).thenReturn(false);
-        ValidationException ex = assertThrows(ValidationException.class, () -> expenseService.deleteBudget("Gadget"));
+        NotFoundException ex = assertThrows(NotFoundException.class, () -> expenseService.deleteBudget("Gadget"));
         assertEquals("Budget not found", ex.getMessage());
     }
 
@@ -429,7 +441,7 @@ class ExpenseServiceTest {
     @Test
     void updateBudget_notFound_shouldReject() {
         when(budgetRepository.update("Gadget", "Gadget2", null, null, null)).thenReturn(false);
-        ValidationException ex = assertThrows(ValidationException.class,
+        NotFoundException ex = assertThrows(NotFoundException.class,
                 () -> expenseService.updateBudget("Gadget", new BudgetUpdateRequest("Gadget2", null, null, null)));
         assertEquals("Budget not found", ex.getMessage());
     }
@@ -437,7 +449,7 @@ class ExpenseServiceTest {
     @Test
     void updateBudget_duplicateName_shouldReject() {
         when(budgetRepository.update("Gadget", "Household", null, null, null)).thenThrow(new IllegalStateException("dup"));
-        ValidationException ex = assertThrows(ValidationException.class,
+        ConflictException ex = assertThrows(ConflictException.class,
                 () -> expenseService.updateBudget("Gadget", new BudgetUpdateRequest("Household", null, null, null)));
         assertEquals("Budget already exists", ex.getMessage());
     }
@@ -472,9 +484,9 @@ class ExpenseServiceTest {
     @Test
     void createExpense_withMissingInvoice_shouldReject() {
         when(budgetRepository.findIdByName("Daily")).thenReturn(1L);
-        when(invoiceService.requireInvoice("missing")).thenThrow(new ValidationException("Invoice not found"));
+        when(invoiceService.requireInvoice("missing")).thenThrow(new NotFoundException("Invoice not found"));
         ExpenseRequest request = new ExpenseRequest("2026-08-06 14:30", "Makan Siang", "Daily", 35000L, null, "missing");
-        ValidationException ex = assertThrows(ValidationException.class, () -> expenseService.createExpense(request));
+        NotFoundException ex = assertThrows(NotFoundException.class, () -> expenseService.createExpense(request));
         assertEquals("Invoice not found", ex.getMessage());
     }
 
@@ -527,7 +539,7 @@ class ExpenseServiceTest {
     @Test
     void detachPhoto_notFound_shouldReject() {
         when(expenseRepository.findById("missing")).thenReturn(null);
-        ValidationException ex = assertThrows(ValidationException.class, () -> expenseService.detachPhoto("missing"));
+        NotFoundException ex = assertThrows(NotFoundException.class, () -> expenseService.detachPhoto("missing"));
         assertEquals("Expense not found", ex.getMessage());
         verify(expenseRepository, never()).detachPhoto(anyString());
     }
@@ -666,7 +678,7 @@ class ExpenseServiceTest {
         when(budgetRepository.findIdByName("Daily")).thenReturn(1L);
         when(categoryRepository.findIdByBudgetAndName(1L, "Nope")).thenReturn(null);
         ExpenseRequest request = new ExpenseRequest("2026-08-06 14:30", "Kopi", "Daily", "Nope", 35000L, null, null);
-        ValidationException ex = assertThrows(ValidationException.class, () -> expenseService.createExpense(request));
+        NotFoundException ex = assertThrows(NotFoundException.class, () -> expenseService.createExpense(request));
         assertTrue(ex.getMessage().contains("Category not found"));
     }
 
@@ -692,13 +704,13 @@ class ExpenseServiceTest {
     void createCategory_duplicate_shouldReject() {
         when(budgetRepository.findIdByName("Daily")).thenReturn(1L);
         doThrow(new IllegalStateException("dup")).when(categoryRepository).create(1L, "Coffee", null);
-        assertThrows(ValidationException.class,
+        assertThrows(ConflictException.class,
                 () -> expenseService.createCategory(new CategoryCreateRequest("Daily", "Coffee", null)));
     }
 
     @Test
     void deleteCategory_notFound_shouldReject() {
         when(categoryRepository.findById(5L)).thenReturn(null);
-        assertThrows(ValidationException.class, () -> expenseService.deleteCategory(5L));
+        assertThrows(NotFoundException.class, () -> expenseService.deleteCategory(5L));
     }
 }

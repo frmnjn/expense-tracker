@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Group, Pagination, Select } from '@mantine/core'
 import { useMediaQuery } from '@mantine/hooks'
@@ -23,16 +23,8 @@ export function AppPagination<T>({
 }) {
   const isMobile = useMediaQuery('(max-width: 48em)')
   const [activePage, setActivePage] = useState(1)
-  const [pageSize, setPageSize] = useState<number>(defaultPageSize ?? 10)
-  const userSetRef = useRef(false)
-
-  // Default ikut device sampai user memilih sendiri lewat selector
-  // (menangani useMediaQuery yang sempat false di render pertama).
-  useEffect(() => {
-    if (!userSetRef.current && defaultPageSize === undefined) {
-      setPageSize(isMobile ? 5 : 10)
-    }
-  }, [isMobile, defaultPageSize])
+  const [pageSizeOverride, setPageSizeOverride] = useState<number | null>(null)
+  const pageSize = pageSizeOverride ?? defaultPageSize ?? (isMobile ? 5 : 10)
 
   const totalPages = Math.max(1, Math.ceil(data.length / pageSize))
   const safePage = Math.min(activePage, totalPages)
@@ -40,13 +32,13 @@ export function AppPagination<T>({
 
   useEffect(() => {
     if (activePage !== safePage) {
+      // oxlint-disable-next-line react/set-state-in-effect -- pertahankan halaman valid saat data menyusut
       setActivePage(safePage)
     }
   }, [activePage, safePage])
 
   const changePageSize = (value: string | null) => {
-    userSetRef.current = true
-    setPageSize(Number(value) || (defaultPageSize ?? (isMobile ? 5 : 10)))
+    setPageSizeOverride(Number(value) || (defaultPageSize ?? (isMobile ? 5 : 10)))
     setActivePage(1)
   }
 

@@ -38,7 +38,10 @@ export function VoiceRecorder({
   const intervalRef = useRef<number | null>(null)
   const stopTimeoutRef = useRef<number | null>(null)
   const onRecordedRef = useRef(onRecorded)
-  onRecordedRef.current = onRecorded
+
+  useEffect(() => {
+    onRecordedRef.current = onRecorded
+  }, [onRecorded])
 
   const cleanup = () => {
     if (intervalRef.current !== null) {

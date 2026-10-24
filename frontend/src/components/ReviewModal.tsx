@@ -148,6 +148,7 @@ function ReviewModal({
 
   const [dateTime, setDateTime] = useState(initialDateTime)
   useEffect(() => {
+    // oxlint-disable-next-line react/set-state-in-effect -- sinkronkan tanggal saat analysis async selesai
     setDateTime(initialDateTime)
   }, [initialDateTime])
 

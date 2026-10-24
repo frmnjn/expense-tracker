@@ -110,7 +110,7 @@ class VoiceNoteServiceTest {
                 .thenReturn(note("TO_REVIEW"));
         when(voiceNoteRepository.countActiveExpensesUsing("vn-1")).thenReturn(1);
 
-        ValidationException ex = assertThrows(ValidationException.class, () -> voiceNoteService.delete("vn-1"));
+        ConflictException ex = assertThrows(ConflictException.class, () -> voiceNoteService.delete("vn-1"));
         assertEquals("Rekaman dipakai oleh expense dan tidak dapat dihapus", ex.getMessage());
         verify(voiceNoteRepository, never()).delete("vn-1");
     }
@@ -120,7 +120,7 @@ class VoiceNoteServiceTest {
         when(voiceNoteRepository.findById("vn-1")).thenReturn(note("SUBMITTED"));
         when(voiceNoteRepository.countActiveExpensesUsing("vn-1")).thenReturn(1);
 
-        assertThrows(ValidationException.class, () -> voiceNoteService.delete("vn-1"));
+        assertThrows(ConflictException.class, () -> voiceNoteService.delete("vn-1"));
         verify(voiceNoteRepository, never()).delete("vn-1");
     }
 
@@ -161,7 +161,7 @@ class VoiceNoteServiceTest {
     void prepareRetry_notExpenseNote_shouldReject() {
         when(voiceNoteRepository.findById("vn-1")).thenReturn(note("NOT_EXPENSE"));
 
-        ValidationException ex = assertThrows(ValidationException.class, () -> voiceNoteService.prepareRetry("vn-1"));
+        ConflictException ex = assertThrows(ConflictException.class, () -> voiceNoteService.prepareRetry("vn-1"));
         assertEquals("Rekaman ini bukan catatan pengeluaran dan tidak dapat dianalisis ulang", ex.getMessage());
         verify(voiceNoteRepository, never()).updateStatus("vn-1", "ANALYZING");
     }
@@ -180,7 +180,7 @@ class VoiceNoteServiceTest {
     void prepareRetry_submittedNote_shouldReject() {
         when(voiceNoteRepository.findById("vn-1")).thenReturn(note("SUBMITTED"));
 
-        assertThrows(ValidationException.class, () -> voiceNoteService.prepareRetry("vn-1"));
+        assertThrows(ConflictException.class, () -> voiceNoteService.prepareRetry("vn-1"));
         verify(voiceNoteRepository, never()).updateStatus("vn-1", "ANALYZING");
     }
 

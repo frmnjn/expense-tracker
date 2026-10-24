@@ -5,7 +5,9 @@ import com.expensetracker.model.ApiResponse;
 import com.expensetracker.model.EmailImportResponse;
 import com.expensetracker.model.EmailImportsResponse;
 import com.expensetracker.model.ExpenseRequest;
+import com.expensetracker.service.ConflictException;
 import com.expensetracker.service.EmailImportService;
+import com.expensetracker.service.NotFoundException;
 import com.expensetracker.service.EmailInboxService;
 import com.expensetracker.service.DuplicateExpenseException;
 import com.expensetracker.service.ValidationException;
@@ -42,6 +44,12 @@ public class EmailImportController {
             EmailImportsResponse response = new EmailImportsResponse(
                     emailImportService.list(status).stream().map(EmailImportController::toResponse).toList());
             return ResponseEntity.ok(ApiResponse.ok(response));
+        } catch (NotFoundException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.NOT_FOUND.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(e.getMessage()));
+        } catch (ConflictException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.CONFLICT.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.error(e.getMessage()));
         } catch (ValidationException e) {
             LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error(e.getMessage()));
@@ -58,9 +66,15 @@ public class EmailImportController {
                                                    @RequestBody ExpenseRequest request) {
         try {
             emailImportService.importToExpense(id, request, force);
-            return ResponseEntity.ok(ApiResponse.ok());
+            return ResponseEntity.status(HttpStatus.CREATED).body(ApiResponse.ok());
         } catch (DuplicateExpenseException e) {
             LOGGER.warn("duplicate expense on import: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.error(e.getMessage()));
+        } catch (NotFoundException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.NOT_FOUND.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(e.getMessage()));
+        } catch (ConflictException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.CONFLICT.value(), e.getMessage());
             return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.error(e.getMessage()));
         } catch (ValidationException e) {
             LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
@@ -77,6 +91,12 @@ public class EmailImportController {
         try {
             emailImportService.discard(id);
             return ResponseEntity.ok(ApiResponse.ok());
+        } catch (NotFoundException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.NOT_FOUND.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(e.getMessage()));
+        } catch (ConflictException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.CONFLICT.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.error(e.getMessage()));
         } catch (ValidationException e) {
             LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error(e.getMessage()));
@@ -92,6 +112,12 @@ public class EmailImportController {
         try {
             emailImportService.retry(id);
             return ResponseEntity.ok(ApiResponse.ok());
+        } catch (NotFoundException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.NOT_FOUND.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(e.getMessage()));
+        } catch (ConflictException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.CONFLICT.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.error(e.getMessage()));
         } catch (ValidationException e) {
             LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error(e.getMessage()));
@@ -117,6 +143,12 @@ public class EmailImportController {
             LOGGER.info("inbox poll triggered: started={}", started);
             return ResponseEntity.status(HttpStatus.ACCEPTED)
                     .body(ApiResponse.ok(Map.of("started", started)));
+        } catch (NotFoundException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.NOT_FOUND.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(e.getMessage()));
+        } catch (ConflictException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.CONFLICT.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.error(e.getMessage()));
         } catch (ValidationException e) {
             LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error(e.getMessage()));

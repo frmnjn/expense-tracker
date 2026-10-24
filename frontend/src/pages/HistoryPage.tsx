@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   ActionIcon,
@@ -66,15 +66,12 @@ const balanceColor = (value: number) => (value < 0 ? 'red' : undefined)
 function HistoryPage() {
   const { data: periodsData, isPending: periodsLoading } = usePeriods()
   const { data: options } = useOptions()
-  const [period, setPeriod] = useState<string | null>(null)
-  const { data: expensesData, isPending: expensesLoading, isError: expensesError, refetch: refetchExpenses } = useExpenses(period)
+  const [periodSelection, setPeriodSelection] = useState<string | null>(null)
   const isMobile = useMediaQuery('(max-width: 48em)')
 
-  useEffect(() => {
-    if (!period && periodsData && periodsData.periods.length > 0) {
-      setPeriod(periodsData.periods[0])
-    }
-  }, [period, periodsData])
+  const period = periodSelection ?? periodsData?.periods[0] ?? null
+  const setPeriod = setPeriodSelection
+  const { data: expensesData, isPending: expensesLoading, isError: expensesError, refetch: refetchExpenses } = useExpenses(period)
 
   const periods = useMemo(() => (periodsData?.periods ?? []).map((p) => ({ value: p, label: p })), [periodsData])
   const expenses = expensesData?.expenses ?? []

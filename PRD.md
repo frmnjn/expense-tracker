@@ -328,6 +328,15 @@ Semua respons:
 
 Error menggunakan HTTP status yang sesuai dan `{ "success": false, "message": "..." }`.
 
+Aturan status HTTP v1:
+
+* `POST` yang membuat resource baru → `201 Created` (`/budgets`, `/categories`, `/topups`, `/expenses`, `/expenses/batch`, `/invoices`, `/voice-notes`, `/email-imports/{id}/import`).
+* `GET`/`PUT`/`DELETE` sukses → `200 OK`.
+* Resource tidak ditemukan → `404 Not Found` (termasuk media foto/audio/report).
+* Validasi input → `400 Bad Request`.
+* Duplikat/state conflict (sudah diproses, sudah dipakai) → `409 Conflict`.
+* Poll email async → `202 Accepted`.
+
 ### GET /health
 
 Pengecekan status.
@@ -506,7 +515,7 @@ Daftar id invoice per periode (untuk "Pakai Foto Periode Ini"). Dengan `scan=tru
 
 ### Idempotensi
 
-Semua endpoint `POST` (`/expenses`, `/expenses/batch`, `/expenses/{id}/photo`, `/topups`, `/budgets`, `/invoices`, `/voice-notes`) menerima header `Idempotency-Key` opsional. Jika key diberikan, backend menyimpan respons selama **24 jam** dan mengembalikan respons tersimpan untuk key yang sama (mencegah duplikat saat retry). Baris lama dibersihkan otomatis saat penyimpanan baru.
+Semua endpoint `POST` (`/expenses`, `/expenses/batch`, `/expenses/{id}/photo`, `/topups`, `/budgets`, `/categories`, `/invoices`, `/voice-notes`) menerima header `Idempotency-Key` opsional. Key di-scope per endpoint (key yang sama di endpoint berbeda dianggap independen), disimpan **24 jam**, dan request ulang dengan key yang sama mengembalikan respons tersimpan (mencegah duplikat saat retry). Baris lama dibersihkan otomatis saat penyimpanan baru.
 
 ### GET /summary?period=YYYY-MON-MON
 
@@ -528,7 +537,7 @@ Ringkasan periode: total, jumlah transaksi, dan pengeluaran per budget (urut ter
 
 ### GET /trend?months=3
 
-Ringkasan beberapa periode terakhir (total + count), urut terlama ke terbaru.
+Ringkasan `N` periode terakhir (default 3) dari periode berjalan, urut terlama ke terbaru. Periode tanpa transaksi tetap disertakan dengan `total=0` dan `count=0`.
 
 ### GET /topups
 

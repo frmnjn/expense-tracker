@@ -175,7 +175,7 @@ public class VoiceNoteService {
         }
         VoiceNoteData note = voiceNoteRepository.findById(id);
         if (note == null) {
-            throw new ValidationException("Voice note not found");
+            throw new NotFoundException("Voice note not found");
         }
         return note;
     }
@@ -187,10 +187,10 @@ public class VoiceNoteService {
     public void prepareRetry(String id) {
         VoiceNoteData note = requireVoiceNote(id);
         if (VoiceNoteStatus.SUBMITTED.value().equals(note.status())) {
-            throw new ValidationException("Rekaman yang sudah menjadi expense tidak dapat dianalisis ulang");
+            throw new ConflictException("Rekaman yang sudah menjadi expense tidak dapat dianalisis ulang");
         }
         if (VoiceNoteStatus.NOT_EXPENSE.value().equals(note.status())) {
-            throw new ValidationException("Rekaman ini bukan catatan pengeluaran dan tidak dapat dianalisis ulang");
+            throw new ConflictException("Rekaman ini bukan catatan pengeluaran dan tidak dapat dianalisis ulang");
         }
         voiceNoteRepository.updateStatus(id, VoiceNoteStatus.ANALYZING.value());
     }
@@ -199,10 +199,10 @@ public class VoiceNoteService {
         VoiceNoteData note = requireVoiceNote(id);
         boolean submitted = VoiceNoteStatus.SUBMITTED.value().equals(note.status());
         if (!submitted && !DELETE_ALLOWED_STATUSES.contains(note.status())) {
-            throw new ValidationException("Rekaman yang sedang diproses tidak dapat dihapus");
+            throw new ConflictException("Rekaman yang sedang diproses tidak dapat dihapus");
         }
         if (voiceNoteRepository.countActiveExpensesUsing(id) > 0) {
-            throw new ValidationException("Rekaman dipakai oleh expense dan tidak dapat dihapus");
+            throw new ConflictException("Rekaman dipakai oleh expense dan tidak dapat dihapus");
         }
         deleteNoteAndFile(note);
     }

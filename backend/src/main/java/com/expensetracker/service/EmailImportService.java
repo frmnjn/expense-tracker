@@ -132,7 +132,7 @@ public class EmailImportService {
         EmailImportData data = require(id);
         if (!EmailImportStatus.PENDING_REVIEW.value().equals(data.status())
                 && !EmailImportStatus.FAILED.value().equals(data.status())) {
-            throw new ValidationException("Transaksi ini sudah diproses");
+            throw new ConflictException("Transaksi ini sudah diproses");
         }
         emailImportRepository.markDiscarded(id);
     }
@@ -146,12 +146,12 @@ public class EmailImportService {
     public void retry(String id) {
         EmailImportData data = require(id);
         if (!EmailImportStatus.FAILED.value().equals(data.status())) {
-            throw new ValidationException("Hanya transaksi gagal yang bisa dicoba lagi");
+            throw new ConflictException("Hanya transaksi gagal yang bisa dicoba lagi");
         }
         FetchedEmail fetched = emailInboxService.fetchByMessageId(data.messageId());
         if (fetched == null) {
             emailImportRepository.markFailed(id, "Email tidak ditemukan di inbox");
-            throw new ValidationException("Email tidak ditemukan di inbox");
+            throw new NotFoundException("Email tidak ditemukan di inbox");
         }
         try {
             ParsedTransaction parsed = emailParserService.parse(fetched.sender(), fetched.subject(), fetched.body());
@@ -190,10 +190,10 @@ public class EmailImportService {
         }
         EmailImportData data = emailImportRepository.findByIdForUpdate(id);
         if (data == null) {
-            throw new ValidationException("Transaksi email tidak ditemukan");
+            throw new NotFoundException("Transaksi email tidak ditemukan");
         }
         if (!EmailImportStatus.PENDING_REVIEW.value().equals(data.status())) {
-            throw new ValidationException("Transaksi ini sudah diproses");
+            throw new ConflictException("Transaksi ini sudah diproses");
         }
         return data;
     }
@@ -204,7 +204,7 @@ public class EmailImportService {
         }
         EmailImportData data = emailImportRepository.findById(id);
         if (data == null) {
-            throw new ValidationException("Transaksi email tidak ditemukan");
+            throw new NotFoundException("Transaksi email tidak ditemukan");
         }
         return data;
     }

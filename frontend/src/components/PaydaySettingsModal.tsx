@@ -52,15 +52,18 @@ function PaydaySettingsModal({
 
   useEffect(() => {
     if (!opened) return
+    // oxlint-disable-next-line react/set-state-in-effect -- reset form saat modal dibuka
     setSelectedPeriod(currentPeriod)
   }, [opened, currentPeriod])
 
   useEffect(() => {
     const current = calendar.find((range) => range.period === selectedPeriod)
     if (!current) {
+      // oxlint-disable-next-line react/set-state-in-effect -- ikuti periode yang dipilih
       setDate(null)
       return
     }
+    // oxlint-disable-next-line react/set-state-in-effect -- isi tanggal dari kalender periode
     setDate(dayjs(current.start).format('YYYY-MM-DD'))
   }, [calendar, selectedPeriod])
 

@@ -35,26 +35,26 @@ class IdempotencyServiceTest {
 
     @Test
     void begin_newKey_shouldClaimAndReturnEmpty() {
-        when(idempotencyRepository.claim("key-1")).thenReturn(true);
+        when(idempotencyRepository.claim("expenses:key-1")).thenReturn(true);
 
-        assertEquals(Optional.empty(), idempotencyService.begin("key-1"));
-        verify(idempotencyRepository).claim("key-1");
+        assertEquals(Optional.empty(), idempotencyService.begin("expenses", "key-1"));
+        verify(idempotencyRepository).claim("expenses:key-1");
     }
 
     @Test
     void begin_blankOrNullKey_shouldReturnEmpty() {
-        assertEquals(Optional.empty(), idempotencyService.begin(null));
-        assertEquals(Optional.empty(), idempotencyService.begin("  "));
+        assertEquals(Optional.empty(), idempotencyService.begin("expenses", null));
+        assertEquals(Optional.empty(), idempotencyService.begin("expenses", "  "));
         verify(idempotencyRepository, never()).claim(anyString());
     }
 
     @Test
     void begin_completedKey_shouldReturnCachedResponse() throws Exception {
         String json = new ObjectMapper().writeValueAsString(ApiResponse.ok(Map.of("id", "abc")));
-        when(idempotencyRepository.claim("key-1")).thenReturn(false);
-        when(idempotencyRepository.find("key-1")).thenReturn(json);
+        when(idempotencyRepository.claim("expenses:key-1")).thenReturn(false);
+        when(idempotencyRepository.find("expenses:key-1")).thenReturn(json);
 
-        Optional<ApiResponse> result = idempotencyService.begin("key-1");
+        Optional<ApiResponse> result = idempotencyService.begin("expenses", "key-1");
 
         assertTrue(result.isPresent());
         assertTrue(result.get().success());
@@ -65,30 +65,42 @@ class IdempotencyServiceTest {
 
     @Test
     void begin_pendingKey_shouldRejectConcurrentRequest() {
-        when(idempotencyRepository.claim("key-1")).thenReturn(false);
-        when(idempotencyRepository.find("key-1")).thenReturn("{\"pending\":true}");
+        when(idempotencyRepository.claim("expenses:key-1")).thenReturn(false);
+        when(idempotencyRepository.find("expenses:key-1")).thenReturn("{\"pending\":true}");
 
-        assertThrows(DuplicateRequestException.class, () -> idempotencyService.begin("key-1"));
+        assertThrows(DuplicateRequestException.class, () -> idempotencyService.begin("expenses", "key-1"));
     }
 
     @Test
     void complete_shouldPersistSerializedResponse() {
-        idempotencyService.complete("key-1", ApiResponse.ok());
+        idempotencyService.complete("expenses", "key-1", ApiResponse.ok());
 
-        verify(idempotencyRepository).complete("key-1", "{\"success\":true}");
+        verify(idempotencyRepository).complete("expenses:key-1", "{\"success\":true}");
     }
 
     @Test
     void abort_shouldDeleteClaim() {
-        idempotencyService.abort("key-1");
+        idempotencyService.abort("expenses", "key-1");
 
-        verify(idempotencyRepository).delete("key-1");
+        verify(idempotencyRepository).delete("expenses:key-1");
+    }
+
+    @Test
+    void begin_sameKeyDifferentScope_shouldUseIndependentKeys() {
+        when(idempotencyRepository.claim("expenses:key-1")).thenReturn(true);
+        when(idempotencyRepository.claim("topups:key-1")).thenReturn(true);
+
+        assertEquals(Optional.empty(), idempotencyService.begin("expenses", "key-1"));
+        assertEquals(Optional.empty(), idempotencyService.begin("topups", "key-1"));
+
+        verify(idempotencyRepository).claim("expenses:key-1");
+        verify(idempotencyRepository).claim("topups:key-1");
     }
 
     @Test
     void complete_blankKey_shouldDoNothing() {
-        idempotencyService.complete(null, ApiResponse.ok());
-        idempotencyService.complete("", ApiResponse.ok());
+        idempotencyService.complete("expenses", null, ApiResponse.ok());
+        idempotencyService.complete("expenses", "", ApiResponse.ok());
 
         verify(idempotencyRepository, never()).complete(anyString(), anyString());
     }

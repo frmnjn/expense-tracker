@@ -46,6 +46,7 @@ export function useTutorial() {
 
   useEffect(() => {
     if (!tutorial) {
+      // oxlint-disable-next-line react/set-state-in-effect -- sinkronisasi dengan route aktif
       setOpened(false)
       return
     }

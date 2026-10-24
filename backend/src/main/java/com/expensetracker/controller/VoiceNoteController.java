@@ -3,6 +3,8 @@ package com.expensetracker.controller;
 import com.expensetracker.data.VoiceNoteData;
 import com.expensetracker.model.ApiResponse;
 import com.expensetracker.service.IdempotencyService;
+import com.expensetracker.service.ConflictException;
+import com.expensetracker.service.NotFoundException;
 import com.expensetracker.service.ValidationException;
 import com.expensetracker.service.VoiceNoteAnalysisService;
 import com.expensetracker.service.VoiceNoteService;
@@ -47,6 +49,12 @@ public class VoiceNoteController {
     public ResponseEntity<ApiResponse> getVoiceNotes(@RequestParam(value = "period", required = false) String period) {
         try {
             return ResponseEntity.ok(ApiResponse.ok(voiceNoteService.listByPeriod(period)));
+        } catch (NotFoundException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.NOT_FOUND.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(e.getMessage()));
+        } catch (ConflictException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.CONFLICT.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.error(e.getMessage()));
         } catch (ValidationException e) {
             LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error(e.getMessage()));
@@ -61,6 +69,12 @@ public class VoiceNoteController {
     public ResponseEntity<ApiResponse> getVoiceNote(@PathVariable String id) {
         try {
             return ResponseEntity.ok(ApiResponse.ok(voiceNoteService.getDetail(id)));
+        } catch (NotFoundException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.NOT_FOUND.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(e.getMessage()));
+        } catch (ConflictException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.CONFLICT.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.error(e.getMessage()));
         } catch (ValidationException e) {
             LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error(e.getMessage()));
@@ -76,7 +90,7 @@ public class VoiceNoteController {
                                                        @RequestParam("date") String date,
                                                        @RequestParam(value = "durationMs", required = false) Integer durationMs,
                                                        @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
-        Optional<ApiResponse> cached = idempotencyService.begin(idempotencyKey);
+        Optional<ApiResponse> cached = idempotencyService.begin("voice-notes", idempotencyKey);
         if (cached.isPresent()) {
             return ResponseEntity.ok(cached.get());
         }
@@ -84,14 +98,20 @@ public class VoiceNoteController {
             String voiceNoteId = voiceNoteService.createForAi(file, date, durationMs);
             voiceNoteAnalysisService.trigger(voiceNoteId);
             ApiResponse response = ApiResponse.ok(Map.of("voiceNoteId", voiceNoteId));
-            idempotencyService.complete(idempotencyKey, response);
-            return ResponseEntity.ok(response);
+            idempotencyService.complete("voice-notes", idempotencyKey, response);
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        } catch (NotFoundException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.NOT_FOUND.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(e.getMessage()));
+        } catch (ConflictException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.CONFLICT.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.error(e.getMessage()));
         } catch (ValidationException e) {
-            idempotencyService.abort(idempotencyKey);
+            idempotencyService.abort("voice-notes", idempotencyKey);
             LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
-            idempotencyService.abort(idempotencyKey);
+            idempotencyService.abort("voice-notes", idempotencyKey);
             LOGGER.error("internal error creating voice note", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("Internal server error"));
@@ -104,6 +124,12 @@ public class VoiceNoteController {
             voiceNoteService.prepareRetry(id);
             voiceNoteAnalysisService.trigger(id);
             return ResponseEntity.ok(ApiResponse.ok());
+        } catch (NotFoundException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.NOT_FOUND.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(e.getMessage()));
+        } catch (ConflictException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.CONFLICT.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.error(e.getMessage()));
         } catch (ValidationException e) {
             LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error(e.getMessage()));
@@ -119,6 +145,12 @@ public class VoiceNoteController {
         try {
             voiceNoteService.delete(id);
             return ResponseEntity.ok(ApiResponse.ok());
+        } catch (NotFoundException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.NOT_FOUND.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(e.getMessage()));
+        } catch (ConflictException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.CONFLICT.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.error(e.getMessage()));
         } catch (ValidationException e) {
             LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error(e.getMessage()));
@@ -130,10 +162,13 @@ public class VoiceNoteController {
     }
 
     @GetMapping("/voice-notes/{id}/audio")
-    public ResponseEntity<byte[]> getVoiceNoteAudio(@PathVariable String id) {
+    public ResponseEntity<?> getVoiceNoteAudio(@PathVariable String id) {
         try {
             VoiceNoteData note = voiceNoteService.requireVoiceNote(id);
             Path file = voiceNoteService.audioPath(note);
+            if (!Files.isRegularFile(file)) {
+                throw new NotFoundException("Voice note audio not found");
+            }
             byte[] bytes = Files.readAllBytes(file);
             MediaType mediaType = note.mimeType() == null || note.mimeType().isBlank()
                     ? MediaType.parseMediaType("audio/webm")
@@ -142,9 +177,15 @@ public class VoiceNoteController {
                     .header(HttpHeaders.CONTENT_TYPE, mediaType.toString())
                     .header(HttpHeaders.CONTENT_DISPOSITION, "inline")
                     .body(bytes);
+        } catch (NotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
             LOGGER.error("internal error getting voice note audio", e);
-            return ResponseEntity.notFound().build();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(ApiResponse.error("Internal server error"));
         }
     }
 }

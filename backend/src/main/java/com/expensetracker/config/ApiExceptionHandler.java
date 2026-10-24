@@ -1,7 +1,10 @@
 package com.expensetracker.config;
 
 import com.expensetracker.model.ApiResponse;
+import com.expensetracker.service.ConflictException;
+import com.expensetracker.service.DuplicateExpenseException;
 import com.expensetracker.service.DuplicateRequestException;
+import com.expensetracker.service.NotFoundException;
 import com.expensetracker.service.ValidationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -32,8 +35,13 @@ public class ApiExceptionHandler {
         return ResponseEntity.badRequest().body(ApiResponse.error("Request tidak valid"));
     }
 
-    @ExceptionHandler(DuplicateRequestException.class)
-    public ResponseEntity<ApiResponse> duplicate(DuplicateRequestException e) {
+    @ExceptionHandler(NotFoundException.class)
+    public ResponseEntity<ApiResponse> notFound(NotFoundException e) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(e.getMessage()));
+    }
+
+    @ExceptionHandler({ConflictException.class, DuplicateExpenseException.class, DuplicateRequestException.class})
+    public ResponseEntity<ApiResponse> conflict(RuntimeException e) {
         return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.error(e.getMessage()));
     }
 

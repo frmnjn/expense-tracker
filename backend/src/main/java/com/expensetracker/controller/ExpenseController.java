@@ -8,7 +8,9 @@ import com.expensetracker.model.CategoryCreateRequest;
 import com.expensetracker.model.CategoryUpdateRequest;
 import com.expensetracker.model.ExpenseRequest;
 import com.expensetracker.model.TopUpRequest;
+import com.expensetracker.service.ConflictException;
 import com.expensetracker.service.ExpenseService;
+import com.expensetracker.service.NotFoundException;
 import com.expensetracker.service.IdempotencyService;
 import com.expensetracker.service.ValidationException;
 import org.slf4j.Logger;
@@ -61,22 +63,28 @@ public class ExpenseController {
     @PostMapping("/budgets")
     public ResponseEntity<ApiResponse> createBudget(@RequestBody BudgetCreateRequest request,
                                                     @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
-        Optional<ApiResponse> cached = idempotencyService.begin(idempotencyKey);
+        Optional<ApiResponse> cached = idempotencyService.begin("budgets", idempotencyKey);
         if (cached.isPresent()) {
             return ResponseEntity.ok(cached.get());
         }
         try {
             expenseService.createBudget(request);
             ApiResponse response = ApiResponse.ok();
-            idempotencyService.complete(idempotencyKey, response);
-            return ResponseEntity.ok(response);
+            idempotencyService.complete("budgets", idempotencyKey, response);
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        } catch (NotFoundException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.NOT_FOUND.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(e.getMessage()));
+        } catch (ConflictException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.CONFLICT.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.error(e.getMessage()));
         } catch (ValidationException e) {
-            idempotencyService.abort(idempotencyKey);
+            idempotencyService.abort("budgets", idempotencyKey);
             LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
-            idempotencyService.abort(idempotencyKey);
+            idempotencyService.abort("budgets", idempotencyKey);
             LOGGER.error("internal error creating budget", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("Internal server error"));
@@ -88,6 +96,12 @@ public class ExpenseController {
         try {
             expenseService.deleteBudget(name);
             return ResponseEntity.ok(ApiResponse.ok());
+        } catch (NotFoundException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.NOT_FOUND.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(e.getMessage()));
+        } catch (ConflictException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.CONFLICT.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.error(e.getMessage()));
         } catch (ValidationException e) {
             LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -105,6 +119,12 @@ public class ExpenseController {
         try {
             expenseService.updateBudget(name, request);
             return ResponseEntity.ok(ApiResponse.ok());
+        } catch (NotFoundException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.NOT_FOUND.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(e.getMessage()));
+        } catch (ConflictException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.CONFLICT.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.error(e.getMessage()));
         } catch (ValidationException e) {
             LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -120,6 +140,12 @@ public class ExpenseController {
     public ResponseEntity<ApiResponse> getCategories(@RequestParam("budget") String budget) {
         try {
             return ResponseEntity.ok(ApiResponse.ok(expenseService.getCategories(budget)));
+        } catch (NotFoundException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.NOT_FOUND.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(e.getMessage()));
+        } catch (ConflictException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.CONFLICT.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.error(e.getMessage()));
         } catch (ValidationException e) {
             LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -134,22 +160,28 @@ public class ExpenseController {
     @PostMapping("/categories")
     public ResponseEntity<ApiResponse> createCategory(@RequestBody CategoryCreateRequest request,
                                                       @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
-        Optional<ApiResponse> cached = idempotencyService.begin(idempotencyKey);
+        Optional<ApiResponse> cached = idempotencyService.begin("categories", idempotencyKey);
         if (cached.isPresent()) {
             return ResponseEntity.ok(cached.get());
         }
         try {
             expenseService.createCategory(request);
             ApiResponse response = ApiResponse.ok();
-            idempotencyService.complete(idempotencyKey, response);
-            return ResponseEntity.ok(response);
+            idempotencyService.complete("categories", idempotencyKey, response);
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        } catch (NotFoundException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.NOT_FOUND.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(e.getMessage()));
+        } catch (ConflictException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.CONFLICT.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.error(e.getMessage()));
         } catch (ValidationException e) {
-            idempotencyService.abort(idempotencyKey);
+            idempotencyService.abort("categories", idempotencyKey);
             LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
-            idempotencyService.abort(idempotencyKey);
+            idempotencyService.abort("categories", idempotencyKey);
             LOGGER.error("internal error creating category", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("Internal server error"));
@@ -162,6 +194,12 @@ public class ExpenseController {
         try {
             expenseService.updateCategory(id, request);
             return ResponseEntity.ok(ApiResponse.ok());
+        } catch (NotFoundException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.NOT_FOUND.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(e.getMessage()));
+        } catch (ConflictException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.CONFLICT.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.error(e.getMessage()));
         } catch (ValidationException e) {
             LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -178,6 +216,12 @@ public class ExpenseController {
         try {
             expenseService.deleteCategory(id);
             return ResponseEntity.ok(ApiResponse.ok());
+        } catch (NotFoundException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.NOT_FOUND.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(e.getMessage()));
+        } catch (ConflictException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.CONFLICT.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.error(e.getMessage()));
         } catch (ValidationException e) {
             LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -203,6 +247,12 @@ public class ExpenseController {
     public ResponseEntity<ApiResponse> getExpenses(@RequestParam("period") String period) {
         try {
             return ResponseEntity.ok(ApiResponse.ok(expenseService.getExpenses(period)));
+        } catch (NotFoundException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.NOT_FOUND.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(e.getMessage()));
+        } catch (ConflictException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.CONFLICT.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.error(e.getMessage()));
         } catch (ValidationException e) {
             LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -218,6 +268,12 @@ public class ExpenseController {
     public ResponseEntity<ApiResponse> getExpense(@PathVariable String id) {
         try {
             return ResponseEntity.ok(ApiResponse.ok(expenseService.getExpense(id)));
+        } catch (NotFoundException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.NOT_FOUND.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(e.getMessage()));
+        } catch (ConflictException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.CONFLICT.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.error(e.getMessage()));
         } catch (ValidationException e) {
             LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -233,6 +289,12 @@ public class ExpenseController {
     public ResponseEntity<ApiResponse> getSummary(@RequestParam("period") String period) {
         try {
             return ResponseEntity.ok(ApiResponse.ok(expenseService.getSummary(period)));
+        } catch (NotFoundException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.NOT_FOUND.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(e.getMessage()));
+        } catch (ConflictException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.CONFLICT.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.error(e.getMessage()));
         } catch (ValidationException e) {
             LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -248,6 +310,12 @@ public class ExpenseController {
     public ResponseEntity<ApiResponse> getTrend(@RequestParam(value = "months", defaultValue = "3") int months) {
         try {
             return ResponseEntity.ok(ApiResponse.ok(expenseService.getTrend(months)));
+        } catch (NotFoundException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.NOT_FOUND.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(e.getMessage()));
+        } catch (ConflictException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.CONFLICT.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.error(e.getMessage()));
         } catch (ValidationException e) {
             LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -273,22 +341,28 @@ public class ExpenseController {
     @PostMapping("/topups")
     public ResponseEntity<ApiResponse> createTopUp(@RequestBody TopUpRequest request,
                                                    @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
-        Optional<ApiResponse> cached = idempotencyService.begin(idempotencyKey);
+        Optional<ApiResponse> cached = idempotencyService.begin("topups", idempotencyKey);
         if (cached.isPresent()) {
             return ResponseEntity.ok(cached.get());
         }
         try {
             expenseService.createTopUp(request);
             ApiResponse response = ApiResponse.ok();
-            idempotencyService.complete(idempotencyKey, response);
-            return ResponseEntity.ok(response);
+            idempotencyService.complete("topups", idempotencyKey, response);
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        } catch (NotFoundException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.NOT_FOUND.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(e.getMessage()));
+        } catch (ConflictException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.CONFLICT.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.error(e.getMessage()));
         } catch (ValidationException e) {
-            idempotencyService.abort(idempotencyKey);
+            idempotencyService.abort("topups", idempotencyKey);
             LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
-            idempotencyService.abort(idempotencyKey);
+            idempotencyService.abort("topups", idempotencyKey);
             LOGGER.error("internal error creating top up", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("Internal server error"));
@@ -298,22 +372,28 @@ public class ExpenseController {
     @PostMapping("/expenses")
     public ResponseEntity<ApiResponse> createExpense(@RequestBody ExpenseRequest request,
                                                      @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
-        Optional<ApiResponse> cached = idempotencyService.begin(idempotencyKey);
+        Optional<ApiResponse> cached = idempotencyService.begin("expenses", idempotencyKey);
         if (cached.isPresent()) {
             return ResponseEntity.ok(cached.get());
         }
         try {
             String id = expenseService.createExpense(request);
             ApiResponse response = ApiResponse.ok(Map.of("id", id));
-            idempotencyService.complete(idempotencyKey, response);
-            return ResponseEntity.ok(response);
+            idempotencyService.complete("expenses", idempotencyKey, response);
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        } catch (NotFoundException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.NOT_FOUND.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(e.getMessage()));
+        } catch (ConflictException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.CONFLICT.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.error(e.getMessage()));
         } catch (ValidationException e) {
-            idempotencyService.abort(idempotencyKey);
+            idempotencyService.abort("expenses", idempotencyKey);
             LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
-            idempotencyService.abort(idempotencyKey);
+            idempotencyService.abort("expenses", idempotencyKey);
             LOGGER.error("internal error creating expense", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("Internal server error"));
@@ -323,22 +403,28 @@ public class ExpenseController {
     @PostMapping("/expenses/batch")
     public ResponseEntity<ApiResponse> createExpenseBatch(@RequestBody BatchExpenseRequest request,
                                                           @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
-        Optional<ApiResponse> cached = idempotencyService.begin(idempotencyKey);
+        Optional<ApiResponse> cached = idempotencyService.begin("expenses-batch", idempotencyKey);
         if (cached.isPresent()) {
             return ResponseEntity.ok(cached.get());
         }
         try {
             int count = expenseService.createExpenseBatch(request);
             ApiResponse response = ApiResponse.ok(Map.of("count", count));
-            idempotencyService.complete(idempotencyKey, response);
-            return ResponseEntity.ok(response);
+            idempotencyService.complete("expenses-batch", idempotencyKey, response);
+            return ResponseEntity.status(HttpStatus.CREATED).body(response);
+        } catch (NotFoundException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.NOT_FOUND.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(e.getMessage()));
+        } catch (ConflictException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.CONFLICT.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.error(e.getMessage()));
         } catch (ValidationException e) {
-            idempotencyService.abort(idempotencyKey);
+            idempotencyService.abort("expenses-batch", idempotencyKey);
             LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
-            idempotencyService.abort(idempotencyKey);
+            idempotencyService.abort("expenses-batch", idempotencyKey);
             LOGGER.error("internal error creating expenses batch", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("Internal server error"));
@@ -348,22 +434,28 @@ public class ExpenseController {
     @PostMapping(value = "/expenses/{id}/photo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)    public ResponseEntity<ApiResponse> uploadPhoto(@PathVariable String id,
                                                    @RequestParam("file") MultipartFile file,
                                                    @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
-        Optional<ApiResponse> cached = idempotencyService.begin(idempotencyKey);
+        Optional<ApiResponse> cached = idempotencyService.begin("expenses-photo", idempotencyKey);
         if (cached.isPresent()) {
             return ResponseEntity.ok(cached.get());
         }
         try {
             expenseService.attachPhoto(id, file);
             ApiResponse response = ApiResponse.ok();
-            idempotencyService.complete(idempotencyKey, response);
+            idempotencyService.complete("expenses-photo", idempotencyKey, response);
             return ResponseEntity.ok(response);
+        } catch (NotFoundException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.NOT_FOUND.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(e.getMessage()));
+        } catch (ConflictException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.CONFLICT.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.error(e.getMessage()));
         } catch (ValidationException e) {
-            idempotencyService.abort(idempotencyKey);
+            idempotencyService.abort("expenses-photo", idempotencyKey);
             LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
-            idempotencyService.abort(idempotencyKey);
+            idempotencyService.abort("expenses-photo", idempotencyKey);
             LOGGER.error("internal error uploading photo", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("Internal server error"));
@@ -371,21 +463,30 @@ public class ExpenseController {
     }
 
     @GetMapping("/expenses/{id}/photo")
-    public ResponseEntity<byte[]> getPhoto(@PathVariable String id) {
+    public ResponseEntity<?> getPhoto(@PathVariable String id) {
         try {
             String photoPath = expenseService.getPhotoPath(id);
             if (photoPath == null) {
-                return ResponseEntity.notFound().build();
+                throw new NotFoundException("Photo not found");
             }
             Path file = Path.of(photoPath);
+            if (!Files.isRegularFile(file)) {
+                throw new NotFoundException("Photo not found");
+            }
             byte[] bytes = Files.readAllBytes(file);
             MediaType mediaType = mediaTypeFor(photoPath);
             return ResponseEntity.ok()
                     .header(HttpHeaders.CONTENT_TYPE, mediaType.toString())
                     .body(bytes);
+        } catch (NotFoundException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
             LOGGER.error("internal error getting photo", e);
-            return ResponseEntity.notFound().build();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .contentType(MediaType.APPLICATION_JSON)
+                    .body(ApiResponse.error("Internal server error"));
         }
     }
 
@@ -403,6 +504,12 @@ public class ExpenseController {
         try {
             expenseService.detachPhoto(id);
             return ResponseEntity.ok(ApiResponse.ok());
+        } catch (NotFoundException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.NOT_FOUND.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(e.getMessage()));
+        } catch (ConflictException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.CONFLICT.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.error(e.getMessage()));
         } catch (ValidationException e) {
             LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -420,6 +527,12 @@ public class ExpenseController {
         try {
             expenseService.updateExpense(id, request);
             return ResponseEntity.ok(ApiResponse.ok());
+        } catch (NotFoundException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.NOT_FOUND.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(e.getMessage()));
+        } catch (ConflictException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.CONFLICT.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.error(e.getMessage()));
         } catch (ValidationException e) {
             LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -436,6 +549,12 @@ public class ExpenseController {
         try {
             expenseService.deleteExpense(id);
             return ResponseEntity.ok(ApiResponse.ok());
+        } catch (NotFoundException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.NOT_FOUND.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(e.getMessage()));
+        } catch (ConflictException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.CONFLICT.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.error(e.getMessage()));
         } catch (ValidationException e) {
             LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)

@@ -23,19 +23,29 @@ function PhotoInput({
   const [opened, setOpened] = useState(false)
   const [pickingExisting, setPickingExisting] = useState(false)
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
+  const previewUrlRef = useRef<string | null>(null)
   const cameraRef = useRef<HTMLInputElement>(null)
   const galleryRef = useRef<HTMLInputElement>(null)
 
-  // Buat & bebaskan object URL agar tidak bocor memori.
-  useEffect(() => {
-    if (value?.kind !== 'new') {
-      setPreviewUrl(null)
-      return
+  const setPreview = (file: File | null) => {
+    if (previewUrlRef.current) {
+      URL.revokeObjectURL(previewUrlRef.current)
+      previewUrlRef.current = null
     }
-    const url = URL.createObjectURL(value.file)
-    setPreviewUrl(url)
-    return () => URL.revokeObjectURL(url)
-  }, [value])
+    if (file) {
+      const url = URL.createObjectURL(file)
+      previewUrlRef.current = url
+      setPreviewUrl(url)
+    } else {
+      setPreviewUrl(null)
+    }
+  }
+
+  useEffect(() => () => {
+    if (previewUrlRef.current) {
+      URL.revokeObjectURL(previewUrlRef.current)
+    }
+  }, [])
 
   const invoices = useInvoices(pickingExisting ? dateTime : null)
   const toast = useToast()
@@ -43,11 +53,13 @@ function PhotoInput({
   const pick = async (file: File | null) => {
     setOpened(false)
     if (!file) {
+      setPreview(null)
       onChange(null)
       return
     }
     try {
       const prepared = await toUploadableImage(file)
+      setPreview(prepared)
       onChange({ kind: 'new', file: prepared })
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Gagal memproses gambar', { title: 'Gagal' })
@@ -59,7 +71,10 @@ function PhotoInput({
     setOpened(false)
   }
 
-  const clear = () => onChange(null)
+  const clear = () => {
+    setPreview(null)
+    onChange(null)
+  }
 
   const fileName =
     value?.kind === 'new' ? value.file.name : value?.kind === 'existing' ? value.name : undefined

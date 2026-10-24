@@ -93,7 +93,7 @@ public class ExpenseService {
         try {
             budgetRepository.create(request.name().trim(), balance, alertThreshold, description);
         } catch (IllegalStateException e) {
-            throw new ValidationException("Budget already exists");
+            throw new ConflictException("Budget already exists");
         }
         notificationService.sendBudgetCreated(request.name().trim(), balance, alertThreshold);
     }
@@ -122,7 +122,7 @@ public class ExpenseService {
             throw new ValidationException("Name is required");
         }
         if (!budgetRepository.softDelete(name)) {
-            throw new ValidationException("Budget not found");
+            throw new NotFoundException("Budget not found");
         }
     }
 
@@ -145,10 +145,10 @@ public class ExpenseService {
         try {
             if (!budgetRepository.update(oldName.trim(), request.name().trim(), request.balance(),
                     alertThreshold, description)) {
-                throw new ValidationException("Budget not found");
+                throw new NotFoundException("Budget not found");
             }
         } catch (IllegalStateException e) {
-            throw new ValidationException("Budget already exists");
+            throw new ConflictException("Budget already exists");
         }
     }
 
@@ -170,7 +170,7 @@ public class ExpenseService {
         try {
             categoryRepository.create(budgetId, name, description);
         } catch (IllegalStateException e) {
-            throw new ValidationException("Category already exists");
+            throw new ConflictException("Category already exists");
         }
     }
 
@@ -180,14 +180,14 @@ public class ExpenseService {
         String description = requireDescription(request.description());
         CategoryData existing = categoryRepository.findById(id);
         if (existing == null || !existing.isActive()) {
-            throw new ValidationException("Category not found");
+            throw new NotFoundException("Category not found");
         }
         try {
             if (!categoryRepository.update(id, name, description)) {
-                throw new ValidationException("Category not found");
+                throw new NotFoundException("Category not found");
             }
         } catch (IllegalStateException e) {
-            throw new ValidationException("Category already exists");
+            throw new ConflictException("Category already exists");
         }
     }
 
@@ -195,7 +195,7 @@ public class ExpenseService {
     public void deleteCategory(long id) {
         CategoryData existing = categoryRepository.findById(id);
         if (existing == null || !existing.isActive()) {
-            throw new ValidationException("Category not found");
+            throw new NotFoundException("Category not found");
         }
         categoryRepository.softDelete(id);
     }
@@ -218,7 +218,7 @@ public class ExpenseService {
         }
         Long id = categoryRepository.findIdByBudgetAndName(budgetId, categoryName.trim());
         if (id == null) {
-            throw new ValidationException("Category not found for budget: " + categoryName);
+            throw new NotFoundException("Category not found for budget: " + categoryName);
         }
         return id;
     }
@@ -430,18 +430,20 @@ public class ExpenseService {
             throw new ValidationException("Months must be greater than 0");
         }
         int safeMonths = Math.min(months, 24);
-        List<String> newest = expenseRepository.getPeriods();
-        if (newest.size() > safeMonths) {
-            newest = newest.subList(0, safeMonths);
+        PaydayCalendar calendar = periodService.calendar();
+        List<String> periods = new ArrayList<>();
+        String period = periodService.currentPeriod();
+        for (int i = 0; i < safeMonths; i++) {
+            periods.add(period);
+            period = calendar.previousPeriod(period);
         }
-        List<String> ascending = new ArrayList<>(newest);
-        Collections.reverse(ascending);
+        Collections.reverse(periods);
 
         List<TrendPoint> points = new ArrayList<>();
-        for (String period : ascending) {
-            points.add(new TrendPoint(period,
-                    expenseRepository.totalForPeriod(period),
-                    expenseRepository.countForPeriod(period)));
+        for (String item : periods) {
+            points.add(new TrendPoint(item,
+                    expenseRepository.totalForPeriod(item),
+                    expenseRepository.countForPeriod(item)));
         }
         return new TrendResponse(points);
     }
@@ -569,7 +571,7 @@ public class ExpenseService {
         }
         ExpenseData expense = expenseRepository.findById(id);
         if (expense == null) {
-            throw new ValidationException("Expense not found");
+            throw new NotFoundException("Expense not found");
         }
         return expense;
     }
@@ -577,7 +579,7 @@ public class ExpenseService {
     private Long requireBudgetId(String name) {
         Long id = budgetRepository.findIdByName(name);
         if (id == null) {
-            throw new ValidationException("Budget not found: " + name);
+            throw new NotFoundException("Budget not found: " + name);
         }
         return id;
     }
@@ -607,7 +609,7 @@ public class ExpenseService {
         }
         VoiceNoteData note = voiceNoteService.requireVoiceNote(voiceNoteId);
         if (!VoiceNoteStatus.TO_REVIEW.value().equals(note.status())) {
-            throw new ValidationException("Voice note is not ready for review or already submitted");
+            throw new ConflictException("Voice note is not ready for review or already submitted");
         }
     }
 

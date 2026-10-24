@@ -335,7 +335,7 @@ class InvoiceServiceTest {
     @Test
     void requireInvoice_notFound_shouldReject() {
         when(invoiceRepository.findById("missing")).thenReturn(null);
-        ValidationException ex = assertThrows(ValidationException.class, () -> invoiceService.requireInvoice("missing"));
+        NotFoundException ex = assertThrows(NotFoundException.class, () -> invoiceService.requireInvoice("missing"));
         assertEquals("Invoice not found", ex.getMessage());
     }
 
@@ -402,7 +402,7 @@ class InvoiceServiceTest {
     void deleteScanInvoice_notDeletableStatus_shouldReject() {
         for (String status : new String[]{"ANALYZING", "SUBMITTED"}) {
             when(invoiceRepository.findById("inv-1")).thenReturn(new InvoiceData("inv-1", "2026-JUL-AUG", "a.jpg", "2026-07-25T09:00:00", status, null));
-            assertThrows(ValidationException.class, () -> invoiceService.deleteScanInvoice("inv-1"));
+            assertThrows(ConflictException.class, () -> invoiceService.deleteScanInvoice("inv-1"));
             verify(invoiceRepository, never()).delete("inv-1");
         }
     }
@@ -410,7 +410,7 @@ class InvoiceServiceTest {
     @Test
     void deleteScanInvoice_notFound_shouldReject() {
         when(invoiceRepository.findById("missing")).thenReturn(null);
-        ValidationException ex = assertThrows(ValidationException.class, () -> invoiceService.deleteScanInvoice("missing"));
+        NotFoundException ex = assertThrows(NotFoundException.class, () -> invoiceService.deleteScanInvoice("missing"));
         assertEquals("Invoice not found", ex.getMessage());
     }
 
@@ -418,7 +418,7 @@ class InvoiceServiceTest {
     void deleteScanInvoice_stillUsedByExpense_shouldReject() {
         when(invoiceRepository.findById("inv-1")).thenReturn(new InvoiceData("inv-1", "2026-JUL-AUG", "a.jpg", "2026-07-25T09:00:00", "TO_REVIEW", null));
         when(invoiceRepository.countExpensesUsing("inv-1")).thenReturn(1);
-        assertThrows(ValidationException.class, () -> invoiceService.deleteScanInvoice("inv-1"));
+        assertThrows(ConflictException.class, () -> invoiceService.deleteScanInvoice("inv-1"));
         verify(invoiceRepository, never()).delete("inv-1");
     }
 }
