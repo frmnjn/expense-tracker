@@ -210,7 +210,7 @@ Detail teknis:
 ### Dashboard
 
 * Daftar saldo per budget — tiap kartu menampilkan:
-  * nama budget, badge urutan (1–3) jika masuk pengeluaran terbesar periode
+  * nama budget
   * saldo saat ini (merah jika negatif)
   * ikon `+` untuk top-up (modal nominal + deskripsi, tampil saldo saat ini)
   * ikon `📋` untuk riwayat top-up budget tersebut

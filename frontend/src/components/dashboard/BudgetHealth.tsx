@@ -1,7 +1,6 @@
 import { useMemo } from 'react'
 import {
   ActionIcon,
-  Badge,
   Button,
   Group,
   Menu,
@@ -64,10 +63,6 @@ export function BudgetHealth({
   }, [budgets])
 
   const infoOf = (name: string): BudgetSummary | undefined => byBudget.find((b) => b.budget === name)
-  const rankOf = useMemo(() => {
-    const sorted = [...byBudget].sort((a, b) => b.amount - a.amount)
-    return new Map(sorted.slice(0, 3).map((b, i) => [b.budget, i + 1]))
-  }, [byBudget])
 
   return (
     <DashboardSection
@@ -113,11 +108,6 @@ export function BudgetHealth({
                   <Text size="sm" fw={600} title={b.name} style={{ minWidth: 0, overflowWrap: 'break-word' }}>
                     {b.name}
                   </Text>
-                  {rankOf.has(b.name) && (
-                    <Badge size="xs" variant="light" color="blue" style={{ flexShrink: 0 }}>
-                      #{rankOf.get(b.name)}
-                    </Badge>
-                  )}
                 </Group>
                 <Text size="sm" fw={600} c={negative ? 'red' : undefined} mt={4}>
                   {negative
