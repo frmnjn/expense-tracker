@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import type { ReactNode } from 'react'
 import { Button, Group, Loader, Modal, Stack, Text } from '@mantine/core'
 import { useMediaQuery } from '@mantine/hooks'
@@ -20,7 +20,7 @@ function PdfViewerModal({
   onClose: () => void
 }) {
   const isMobile = useMediaQuery('(max-width: 48em)')
-  const containerRef = useRef<HTMLDivElement>(null)
+  const [containerEl, setContainerEl] = useState<HTMLDivElement | null>(null)
   const [state, setState] = useState<PdfLoadState>({ status: 'idle' })
   const opened = target !== null
 
@@ -40,9 +40,8 @@ function PdfViewerModal({
   }, [opened, onClose])
 
   useEffect(() => {
-    if (!opened || !target?.url) return
-    const container = containerRef.current
-    if (!container) return
+    if (!opened || !target?.url || !containerEl) return
+    const container = containerEl
 
     let cancelled = false
     let destroyPdf: (() => void) | null = null
@@ -51,8 +50,8 @@ function PdfViewerModal({
 
     const renderPdf = async () => {
       try {
-        const pdfjs = await import('pdfjs-dist')
-        const workerSrc = (await import('pdfjs-dist/build/pdf.worker.min.mjs?url')).default
+        const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs')
+        const workerSrc = (await import('pdfjs-dist/legacy/build/pdf.worker.min.mjs?url')).default
         pdfjs.GlobalWorkerOptions.workerSrc = workerSrc
 
         const loadingTask = pdfjs.getDocument({ url: target.url })
@@ -115,7 +114,7 @@ function PdfViewerModal({
       destroyPdf?.()
       container.innerHTML = ''
     }
-  }, [opened, target])
+  }, [opened, target, containerEl])
 
   const close = () => onClose()
   const downloadUrl = target?.downloadUrl ?? target?.url
@@ -189,11 +188,10 @@ function PdfViewerModal({
           </Stack>
         ) : (
           <div
-            ref={containerRef}
+            ref={setContainerEl}
             style={{
-              flex: isMobile ? 1 : undefined,
+              height: isMobile ? 'calc(100dvh - 160px)' : '75vh',
               minHeight: 240,
-              maxHeight: isMobile ? undefined : '75vh',
               overflowY: 'auto',
               background: '#dee2e6',
               borderRadius: 8,
