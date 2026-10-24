@@ -1,5 +1,4 @@
 import { Button, Group, Modal, Progress, Stack, Text, ThemeIcon, Title } from '@mantine/core'
-import { useMediaQuery } from '@mantine/hooks'
 import { IconBook2, IconCheck, IconChevronLeft, IconChevronRight } from '@tabler/icons-react'
 import type { TutorialStep } from '../utils/tutorialSteps'
 
@@ -20,7 +19,6 @@ export function TutorialModal({
   onNext: () => void
   onBack: () => void
 }) {
-  const isMobile = useMediaQuery('(max-width: 48em)')
   const step = steps[stepIndex]
 
   if (!step) return null
@@ -32,7 +30,6 @@ export function TutorialModal({
       opened={opened}
       onClose={onClose}
       title={`Panduan · ${label}`}
-      fullScreen={isMobile}
       centered
       size="lg"
       radius="lg"
