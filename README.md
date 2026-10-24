@@ -155,6 +155,60 @@ mysql -u expense_tracker_user -p expense_tracker < seed.sql
 
 ---
 
+## Environment Dev (VPS)
+
+Dev berjalan di subdomain terpisah dari produksi (domain dikonfigurasi di nginx dan tidak disimpan di repo):
+
+* MySQL produksi dipakai bersama, tetapi memakai schema `expense_tracker_dev` dan user khusus dengan grant hanya ke schema tersebut.
+* Notifier produksi dipakai ulang.
+* Email dipaksa `NOTIFY_TEST_MODE=true` ke alamat email developer yang diisi di `backend/.env.dev`; inbox polling dan report otomatis dimatikan.
+* Upload dan report disimpan di `uploads-dev/`.
+
+Setup sekali:
+
+```bash
+cp backend/.env.dev.example backend/.env.dev
+chmod 600 backend/.env.dev
+# isi DB_PASSWORD, ACCESS_CODE, NOTIFIER_TOKEN, dan API key
+```
+
+Buat schema + user (dari VPS, lewat container MySQL):
+
+```bash
+docker exec -i wordpress-db-1 sh -c 'mysql -uroot -p"$MYSQL_ROOT_PASSWORD"' <<'SQL'
+CREATE DATABASE IF NOT EXISTS expense_tracker_dev;
+CREATE USER IF NOT EXISTS 'expense-tracker-dev'@'%' IDENTIFIED BY '<password-dev>';
+GRANT ALL PRIVILEGES ON expense_tracker_dev.* TO 'expense-tracker-dev'@'%';
+FLUSH PRIVILEGES;
+SQL
+```
+
+Jalankan / update:
+
+```bash
+./scripts/deploy-dev.sh
+```
+
+Seed data dummy (opsional):
+
+```bash
+python3 scripts/seed_dummy_data.py \
+  --container wordpress-db-1 \
+  --db-user expense-tracker-dev \
+  --db-password '<password-dev>' \
+  --db expense_tracker_dev
+```
+
+Hentikan / hapus:
+
+```bash
+docker compose -p expense-dev -f docker-compose.dev.yml down        # simpan data
+docker compose -p expense-dev -f docker-compose.dev.yml down -v     # hapus data DB
+rm -rf uploads-dev
+```
+
+---
+
 ## Environment Variables
 
 ### Backend (`backend/.env`)

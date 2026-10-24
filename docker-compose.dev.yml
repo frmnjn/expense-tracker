@@ -1,0 +1,67 @@
+name: expense-dev
+
+services:
+  backend:
+    image: expense-tracker-backend-jvm:latest
+    restart: unless-stopped
+    mem_limit: 320m
+    env_file:
+      - ./backend/.env.dev
+    environment:
+      DB_URL: jdbc:mysql://10.8.0.1:33060/expense_tracker_dev?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      DB_USER: expense-tracker-dev
+      UPLOAD_DIR: /app/uploads
+      NOTIFIER_URL: http://10.8.0.4:8081
+      NOTIFY_EMAILS: ""
+      NOTIFY_TEST_MODE: "true"
+      INBOX_ENABLED: "false"
+      REPORT_ENABLED: "false"
+      SPRING_DATASOURCE_HIKARI_MAXIMUM_POOL_SIZE: "3"
+      TZ: Asia/Jakarta
+    entrypoint:
+      - java
+      - -Xms16m
+      - -Xmx160m
+      - -XX:MaxMetaspaceSize=96m
+      - -XX:ReservedCodeCacheSize=32m
+      - -XX:MaxDirectMemorySize=32m
+      - -XX:+UseSerialGC
+      - -XX:TieredStopAtLevel=1
+      - -XX:+ExitOnOutOfMemoryError
+      - -Djava.awt.headless=true
+      - -Dspring.jmx.enabled=false
+      - -jar
+      - app.jar
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1:8080/ready >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 60s
+    volumes:
+      - ./uploads-dev:/app/uploads
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        VITE_API_URL: /api
+    image: expense-tracker-dev-frontend:latest
+    restart: unless-stopped
+    mem_limit: 64m
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/ >/dev/null || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      default:
+      edge:
+
+networks:
+  edge:
+    name: adguard_default
+    external: true

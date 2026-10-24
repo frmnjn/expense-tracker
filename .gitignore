@@ -19,6 +19,10 @@ backups/
 # demo environment
 .env.demo
 uploads-demo/
+
+# dev environment
+backend/.env.dev
+uploads-dev/
 __pycache__/
 *.pyc
 
