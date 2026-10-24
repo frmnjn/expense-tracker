@@ -4,6 +4,7 @@ import AppLayout from './components/AppLayout'
 import ExpensePage from './pages/ExpensePage'
 import LockPage from './pages/LockPage'
 import { getAccessCode } from './utils/access'
+import { isDemoMode } from './utils/demo'
 
 const DashboardPage = lazy(() => import('./pages/DashboardPage'))
 const HistoryPage = lazy(() => import('./pages/HistoryPage'))
@@ -13,7 +14,7 @@ const VoicePage = lazy(() => import('./pages/VoicePage'))
 const ReportsPage = lazy(() => import('./pages/ReportsPage'))
 
 function Protected() {
-  return getAccessCode() ? <AppLayout /> : <Navigate to="/lock" replace />
+  return isDemoMode || getAccessCode() ? <AppLayout /> : <Navigate to="/lock" replace />
 }
 
 const routerBasename = import.meta.env.BASE_URL.replace(/\/$/, '') || '/'
@@ -22,7 +23,7 @@ function App() {
   return (
     <BrowserRouter basename={routerBasename}>
       <Routes>
-        <Route path="/lock" element={<LockPage />} />
+        <Route path="/lock" element={isDemoMode ? <Navigate to="/catat" replace /> : <LockPage />} />
         <Route element={<Protected />}>
           <Route path="/" element={<Navigate to="/catat" replace />} />
           <Route path="/catat" element={<ExpensePage />} />

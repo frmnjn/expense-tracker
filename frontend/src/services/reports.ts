@@ -1,5 +1,6 @@
 import apiClient from './api'
 import { getAccessCode } from '../utils/access'
+import { demoReportUrl, isDemoMode } from '../utils/demo'
 import type { ApiResponse } from '../types/expense'
 import type { PeriodReportsResponse } from '../types/report'
 
@@ -9,6 +10,9 @@ export async function getReports(): Promise<PeriodReportsResponse> {
 }
 
 function reportUrl(period: string, inline: boolean): string {
+  if (isDemoMode) {
+    return demoReportUrl(`report-${encodeURIComponent(period)}.pdf`)
+  }
   const params = new URLSearchParams()
   const code = getAccessCode()
   if (code) params.set('access_code', code)

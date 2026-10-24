@@ -8,9 +8,15 @@ Aplikasi web untuk mencatat pengeluaran harian, memantau saldo per budget, dan m
 
 **https://frmnjn.my.id/expense-tracker-demo/**
 
-PIN demo: **2026**
+Demo bersifat **read-only** (tidak bisa menambah/mengubah data), memakai data dummy, dan tidak terhubung ke AI, email, atau notifier production. Badge **DEMO** di kanan atas menandakan mode read-only. Demo berjalan **tanpa backend/MySQL**: frontend mengambil data dari `frontend/public/demo/data.json` dan report PDF statis. Data dan PDF digenerate harian (tanggal mengikuti hari generate) dengan:
 
-Demo bersifat **read-only** (tidak bisa menambah/mengubah data), memakai data dummy, dan tidak terhubung ke AI, email, atau notifier production. Badge **DEMO** di kanan atas menandakan mode read-only. Demo berisi contoh invoice (`TO_REVIEW`/`SUBMITTED`/`NOT_INVOICE`), email inbox, voice note (`TO_REVIEW`/`SUBMITTED`/`NOT_EXPENSE`), dan beberapa report PDF periode sebelumnya.
+```bash
+./scripts/generate_demo.sh        # generate data.json + report PDF
+./scripts/install_demo_cron.sh    # pasang cron harian 00:05 WIB
+docker compose -f docker-compose.demo.yml up -d --build
+```
+
+Demo berisi contoh invoice (`TO_REVIEW`/`SUBMITTED`/`NOT_INVOICE`), email inbox, voice note (`TO_REVIEW`/`SUBMITTED`/`NOT_EXPENSE`), dan tiga report PDF periode sebelumnya.
 
 ## Screenshots
 
@@ -39,10 +45,6 @@ Tampilan desktop memakai sidebar di kiri, konten lebar, dan tabel untuk daftar t
 |---|---|
 | ![Voice desktop](docs/screenshots/voice-desktop.jpg) | ![Laporan desktop](docs/screenshots/laporan-desktop.jpg) |
 
-<p align="center">
-  <img src="docs/screenshots/lock-desktop.jpg" alt="Halaman PIN desktop" width="55%" />
-</p>
-
 ### Mobile
 
 Tampilan mobile mengganti sidebar menjadi **bottom navigation**, form menjadi satu kolom, dan daftar transaksi berubah menjadi kartu agar tombol aksi tetap terlihat tanpa scroll horizontal. Filter budget & kategori ditampilkan sebagai chip yang **wrap ke bawah** (bukan scroll horizontal), dengan section **BUDGET** dan **KATEGORI** yang terpisah. Screenshot Dashboard mobile juga memakai long screenshot sampai bagian paling bawah.
@@ -55,9 +57,9 @@ Tampilan mobile mengganti sidebar menjadi **bottom navigation**, form menjadi sa
 |---|---|---|
 | <img src="docs/screenshots/scan-mobile.jpg" width="100%" /> | <img src="docs/screenshots/inbox-mobile.jpg" width="100%" /> | <img src="docs/screenshots/voice-mobile.jpg" width="100%" /> |
 
-| Laporan | Halaman PIN |
-|---|---|
-| <img src="docs/screenshots/laporan-mobile.jpg" width="100%" /> | <img src="docs/screenshots/lock-mobile.jpg" width="100%" /> |
+| Laporan |
+|---|
+| <img src="docs/screenshots/laporan-mobile.jpg" width="100%" /> |
 
 ---
 

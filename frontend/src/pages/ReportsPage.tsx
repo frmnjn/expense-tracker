@@ -42,6 +42,7 @@ function ReportActions({ report }: { report: PeriodReport }) {
       <Button
         component="a"
         href={getReportDownloadUrl(report.period)}
+        download={report.fileName}
         target="_blank"
         rel="noreferrer"
         variant="light"
@@ -136,6 +137,7 @@ function ReportsPage() {
                             <Button
                               component="a"
                               href={getReportDownloadUrl(report.period)}
+                              download={report.fileName}
                               target="_blank"
                               rel="noreferrer"
                               variant="light"

@@ -1,7 +1,15 @@
 import apiClient from './api'
 import { newIdempotencyKey } from '../utils/idempotency'
 import { getAccessCode } from '../utils/access'
+import { demoAssetUrl, isDemoMode } from '../utils/demo'
 import type { ApiResponse, VoiceNoteDetail, VoiceNotesResponse } from '../types/expense'
+
+const DEMO_VOICE_AUDIO: Record<string, string> = {
+  'voice-demo-review': 'demo-voice-review.webm',
+  'voice-demo-wartek': 'demo-voice-wartek.webm',
+  'voice-demo-household': 'demo-voice-household.webm',
+  'voice-demo-not-expense': 'demo-voice-not-expense.webm',
+}
 
 export async function uploadVoiceNote(
   file: File,
@@ -46,6 +54,10 @@ export async function deleteVoiceNote(id: string): Promise<ApiResponse<void>> {
 }
 
 export function getVoiceNoteAudioUrl(id: string): string {
+  if (isDemoMode) {
+    const fileName = DEMO_VOICE_AUDIO[id]
+    return fileName ? demoAssetUrl(fileName) : ''
+  }
   const code = getAccessCode()
   const suffix = code ? `?access_code=${encodeURIComponent(code)}` : ''
   return `${apiClient.defaults.baseURL}/voice-notes/${encodeURIComponent(id)}/audio${suffix}`
