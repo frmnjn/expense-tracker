@@ -11,6 +11,7 @@ const pages = [
   ['scan', 'scan'],
   ['voice', 'voice'],
   ['inbox', 'inbox'],
+  ['laporan', 'laporan'],
 ]
 
 await fs.mkdir(outDir, { recursive: true })

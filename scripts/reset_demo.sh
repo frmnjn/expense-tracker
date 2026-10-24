@@ -28,3 +28,6 @@ DEMO_DB_PASSWORD="${DB_PASSWORD}" python3 "${SCRIPT_DIR}/seed_demo_data.py" \
     --container "${MYSQL_CONTAINER:-wordpress-db-1}" \
     --db-user "${DB_USER}" \
     --db "${DB_NAME}"
+
+echo "==> Generate report PDF demo"
+"${SCRIPT_DIR}/seed_demo_reports.sh"

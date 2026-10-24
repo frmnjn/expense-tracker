@@ -10,7 +10,7 @@ Aplikasi web untuk mencatat pengeluaran harian, memantau saldo per budget, dan m
 
 PIN demo: **2026**
 
-Demo bersifat **read-only** (tidak bisa menambah/mengubah data), memakai data dummy, dan tidak terhubung ke AI, email, atau notifier production. Badge **DEMO** di kanan atas menandakan mode read-only. Demo berisi contoh invoice (`TO_REVIEW`/`SUBMITTED`/`NOT_INVOICE`), email inbox, dan voice note (`TO_REVIEW`/`SUBMITTED`/`NOT_EXPENSE`).
+Demo bersifat **read-only** (tidak bisa menambah/mengubah data), memakai data dummy, dan tidak terhubung ke AI, email, atau notifier production. Badge **DEMO** di kanan atas menandakan mode read-only. Demo berisi contoh invoice (`TO_REVIEW`/`SUBMITTED`/`NOT_INVOICE`), email inbox, voice note (`TO_REVIEW`/`SUBMITTED`/`NOT_EXPENSE`), dan beberapa report PDF periode sebelumnya.
 
 ## Screenshots
 
@@ -35,9 +35,13 @@ Tampilan desktop memakai sidebar di kiri, konten lebar, dan tabel untuk daftar t
 |---|---|
 | ![Scan desktop](docs/screenshots/scan-desktop.jpg) | ![Inbox desktop](docs/screenshots/inbox-desktop.jpg) |
 
-| Voice Assistant | Halaman PIN |
+| Voice Assistant | Laporan |
 |---|---|
-| ![Voice desktop](docs/screenshots/voice-desktop.jpg) | ![Lock desktop](docs/screenshots/lock-desktop.jpg) |
+| ![Voice desktop](docs/screenshots/voice-desktop.jpg) | ![Laporan desktop](docs/screenshots/laporan-desktop.jpg) |
+
+<p align="center">
+  <img src="docs/screenshots/lock-desktop.jpg" alt="Halaman PIN desktop" width="55%" />
+</p>
 
 ### Mobile
 
@@ -51,9 +55,9 @@ Tampilan mobile mengganti sidebar menjadi **bottom navigation**, form menjadi sa
 |---|---|---|
 | <img src="docs/screenshots/scan-mobile.jpg" width="100%" /> | <img src="docs/screenshots/inbox-mobile.jpg" width="100%" /> | <img src="docs/screenshots/voice-mobile.jpg" width="100%" /> |
 
-<p align="center">
-  <img src="docs/screenshots/lock-mobile.jpg" alt="PIN mobile" width="45%" />
-</p>
+| Laporan | Halaman PIN |
+|---|---|
+| <img src="docs/screenshots/laporan-mobile.jpg" width="100%" /> | <img src="docs/screenshots/lock-mobile.jpg" width="100%" /> |
 
 ---
 

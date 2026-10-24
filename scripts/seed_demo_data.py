@@ -72,22 +72,29 @@ VOICE_ASSETS = [
 ]
 
 
+def payday(year: int, month: int) -> datetime.date:
+    day = datetime.date(year, month, 25)
+    while day.weekday() >= 5:
+        day -= datetime.timedelta(days=1)
+    return day
+
+
+def period_month(d: datetime.date) -> tuple[int, int]:
+    if d >= payday(d.year, d.month):
+        return d.year, d.month
+    if d.month == 1:
+        return d.year - 1, 12
+    return d.year, d.month - 1
+
+
 def period_of(d: datetime.date) -> str:
-    y, m = d.year, d.month
-    if d.day < 25:
-        m -= 1
-        if m == 0:
-            m, y = 12, y - 1
+    y, m = period_month(d)
     return f'{y}-{MONTHS[m - 1]}-{MONTHS[m % 12]}'
 
 
 def period_start(d: datetime.date) -> str:
-    y, m = d.year, d.month
-    if d.day < 25:
-        m -= 1
-        if m == 0:
-            m, y = 12, y - 1
-    return f'{y}-{m:02d}-25'
+    y, m = period_month(d)
+    return payday(y, m).isoformat()
 
 
 def esc(value: str) -> str:
