@@ -54,7 +54,7 @@ async function expandMobileLayout(page) {
 async function capture(viewport, suffix, mobile) {
   const context = await browser.newContext({
     viewport,
-    deviceScaleFactor: 2,
+    deviceScaleFactor: 1,
     colorScheme: 'dark',
     locale: 'id-ID',
     isMobile: mobile,
@@ -72,7 +72,7 @@ async function capture(viewport, suffix, mobile) {
     await page.screenshot({
       path: `${outDir}/${name}-${suffix}.jpg`,
       type: 'jpeg',
-      quality: 84,
+      quality: 80,
       fullPage,
     })
     console.log(`captured ${name}-${suffix}`)
