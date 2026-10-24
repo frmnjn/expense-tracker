@@ -85,7 +85,7 @@ public class InvoiceController {
     public ResponseEntity<ApiResponse> createInvoice(@RequestParam("file") MultipartFile file,
                                                      @RequestParam("date") String date,
                                                      @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
-        Optional<ApiResponse> cached = idempotencyService.find(idempotencyKey);
+        Optional<ApiResponse> cached = idempotencyService.begin(idempotencyKey);
         if (cached.isPresent()) {
             return ResponseEntity.ok(cached.get());
         }
@@ -96,13 +96,15 @@ public class InvoiceController {
             String invoiceId = invoiceService.createInvoiceForAi(period, periodStart, file);
             invoiceAnalysisService.trigger(invoiceId);
             ApiResponse response = ApiResponse.ok(Map.of("invoiceId", invoiceId));
-            idempotencyService.save(idempotencyKey, response);
+            idempotencyService.complete(idempotencyKey, response);
             return ResponseEntity.ok(response);
         } catch (ValidationException e) {
+            idempotencyService.abort(idempotencyKey);
             LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
+            idempotencyService.abort(idempotencyKey);
             LOGGER.error("internal error creating invoice", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("Internal server error"));

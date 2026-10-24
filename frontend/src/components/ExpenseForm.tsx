@@ -22,6 +22,7 @@ import { useOptions } from '../hooks/useOptions'
 import { formatCurrency } from '../utils/currency'
 import { getErrorMessage } from '../utils/error'
 import { useToast } from './Toast'
+import { ErrorState } from './ErrorState'
 
 const DATE_TIME_FORMAT = 'YYYY-MM-DD HH:mm'
 const DATE_TIME_SECONDS_FORMAT = 'YYYY-MM-DD HH:mm:ss'
@@ -55,7 +56,7 @@ function ExpenseForm() {
   const [description, setDescription] = useState(draft?.description ?? '')
   const [photo, setPhoto] = useState<PhotoSelection | null>(null)
 
-  const { data: options, isPending: optionsLoading } = useOptions()
+  const { data: options, isPending: optionsLoading, isError: optionsError, refetch: refetchOptions } = useOptions()
   const toast = useToast()
   const createExpense = useCreateExpense()
   const uploadPhoto = useUploadPhoto()
@@ -115,9 +116,10 @@ function ExpenseForm() {
     }
     setErrors({})
     submittingRef.current = true
+    const submitValue = nowDisabled ? dayjs() : dayjs(displayValue)
     createExpense.mutate(
       {
-        dateTime: dayjs(displayValue).format(DATE_TIME_FORMAT),
+        dateTime: submitValue.format(DATE_TIME_FORMAT),
         name: name.trim(),
         budget: budget ?? '',
         category: category ?? undefined,
@@ -184,6 +186,10 @@ function ExpenseForm() {
     <Paper withBorder p={{ base: 'md', sm: 'lg' }} radius="md">
       <Stack gap="md">
         <Title order={3}>Catat Pengeluaran</Title>
+
+        {optionsError && (
+          <ErrorState message="Gagal memuat daftar budget." onRetry={() => void refetchOptions()} />
+        )}
 
         <SegmentedControl
           value={mode}

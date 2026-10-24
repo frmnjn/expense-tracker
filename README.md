@@ -71,7 +71,8 @@ Tampilan mobile mengganti sidebar menjadi **bottom navigation**, form menjadi sa
 * Dashboard: saldo per budget, pengeluaran terbesar, 3 bulan terakhir
 * Riwayat per periode: search, **filter budget & kategori multi-select**, sort, **pagination**, edit (termasuk ganti/hapus foto), hapus, lihat foto (termasuk PDF)
 * Kelola budget (tambah/edit/hapus, soft delete) — termasuk ambang notifikasi "budget menipis" per budget
-* Idempotensi POST (header `Idempotency-Key`) untuk mencegah duplikat
+* Idempotensi POST atomik (header `Idempotency-Key`) untuk mencegah duplikat
+* Shared access code (PIN) untuk membuka aplikasi; API fail-closed bila `ACCESS_CODE` kosong
 * Notifikasi email (Gmail SMTP via microservice `notifier`): konfirmasi expense/top-up/budget + peringatan budget menipis (threshold per budget)
 * **Report PDF otomatis per periode**: saat periode baru dimulai, laporan lengkap periode sebelumnya (ringkasan, rincian budget/kategori, analisis, seluruh transaksi) dibuat via HTML/CSS → PDF dalam Bahasa Indonesia (email report tetap Bahasa Inggris), disimpan di `uploads/reports/`, dikirim sebagai lampiran email, dan bisa dilihat/diunduh lewat halaman **Laporan** (tombol di Dashboard)
 * Trace id end-to-end (header `X-Trace-Id` FE → BE → notifier) untuk menelusuri log satu request
@@ -82,7 +83,7 @@ Tampilan mobile mengganti sidebar menjadi **bottom navigation**, form menjadi sa
 ## Tech Stack
 
 * **Frontend:** React 19 + Vite + TypeScript, React Router, TanStack Query, Axios, Mantine UI
-* **Backend:** Java 25 + Spring Boot 4, Spring JDBC (JdbcTemplate), Flyway; runtime **JVM** (`Dockerfile`, default) atau GraalVM Native Image (`Dockerfile.native`, opsional/legacy)
+* **Backend:** Java 25 + Spring Boot 4, Spring JDBC (JdbcTemplate), Flyway; runtime **JVM** (`Dockerfile`, default produksi). GraalVM Native (`Dockerfile.native`) opsional/legacy.
 * **AI:** Google Gemini (`gemini-3.5-flash-lite`) via JDK HttpClient untuk analisis struk (gambar/PDF)
 * **Report PDF:** HTML/CSS → PDF via Flying Saucer + OpenPDF; PDFBox untuk render invoice PDF & stempel nomor halaman
 * **Notifier:** Go (std lib `net/smtp`), kirim email via SMTP (Gmail), fallback Resend, mendukung lampiran PDF
@@ -99,19 +100,27 @@ docker compose up --build
 * Frontend: http://localhost:3000
 * Backend: http://localhost:8080
 
-`docker-compose.yml` menyertakan service `mysql` sendiri (self-contained). Skema & seed budget dibuat otomatis oleh **Flyway**. Foto invoice tersimpan di direktori `./uploads` (bind mount, tetap ada meski container/project dihapus).
+`docker-compose.yml` menyertakan service `mysql` sendiri (self-contained) dan sekarang juga men-*build* backend. Skema dibuat otomatis oleh **Flyway**. Foto invoice tersimpan di direktori `./uploads` (bind mount, tetap ada meski container/project dihapus).
 
-Untuk pengembangan cepat dengan backend **JVM** (tanpa build native), ada override `docker-compose.local.yml`:
+Default access code untuk lokal adalah `123456` (ubah lewat `ACCESS_CODE`). Health check: `http://localhost:8080/health`.
+
+Untuk memakai konfigurasi tambahan (AI, email), buat `backend/.env` dari contoh:
 
 ```bash
-GEMINI_API_KEY=AIza... docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build
+cp backend/.env.example backend/.env   # opsional
+GEMINI_API_KEY=AIza... docker compose up -d --build
 ```
 
 ---
 
 ## Menjalankan (produksi)
 
-`docker-compose.prod.yml` memakai MySQL yang sudah ada di VPS (berbagi dengan WordPress) dan image backend **JVM** (`expense-tracker-backend-jvm:latest`). Image dibuild langsung di VPS via `./deploy-vps.sh` (terbukti aman tanpa OOM, lihat AGENTS.md).
+Topologi produksi saat ini:
+
+* Host nginx di VPS meneruskan `https://expense.frmnjn.my.id` ke container `expense-tracker-frontend-1:80` (config nginx berada di repo infrastruktur terpisah).
+* `docker-compose.prod.yml` menjalankan frontend + backend JVM (`expense-tracker-backend-jvm:latest`); MySQL memakai instance bersama WordPress di `10.8.0.1:33060` lewat WireGuard.
+* Notifier berjalan terpisah di STB Armbian (`10.8.0.4:8081`).
+* Image backend dibuild langsung di VPS via `./deploy-vps.sh` (backup DB dulu, tag commit + `latest`, health gate `/ready`).
 
 Setup database (sekali):
 
@@ -143,8 +152,12 @@ DB_URL=jdbc:mysql://host.docker.internal:33060/expense_tracker?useSSL=false&allo
 DB_USER=expense_tracker_user
 DB_PASSWORD=password-kuat
 UPLOAD_DIR=/app/uploads
+ACCESS_CODE=123456                 # wajib di produksi; API fail-closed bila kosong
+ACCESS_ALLOW_BLANK=false           # true hanya untuk dev (mematikan auth)
 GEMINI_API_KEY=AIza...            # untuk Scan Struk dengan AI
 AI_MODEL=gemini-3.5-flash-lite    # opsional, default
+AI_TIMEOUT=60                     # opsional, detik
+AI_MAX_ATTEMPTS=5                 # opsional, retry Gemini
 NOTIFIER_URL=http://notifier:8081
 NOTIFY_EMAILS=email1@example.com,email2@example.com
 NOTIFY_TEST_MODE=false
@@ -209,12 +222,14 @@ VITE_API_URL=/api
 Script di VPS (membaca kredensial dari `backend/.env`).
 
 ```bash
-# backup (mysqldump + gzip + simpan 14 terakhir)
+# backup (mysqldump + gzip + simpan 14 terakhir, permission 0600)
 cd /root/expense-tracker
 ./scripts/backup_mysql.sh
 
-# restore (menimpa DB saat ini!)
+# restore (menimpa DB saat ini; otomatis backup dulu + minta konfirmasi)
 ./scripts/restore_mysql.sh backups/expense_tracker_<timestamp>.sql.gz
+# tanpa konfirmasi (hati-hati)
+./scripts/restore_mysql.sh -f backups/expense_tracker_<timestamp>.sql.gz
 ```
 
 Cron harian sudah terpasang di VPS (03:00 WIB), log di `/var/log/expense-backup.log`.
@@ -225,32 +240,37 @@ Cron harian sudah terpasang di VPS (03:00 WIB), log di `/var/log/expense-backup.
 
 Dokumentasi lengkap ada di `PRD.md`. Ringkasan endpoint (`/api`):
 
-* `GET /health`, `/options`, `/periods`
-* `GET/POST /expenses`, `PUT/DELETE /expenses/{id}`, `POST /expenses/batch`
+* `GET /health` & `/ready` (cek koneksi DB), `/options`, `/periods`
+* `GET/POST /expenses`, `GET/PUT/DELETE /expenses/{id}`, `POST /expenses/batch`
 * `POST/GET/DELETE /expenses/{id}/photo`
-* `GET /invoices?date=&scan=`, `POST /invoices`, `GET /invoices/{id}`, `POST /invoices/{id}/retry`, `GET /invoices/{id}/photo`
+* `GET /invoices?date=&scan=&period=`, `POST /invoices`, `GET /invoices/{id}`, `POST /invoices/{id}/retry`, `DELETE /invoices/{id}`, `GET /invoices/{id}/photo`
 * `GET /summary?period=`, `/trend?months=`
 * `GET/POST /topups`
-* `POST /budgets`, `PUT/DELETE /budgets/{name}`
+* `POST /budgets`, `PUT/DELETE /budgets/{name}`, `GET/POST /categories`, `PUT/DELETE /categories/{id}`
+* `GET/POST /voice-notes`, `GET/DELETE /voice-notes/{id}`, `POST /voice-notes/{id}/retry`, `GET /voice-notes/{id}/audio`
+* `GET/PATCH/DELETE /email-imports...`, `POST /email-imports/poll`, `GET /email-imports/poll/status`
+* `GET/POST/DELETE /reports...`
+* `GET/POST/DELETE /payday-overrides...`
 
-Semua endpoint `POST` menerima header `Idempotency-Key` opsional (uuid) untuk mencegah duplikat.
+Endpoint yang mengubah data menerima header `Idempotency-Key` opsional (uuid) untuk mencegah duplikat.
 
 ---
 
 ## Build & Deploy (produksi)
 
-Build & deploy hanya dari PC lokal (butuh RAM ~7GB untuk build native).
+Jalur produksi adalah **JVM** dan dibuild langsung di VPS:
 
 ```bash
-./build-native.sh       # build image native lokal (~6 menit)
-./deploy-native.sh      # deploy penuh: export native image -> scp -> VPS git pull -> up -d -> prune
-VPS_HOST=<host-vps> VPS_DIR=/root/expense-tracker ./deploy-vps.sh  # deploy penuh produksi
+VPS_HOST=<host-vps> VPS_DIR=/root/expense-tracker ./deploy-vps.sh  # backup -> build -> up -> health gate
 STB_HOST=10.8.0.4 STB_DIR=/root/expense-tracker ./deploy-stb.sh  # deploy notifier ke STB
 ```
 
-* Regenerasi native config saat menambah endpoint/model: `./backend/generate-native-config.sh`
-* Cleanup data (expense/invoice/topup/idempotency + folder upload, **tabel budget dipertahankan**): `scripts/clean_data.sh`
-* `deploy-native.sh` / `deploy-vps.sh` mengasumsikan SSH key `root@example.com` terdaftar; `deploy-stb.sh` mengasumsikan SSH key `root@10.8.0.4` (WireGuard) terdaftar.
+`deploy-vps.sh` melakukan backup DB sebelum migrasi, membuat tag image per commit + `rollback-<timestamp>`, lalu memverifikasi `/ready`. Native build (`build-native.sh`, `deploy-native.sh`) hanya opsional/legacy.
+
+* Cleanup data (expense/invoice/voice/email/topup/report/idempotency + folder upload, **budget dipertahankan**): `scripts/clean_data.sh`
+* CI (`.github/workflows/ci.yml`) menjalankan test backend, lint/build frontend, build notifier, dan validasi compose.
+* Checklist rilis & rollback: `docs/release.md`.
+* `deploy-vps.sh` mengasumsikan SSH key `root@$VPS_HOST` terdaftar; `deploy-stb.sh` mengasumsikan SSH key `root@10.8.0.4` (WireGuard) terdaftar.
 
 ---
 
@@ -266,5 +286,7 @@ docker-compose.yml       # lokal (dengan mysql + notifier service, backend JVM d
 docker-compose.local.yml # override dev: backend JVM (build dari backend/Dockerfile)
 docker-compose.prod.yml  # produksi (MySQL VPS, backend JVM)
 docker-compose.stb.yml   # notifier di STB Armbian (WireGuard 10.8.0.4)
+.github/workflows/       # CI (test/build) + CodeQL
+docs/                    # referensi tambahan
 uploads/                 # foto/PDF invoice (bind mount)
 ```

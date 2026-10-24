@@ -30,28 +30,41 @@ public class AccessCodeFilter extends OncePerRequestFilter {
     private static final Pattern IP_PATTERN = Pattern.compile("[0-9a-fA-F:.]{3,45}");
 
     private final String accessCode;
+    private final boolean allowBlank;
     private final AccessAttemptLimiter attemptLimiter;
 
     public AccessCodeFilter(@Value("${access.code:}") String accessCode,
+                            @Value("${access.allow-blank:false}") boolean allowBlank,
                             AccessAttemptLimiter attemptLimiter) {
         this.accessCode = accessCode == null ? "" : accessCode.trim();
+        this.allowBlank = allowBlank;
         this.attemptLimiter = attemptLimiter;
         if (this.accessCode.isEmpty()) {
-            LOGGER.warn("ACCESS_CODE kosong: autentikasi API DINONAKTIFKAN (hanya untuk development)");
+            if (allowBlank) {
+                LOGGER.warn("ACCESS_CODE kosong dan ACCESS_ALLOW_BLANK=true: autentikasi API DINONAKTIFKAN");
+            } else {
+                LOGGER.error("ACCESS_CODE kosong: semua request API akan ditolak. "
+                        + "Set ACCESS_CODE atau ACCESS_ALLOW_BLANK=true untuk development.");
+            }
         }
     }
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String path = request.getRequestURI();
-        return path.equals("/health") || path.equals("/error");
+        return path.equals("/health") || path.equals("/ready") || path.equals("/error");
     }
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
         if (accessCode.isEmpty()) {
-            filterChain.doFilter(request, response);
+            if (allowBlank) {
+                filterChain.doFilter(request, response);
+            } else {
+                writeJson(response, HttpServletResponse.SC_SERVICE_UNAVAILABLE,
+                        "ACCESS_CODE belum dikonfigurasi");
+            }
             return;
         }
 
@@ -88,9 +101,12 @@ public class AccessCodeFilter extends OncePerRequestFilter {
     private static String clientKey(HttpServletRequest request) {
         String forwarded = request.getHeader("X-Forwarded-For");
         if (forwarded != null && !forwarded.isBlank()) {
-            String first = forwarded.split(",")[0].trim();
-            if (IP_PATTERN.matcher(first).matches()) {
-                return first;
+            // Nginx menambahkan remote address asli di elemen terakhir; elemen
+            // sebelumnya bisa dikirim klien sehingga tidak boleh dipercaya.
+            String[] parts = forwarded.split(",");
+            String last = parts[parts.length - 1].trim();
+            if (IP_PATTERN.matcher(last).matches()) {
+                return last;
             }
         }
         String remote = request.getRemoteAddr();

@@ -1,4 +1,4 @@
-import { Button, Group, Modal, Text } from '@mantine/core'
+import { Button, Group, Modal, Stack, Text } from '@mantine/core'
 import { useDeleteBudget } from '../hooks/useBudgets'
 import { useToast } from '../components/Toast'
 
@@ -24,7 +24,12 @@ function DeleteBudgetModal({ name, onClose }: { name: string | null; onClose: ()
 
   return (
     <Modal opened={!!name} onClose={onClose} title="Hapus budget" centered>
-      <Text>Yakin ingin menghapus budget "{name}"?</Text>
+      <Stack gap="xs">
+        <Text>Yakin ingin menghapus budget "{name}"?</Text>
+        <Text size="sm" c="red">
+          Semua pengeluaran yang memakai budget ini juga akan dihapus dari riwayat dan laporan.
+        </Text>
+      </Stack>
       <Group justify="flex-end" mt="lg">
         <Button variant="default" onClick={onClose}>
           Batal

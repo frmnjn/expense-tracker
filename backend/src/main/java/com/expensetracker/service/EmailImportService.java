@@ -23,7 +23,8 @@ import java.util.stream.Collectors;
 @Service
 public class EmailImportService {
 
-    private static final NumberFormat RUPIAH = NumberFormat.getCurrencyInstance(Locale.of("id", "ID"));
+    private static final ThreadLocal<NumberFormat> RUPIAH =
+            ThreadLocal.withInitial(() -> NumberFormat.getCurrencyInstance(Locale.of("id", "ID")));
 
     private final EmailImportRepository emailImportRepository;
     private final ExpenseRepository expenseRepository;
@@ -110,7 +111,7 @@ public class EmailImportService {
                     .distinct()
                     .collect(Collectors.joining(", "));
             throw new DuplicateExpenseException("Kemungkinan duplikat: sudah ada pengeluaran "
-                    + RUPIAH.format(request.amount()) + " di periode " + period + " (" + names + ").");
+                    + RUPIAH.get().format(request.amount()) + " di periode " + period + " (" + names + ").");
         }
     }
 
@@ -184,7 +185,13 @@ public class EmailImportService {
     }
 
     private EmailImportData requirePending(String id) {
-        EmailImportData data = require(id);
+        if (id == null || id.isBlank()) {
+            throw new ValidationException("Id transaksi email diperlukan");
+        }
+        EmailImportData data = emailImportRepository.findByIdForUpdate(id);
+        if (data == null) {
+            throw new ValidationException("Transaksi email tidak ditemukan");
+        }
         if (!EmailImportStatus.PENDING_REVIEW.value().equals(data.status())) {
             throw new ValidationException("Transaksi ini sudah diproses");
         }

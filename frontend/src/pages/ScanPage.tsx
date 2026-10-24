@@ -28,6 +28,7 @@ import ReviewModal from '../components/ReviewModal'
 import DeleteInvoiceModal from '../components/DeleteInvoiceModal'
 import SubmittedExpensesModal from '../components/SubmittedExpensesModal'
 import { AppPagination } from '../components/AppPagination'
+import { ErrorState } from '../components/ErrorState'
 import { useToast } from '../components/Toast'
 import type { Invoice } from '../types/expense'
 
@@ -43,12 +44,11 @@ function ScanPage() {
   const isMobile = useMediaQuery('(max-width: 48em)')
 
   // Periode berjalan (default). Tanggal belanja diambil otomatis dari struk oleh AI (fallback ke waktu sistem).
-  const nowDate = dayjs().format(DATE_TIME_FORMAT)
   const { data: periodsData } = usePeriods()
   const currentPeriod = periodsData?.currentPeriod || fallbackCurrentPeriod()
   const [period, setPeriod] = useState<string | null>(null)
   const activePeriod = period ?? currentPeriod
-  const { data, isPending } = useScanInvoices(activePeriod)
+  const { data, isPending, isError, refetch } = useScanInvoices(activePeriod)
   const upload = useUploadInvoice()
   const retry = useRetryAnalysis()
   const toast = useToast()
@@ -77,6 +77,10 @@ function ScanPage() {
 
   const pick = async (file: File | null) => {
     if (!file) return
+    if (file.size > 10 * 1024 * 1024) {
+      toast.error('Ukuran file maksimal 10 MB', { title: 'File terlalu besar' })
+      return
+    }
     let prepared: File
     try {
       prepared = await toUploadableImage(file)
@@ -85,7 +89,7 @@ function ScanPage() {
       return
     }
     upload.mutate(
-      { file: prepared, dateTime: nowDate },
+      { file: prepared, dateTime: dayjs().format(DATE_TIME_FORMAT) },
       {
         onError: (error) => toast.error(getErrorMessage(error), { title: 'Gagal upload' }),
       },
@@ -99,7 +103,12 @@ function ScanPage() {
   }
 
   return (
-    <Container size="sm" px="md" py="lg">
+    <Container
+      size="sm"
+      px="md"
+      py="lg"
+      pb={isMobile ? 'calc(96px + env(safe-area-inset-bottom))' : 'lg'}
+    >
       <Stack gap="lg">
         <PageHeader
           eyebrow="Pemindai Struk AI"
@@ -177,6 +186,8 @@ function ScanPage() {
             <Group justify="center" py="xl">
               <Loader />
             </Group>
+          ) : isError ? (
+            <ErrorState message="Gagal memuat daftar struk." onRetry={() => void refetch()} />
           ) : invoices.length === 0 ? (
             <Paper withBorder p="xl" radius="md">
               <Stack align="center" gap={4}>
@@ -226,14 +237,22 @@ function ScanPage() {
         accept="image/*"
         capture="environment"
         style={{ display: 'none' }}
-        onChange={(e) => void pick(e.target.files?.[0] ?? null)}
+        onChange={(e) => {
+          const file = e.target.files?.[0] ?? null
+          e.currentTarget.value = ''
+          void pick(file)
+        }}
       />
       <input
         ref={galleryRef}
         type="file"
         accept="image/*,application/pdf"
         style={{ display: 'none' }}
-        onChange={(e) => void pick(e.target.files?.[0] ?? null)}
+        onChange={(e) => {
+          const file = e.target.files?.[0] ?? null
+          e.currentTarget.value = ''
+          void pick(file)
+        }}
       />
 
       {reviewId && (

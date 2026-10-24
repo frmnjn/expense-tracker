@@ -23,7 +23,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
-MYSQL_CONTAINER="${MYSQL_CONTAINER:-expensetracker-mysql-1}"
+MYSQL_CONTAINER="${MYSQL_CONTAINER:-expense-tracker-mysql-1}"
 DB_NAME="${DB_NAME:-expense_tracker}"
 UPLOAD_DIR="${UPLOAD_DIR:-${PROJECT_ROOT}/uploads}"
 
@@ -51,12 +51,15 @@ main() {
     echo "==> Upload dir: ${UPLOAD_DIR}"
     confirm || { echo "Dibatalkan."; exit 1; }
 
-    echo "==> Bersihkan tabel: expenses, invoices, top_ups, idempotency_keys ..."
+    echo "==> Bersihkan tabel data transaksi ..."
     docker exec "${MYSQL_CONTAINER}" mysql \
         -u"${DB_USER}" -p"${DB_PASSWORD}" "${DB_NAME}" 2>/dev/null <<'SQL'
 DELETE FROM expenses;
 DELETE FROM invoices;
+DELETE FROM voice_notes;
+DELETE FROM email_imports;
 DELETE FROM top_ups;
+DELETE FROM period_reports;
 DELETE FROM idempotency_keys;
 SQL
 

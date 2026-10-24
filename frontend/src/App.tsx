@@ -33,6 +33,7 @@ function App() {
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/riwayat" element={<HistoryPage />} />
           <Route path="/laporan" element={<ReportsPage />} />
+          <Route path="*" element={<Navigate to="/catat" replace />} />
         </Route>
       </Routes>
     </BrowserRouter>

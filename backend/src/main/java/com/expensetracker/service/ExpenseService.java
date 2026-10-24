@@ -246,6 +246,7 @@ public class ExpenseService {
                 request.description());
         if (request.invoiceId() != null && !request.invoiceId().isBlank()) {
             attachInvoiceToExpense(id, request.invoiceId(), period);
+            invoiceService.markSubmitted(request.invoiceId());
         }
         if (request.voiceNoteId() != null && !request.voiceNoteId().isBlank()) {
             expenseRepository.attachVoiceNote(id, request.voiceNoteId());
@@ -288,7 +289,7 @@ public class ExpenseService {
         LocalDate periodStart = periodService.periodStart(dateTime.toLocalDate());
 
         if (request.invoiceId() != null && !request.invoiceId().isBlank()) {
-            invoiceService.requireInvoice(request.invoiceId());
+            invoiceService.requireUsableForExpense(request.invoiceId());
             // Ikutkan periode invoice ke tanggal yang dipilih (bisa hasil edit user),
             // agar periode invoice konsisten dengan tanggal expense.
             invoiceService.updatePeriod(request.invoiceId(), dateTime.toLocalDate());
@@ -359,6 +360,7 @@ public class ExpenseService {
 
     private void attachInvoiceToExpense(String expenseId, String invoiceId, String period) {
         InvoiceData invoice = invoiceService.requireInvoice(invoiceId);
+        invoiceService.requireUsableForExpense(invoiceId);
         if (!invoice.period().equals(period)) {
             throw new ValidationException("Invoice is not in the same period as the expense");
         }
@@ -427,9 +429,10 @@ public class ExpenseService {
         if (months < 1) {
             throw new ValidationException("Months must be greater than 0");
         }
+        int safeMonths = Math.min(months, 24);
         List<String> newest = expenseRepository.getPeriods();
-        if (newest.size() > months) {
-            newest = newest.subList(0, months);
+        if (newest.size() > safeMonths) {
+            newest = newest.subList(0, safeMonths);
         }
         List<String> ascending = new ArrayList<>(newest);
         Collections.reverse(ascending);
@@ -503,8 +506,15 @@ public class ExpenseService {
                 request.amount(),
                 request.description());
 
-        if (request.invoiceId() != null && !request.invoiceId().isBlank()) {
+        if (request.invoiceId() != null && !request.invoiceId().isBlank()
+                && !request.invoiceId().equals(current.invoiceId())) {
+            String oldInvoiceId = current.invoiceId();
+            if (oldInvoiceId != null && !oldInvoiceId.isBlank()) {
+                expenseRepository.detachPhoto(id);
+                invoiceService.deleteIfUnused(oldInvoiceId);
+            }
             attachInvoiceToExpense(id, request.invoiceId(), periodService.forDate(dateTime.toLocalDate()));
+            invoiceService.markSubmitted(request.invoiceId());
         }
     }
 
@@ -523,6 +533,9 @@ public class ExpenseService {
         ExpenseData current = requireExpense(id);
         budgetRepository.adjustBalance(current.budgetName(), current.amount());
         expenseRepository.softDelete(id);
+        if (current.invoiceId() != null && !current.invoiceId().isBlank()) {
+            invoiceService.deleteIfUnused(current.invoiceId());
+        }
         if (current.voiceNoteId() != null) {
             voiceNoteService.deleteIfUnused(current.voiceNoteId());
         }

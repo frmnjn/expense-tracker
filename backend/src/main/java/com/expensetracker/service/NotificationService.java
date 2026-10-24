@@ -31,7 +31,8 @@ import java.util.concurrent.Executors;
 public class NotificationService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(NotificationService.class);
-    private static final NumberFormat RUPIAH = NumberFormat.getCurrencyInstance(new Locale("id", "ID"));
+    private static final ThreadLocal<NumberFormat> RUPIAH =
+            ThreadLocal.withInitial(() -> NumberFormat.getCurrencyInstance(new Locale("id", "ID")));
 
     private final HttpClient httpClient;
     private final String notifierUrl;
@@ -53,7 +54,7 @@ public class NotificationService {
                 .connectTimeout(Duration.ofSeconds(5))
                 .build();
         if (testMode) {
-            LOGGER.info("notification TEST MODE active, recipients={}", this.emails);
+            LOGGER.info("notification TEST MODE active, recipients={}", this.emails.size());
         }
     }
 
@@ -80,8 +81,8 @@ public class NotificationService {
                 row("Name", name),
                 row("Budget", budget),
                 row("Date", dateTime),
-                row("Remaining in " + budget, RUPIAH.format(budgetBalance)));
-        send("💳 Expense recorded: " + name + " · " + RUPIAH.format(amount), body);
+                row("Remaining in " + budget, rupiah(budgetBalance)));
+        send("💳 Expense recorded: " + name + " · " + rupiah(amount), body);
     }
 
     public void sendBudgetAlert(String budget, long balance, long threshold) {
@@ -91,8 +92,8 @@ public class NotificationService {
                 balance,
                 "Current balance",
                 row("Budget", budget),
-                row("Threshold", RUPIAH.format(threshold)),
-                row("Shortfall", RUPIAH.format(balance - threshold)));
+                row("Threshold", rupiah(threshold)),
+                row("Shortfall", rupiah(balance - threshold)));
         send("⚠️ Low balance: " + budget, body);
     }
 
@@ -103,8 +104,8 @@ public class NotificationService {
                 amount,
                 "Amount added",
                 row("Budget", budget),
-                row("New balance", RUPIAH.format(newBalance)));
-        send("💰 Top-up: " + budget + " +" + RUPIAH.format(amount), body);
+                row("New balance", rupiah(newBalance)));
+        send("💰 Top-up: " + budget + " +" + rupiah(amount), body);
     }
 
     public void sendBudgetCreated(String name, long balance, long alertThreshold) {
@@ -114,14 +115,14 @@ public class NotificationService {
                 balance,
                 "Initial balance",
                 row("Budget", name),
-                row("Alert threshold", alertThreshold > 0 ? RUPIAH.format(alertThreshold) : "Disabled"));
+                row("Alert threshold", alertThreshold > 0 ? rupiah(alertThreshold) : "Disabled"));
         send("🎉 New budget: " + name, body);
     }
 
     public void sendBatchCreated(long total, int count, String dateTime, Map<String, Long> byBudget) {
         String[] breakdown = byBudget.entrySet().stream()
                 .sorted(Map.Entry.<String, Long>comparingByValue().reversed())
-                .map(e -> row(e.getKey(), RUPIAH.format(e.getValue())))
+                .map(e -> row(e.getKey(), rupiah(e.getValue())))
                 .toArray(String[]::new);
         String[] rows = new String[breakdown.length + 1];
         rows[0] = row("Date", dateTime);
@@ -132,7 +133,7 @@ public class NotificationService {
                 total,
                 "Total",
                 rows);
-        send("📋 Expenses recorded: " + RUPIAH.format(total), body);
+        send("📋 Expenses recorded: " + rupiah(total), body);
     }
 
     public void sendPeriodReport(String period, String dateRange, long total, int count, long topUpTotal,
@@ -145,7 +146,7 @@ public class NotificationService {
                 row("Period", period),
                 row("Date range", dateRange),
                 row("Transactions", String.valueOf(count)),
-                row("Total top-ups", RUPIAH.format(topUpTotal)));
+                row("Total top-ups", rupiah(topUpTotal)));
         send("📊 Period report: " + period, body, new Attachment(fileName, pdf));
     }
 
@@ -220,17 +221,17 @@ public class NotificationService {
                 + "style=\"max-width:480px;width:100%;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',"
                 + "Roboto,Helvetica,Arial,sans-serif\">"
                 + "<tr><td style=\"background:#863bff;border-radius:12px 12px 0 0;padding:22px 24px;color:#ffffff\">"
-                + "<div style=\"font-size:18px;font-weight:700\">" + esc(title) + "</div>"
-                + "<div style=\"font-size:13px;opacity:.85;margin-top:2px\">" + esc(subtitle) + "</div>"
+                + "<div style=\"font-size:18px;font-weight:700\">" + htmlEscape(title) + "</div>"
+                + "<div style=\"font-size:13px;opacity:.85;margin-top:2px\">" + htmlEscape(subtitle) + "</div>"
                 + "</td></tr>"
                 + "<tr><td style=\"background:#ffffff;border-radius:0 0 12px 12px;padding:24px\">"
-                + "<div style=\"text-align:center;color:#9aa0a6;font-size:13px\">" + esc(heroLabel) + "</div>"
+                + "<div style=\"text-align:center;color:#9aa0a6;font-size:13px\">" + htmlEscape(heroLabel) + "</div>"
                 + "<div style=\"text-align:center;color:#111111;font-size:32px;font-weight:800;margin:6px 0 20px\">"
-                + esc(RUPIAH.format(heroAmount)) + "</div>"
+                + htmlEscape(rupiah(heroAmount)) + "</div>"
                 + buildRows(rows)
                 + "<div style=\"border-top:1px solid #eeeeee;margin-top:20px;padding-top:14px;"
                 + "color:#9aa0a6;font-size:12px;line-height:1.5\">"
-                + esc(footer) + "</div>"
+                + htmlEscape(footer) + "</div>"
                 + "</td></tr>"
                 + "</table></td></tr></table></body></html>";
     }
@@ -248,8 +249,8 @@ public class NotificationService {
     private static String row(String label, String value) {
         return "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\" "
                 + "style=\"margin-bottom:10px\"><tr>"
-                + "<td style=\"color:#9aa0a6;font-size:13px;padding-right:12px\">" + esc(label) + "</td>"
-                + "<td style=\"text-align:right;color:#222222;font-size:13px;font-weight:600\">" + esc(value) + "</td>"
+                + "<td style=\"color:#9aa0a6;font-size:13px;padding-right:12px\">" + htmlEscape(label) + "</td>"
+                + "<td style=\"text-align:right;color:#222222;font-size:13px;font-weight:600\">" + htmlEscape(value) + "</td>"
                 + "</tr></table>";
     }
 
@@ -258,17 +259,29 @@ public class NotificationService {
     }
 
     private static String toJsonString(String value) {
-        return "\"" + esc(value) + "\"";
+        return "\"" + jsonEscape(value) + "\"";
     }
 
     private record Attachment(String fileName, byte[] content) {
     }
 
-    private static String esc(String value) {
+    private static String rupiah(long value) {
+        return RUPIAH.get().format(value);
+    }
+
+    private static String jsonEscape(String value) {
         return value.replace("\\", "\\\\")
                 .replace("\"", "\\\"")
                 .replace("\r", "\\r")
                 .replace("\n", "\\n")
                 .replace("\t", "\\t");
+    }
+
+    private static String htmlEscape(String value) {
+        return value.replace("&", "&amp;")
+                .replace("<", "&lt;")
+                .replace(">", "&gt;")
+                .replace("\"", "&quot;")
+                .replace("'", "&#39;");
     }
 }

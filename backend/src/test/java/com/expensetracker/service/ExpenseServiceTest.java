@@ -261,6 +261,15 @@ class ExpenseServiceTest {
     }
 
     @Test
+    void deleteExpense_alreadyDeleted_shouldRejectWithoutRefund() {
+        when(expenseRepository.findById("id123")).thenReturn(null);
+
+        assertThrows(ValidationException.class, () -> expenseService.deleteExpense("id123"));
+        verify(budgetRepository, never()).adjustBalance(anyString(), anyLong());
+        verify(expenseRepository, never()).softDelete("id123");
+    }
+
+    @Test
     void deleteExpense_withVoiceNote_shouldDeleteVoiceNoteIfUnused() {
         when(expenseRepository.findById("id123")).thenReturn(expenseDataWithVoiceNote());
         assertDoesNotThrow(() -> expenseService.deleteExpense("id123"));
@@ -447,6 +456,7 @@ class ExpenseServiceTest {
         ExpenseRequest request = new ExpenseRequest("2026-08-06 14:30", "Makan Siang", "Daily", 35000L, null, "inv-1");
         assertDoesNotThrow(() -> expenseService.createExpense(request));
         verify(expenseRepository).attachInvoice(anyString(), eq("inv-1"));
+        verify(invoiceService).markSubmitted("inv-1");
     }
 
     @Test
@@ -570,8 +580,6 @@ class ExpenseServiceTest {
     void createExpenseBatch_shouldInsertEachAdjustBalanceAggregatedAndMarkSubmitted() {
         when(budgetRepository.findIdByName("Alana")).thenReturn(1L);
         when(budgetRepository.findIdByName("Household")).thenReturn(2L);
-        when(invoiceService.requireInvoice("inv-1"))
-                .thenReturn(new InvoiceData("inv-1", "2026-JUL-AUG", "f.jpg", "2026-07-25T09:00:00", "TO_REVIEW", null));
         BatchExpenseRequest request = new BatchExpenseRequest("2026-08-06 14:30", "inv-1", List.of(
                 new BatchExpenseItem("Popok", "Alana", 50000L, "Popok MamyPoko"),
                 new BatchExpenseItem("Kopi", "Household", 15000L, null)));
@@ -589,8 +597,6 @@ class ExpenseServiceTest {
     @Test
     void createExpenseBatch_invoiceOtherPeriod_shouldUpdateInvoicePeriod() {
         when(budgetRepository.findIdByName("Household")).thenReturn(2L);
-        when(invoiceService.requireInvoice("inv-9"))
-                .thenReturn(new InvoiceData("inv-9", "2026-AUG-SEP", "f.jpg", "2026-08-25T09:00:00", "TO_REVIEW", null));
         BatchExpenseRequest request = new BatchExpenseRequest("2026-08-06 14:30", "inv-9", List.of(
                 new BatchExpenseItem("Kopi", "Household", 15000L, null)));
         assertDoesNotThrow(() -> expenseService.createExpenseBatch(request));

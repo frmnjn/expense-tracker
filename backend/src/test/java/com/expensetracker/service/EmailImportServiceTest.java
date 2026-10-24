@@ -70,7 +70,7 @@ class EmailImportServiceTest {
 
     @Test
     void rejectsImportWhenSameAmountExistsInPeriod() {
-        when(emailImportRepository.findById("e1")).thenReturn(importRow("PENDING_REVIEW"));
+        when(emailImportRepository.findByIdForUpdate("e1")).thenReturn(importRow("PENDING_REVIEW"));
         when(expenseRepository.findByPeriodAndAmount(anyString(), eq(57_500L)))
                 .thenReturn(List.of(existingExpense()));
 
@@ -83,7 +83,7 @@ class EmailImportServiceTest {
 
     @Test
     void forceSkipsDuplicateCheckAndImports() {
-        when(emailImportRepository.findById("e1")).thenReturn(importRow("PENDING_REVIEW"));
+        when(emailImportRepository.findByIdForUpdate("e1")).thenReturn(importRow("PENDING_REVIEW"));
         when(expenseService.createExpense(any())).thenReturn("exp-1");
 
         service.importToExpense("e1", request(57_500L), true);
@@ -95,7 +95,7 @@ class EmailImportServiceTest {
 
     @Test
     void importsWhenNoMatchingExpense() {
-        when(emailImportRepository.findById("e1")).thenReturn(importRow("PENDING_REVIEW"));
+        when(emailImportRepository.findByIdForUpdate("e1")).thenReturn(importRow("PENDING_REVIEW"));
         when(expenseRepository.findByPeriodAndAmount(anyString(), eq(57_500L))).thenReturn(List.of());
         when(expenseService.createExpense(any())).thenReturn("exp-2");
 
@@ -107,7 +107,7 @@ class EmailImportServiceTest {
 
     @Test
     void importSyncsEditedNameAmountAndDateToEmailRow() {
-        when(emailImportRepository.findById("e1")).thenReturn(importRow("PENDING_REVIEW"));
+        when(emailImportRepository.findByIdForUpdate("e1")).thenReturn(importRow("PENDING_REVIEW"));
         when(expenseRepository.findByPeriodAndAmount(anyString(), eq(50_000L))).thenReturn(List.of());
         when(expenseService.createExpense(any())).thenReturn("exp-3");
         ExpenseRequest edited = new ExpenseRequest("2026-09-21 08:00", "Buah Segar Pondok", "Belanja",
@@ -121,7 +121,7 @@ class EmailImportServiceTest {
 
     @Test
     void rejectsImportWhenAlreadyProcessed() {
-        when(emailImportRepository.findById("e1")).thenReturn(importRow("IMPORTED"));
+        when(emailImportRepository.findByIdForUpdate("e1")).thenReturn(importRow("IMPORTED"));
 
         assertThrows(ValidationException.class,
                 () -> service.importToExpense("e1", request(57_500L), false));

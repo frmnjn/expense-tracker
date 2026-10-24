@@ -12,7 +12,7 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use((config) => {
   config.headers.set('X-Trace-Id', newIdempotencyKey())
   const code = getAccessCode()
-  if (code) {
+  if (code && !config.headers.get('X-Access-Code')) {
     config.headers.set('X-Access-Code', code)
   }
   return config
@@ -21,9 +21,11 @@ apiClient.interceptors.request.use((config) => {
 apiClient.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error?.response?.status === 401 && window.location.pathname !== '/lock') {
+    const basePath = import.meta.env.BASE_URL.replace(/\/$/, '') || ''
+    const lockPath = `${basePath}/lock`
+    if (error?.response?.status === 401 && !window.location.pathname.endsWith('/lock')) {
       clearAccessCode()
-      window.location.href = '/lock'
+      window.location.href = lockPath
     }
     return Promise.reject(error)
   },

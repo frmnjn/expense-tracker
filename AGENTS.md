@@ -384,8 +384,27 @@ Produksi **memakai image JVM** (`expense-tracker-backend-jvm:latest`, dibuild da
 Image backend (JVM) dibuild **langsung di VPS** (terbukti aman tanpa OOM, lihat **Runtime Backend**):
 
 ```bash
-./deploy-vps.sh   # git pull -> docker build backend (di VPS) -> compose up -d --build -> prune -> verifikasi
+./deploy-vps.sh   # git pull -> backup DB -> build (tag commit + latest) -> compose up -> health gate /ready
 ```
+
+Deploy **wajib** melewati health gate `/ready` (cek koneksi DB), bukan hanya `compose ps`. Script menyimpan tag `rollback-<timestamp>` sebelum menimpa `latest`.
+
+### CI (wajib hijau sebelum merge)
+
+`.github/workflows/ci.yml` menjalankan:
+
+* backend: `mvn -B test`
+* frontend: `npm ci`, `npm run lint`, `npm run build`
+* notifier: `go build ./...`
+* compose: validasi `docker compose config`
+
+Jangan merge bila CI gagal. Build Docker backend memakai `-DskipTests`, jadi test harus lulus di CI/di lokal sebelum deploy.
+
+### Keamanan akses
+
+* `ACCESS_CODE` **wajib** di produksi. Bila kosong, API fail-closed (503) kecuali `ACCESS_ALLOW_BLANK=true` untuk development.
+* Jangan mengaktifkan `ACCESS_ALLOW_BLANK` di produksi.
+* Rate limit login memakai IP hop terakhir dari `X-Forwarded-For` (di belakang nginx).
 
 Skrip lain:
 
@@ -399,6 +418,12 @@ Skrip lain:
 Semua deploy ke VPS berasumsi SSH key `root@example.com` tanpa password sudah terdaftar.
 
 Backup MySQL otomatis (cron di VPS) dan manual via `scripts/backup_mysql.sh` / `scripts/restore_mysql.sh`.
+
+---
+
+## Documentation
+
+Sumber dokumentasi: `README.md`, `PRD.md`, `AGENTS.md`, dan `docs/`. File `TASKS.md` sudah dihapus agar tidak ada checklist usang.
 
 ---
 

@@ -112,7 +112,7 @@ export default function LockPage() {
 function GroupPin({ pin, error }: { pin: string; error: boolean }) {
   return (
     <Group gap={10} justify="center" align="center">
-      {Array.from({ length: 6 }).map((_, i) => (
+      {Array.from({ length: Math.max(6, Math.min(pin.length + 1, MAX_PIN)) }).map((_, i) => (
         <Box
           key={i}
           w={14}

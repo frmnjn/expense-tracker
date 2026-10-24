@@ -73,6 +73,9 @@ export function SpendingTrend({
                 <Text size="xs" ff="monospace" c={isSelected ? undefined : 'dimmed'} truncate>
                   {formatCurrency(p.total)}
                 </Text>
+                <Text size="xs" c="dimmed">
+                  {p.count} transaksi
+                </Text>
               </Stack>
             )
           })}

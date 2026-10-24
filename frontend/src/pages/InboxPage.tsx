@@ -19,6 +19,7 @@ import { useDiscardEmail, useEmailImports, usePollEmails, useRetryEmailImport } 
 import { getPollStatus } from '../services/emailImports'
 import { PageHeader } from '../components/PageHeader'
 import { AppPagination } from '../components/AppPagination'
+import { ErrorState } from '../components/ErrorState'
 import ImportEmailModal from '../components/ImportEmailModal'
 import EmailRincianModal from '../components/EmailRincianModal'
 import { useToast } from '../components/Toast'
@@ -50,7 +51,7 @@ function InboxPage() {
   const [polling, setPolling] = useState(false)
   const navigate = useNavigate()
   const queryClient = useQueryClient()
-  const { data, isPending } = useEmailImports(status)
+  const { data, isPending, isError, refetch } = useEmailImports(status)
   const poll = usePollEmails()
   const discard = useDiscardEmail()
   const retry = useRetryEmailImport()
@@ -120,7 +121,12 @@ function InboxPage() {
   }
 
   return (
-    <Container size="sm" px="md" py="lg">
+    <Container
+      size="sm"
+      px="md"
+      py="lg"
+      pb={{ base: 'calc(96px + env(safe-area-inset-bottom))', sm: 'lg' }}
+    >
       <Stack gap="lg">
         <PageHeader
           eyebrow="Transaksi Email"
@@ -163,6 +169,8 @@ function InboxPage() {
           <Group justify="center" py="xl">
             <Loader />
           </Group>
+        ) : isError ? (
+          <ErrorState message="Gagal memuat inbox email." onRetry={() => void refetch()} />
         ) : imports.length === 0 ? (
           <Paper withBorder p="xl" radius="md">
             <Stack align="center" gap="sm">

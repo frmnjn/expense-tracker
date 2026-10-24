@@ -30,9 +30,11 @@ public class EmailImportRepository {
                 "INSERT INTO email_imports (id, message_id, sender, subject, received_at, transaction_at, "
                         + "merchant, amount, description, suggested_budget, suggested_category, parse_method, status, error_message, "
                         + "expense_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?)",
-                id, messageId, sender, subject,
+                id, messageId, truncate(sender, 320), truncate(subject, 512),
                 Timestamp.valueOf(receivedAt), transactionAt,
-                merchant, amount, description, suggestedBudget, suggestedCategory, parseMethod, status, errorMessage,
+                truncate(merchant, 255), amount, truncate(description, 10000),
+                truncate(suggestedBudget, 255), truncate(suggestedCategory, 255), parseMethod, status,
+                truncate(errorMessage, 500),
                 Timestamp.valueOf(LocalDateTime.now()));
     }
 
@@ -60,6 +62,14 @@ public class EmailImportRepository {
     public EmailImportData findById(String id) {
         List<EmailImportData> rows = jdbcTemplate.query(
                 "SELECT " + COLUMNS + " FROM email_imports WHERE id = ?",
+                this::mapRow, id);
+        return rows.isEmpty() ? null : rows.get(0);
+    }
+
+    /** Kunci baris agar dua request import tidak memproses email yang sama bersamaan. */
+    public EmailImportData findByIdForUpdate(String id) {
+        List<EmailImportData> rows = jdbcTemplate.query(
+                "SELECT " + COLUMNS + " FROM email_imports WHERE id = ? FOR UPDATE",
                 this::mapRow, id);
         return rows.isEmpty() ? null : rows.get(0);
     }
@@ -94,7 +104,8 @@ public class EmailImportRepository {
                         + "suggested_budget = ?, suggested_category = ?, parse_method = ?, status = ?, "
                         + "error_message = ? WHERE id = ?",
                 transactionAt,
-                merchant, amount, description, suggestedBudget, suggestedCategory, parseMethod, status, safe, id);
+                truncate(merchant, 255), amount, truncate(description, 10000),
+                truncate(suggestedBudget, 255), truncate(suggestedCategory, 255), parseMethod, status, safe, id);
     }
 
     public void markFailed(String id, String message) {
@@ -102,6 +113,13 @@ public class EmailImportRepository {
         jdbcTemplate.update(
                 "UPDATE email_imports SET status = 'FAILED', error_message = ? WHERE id = ?",
                 safe.substring(0, Math.min(safe.length(), 500)), id);
+    }
+
+    private static String truncate(String value, int max) {
+        if (value == null) {
+            return null;
+        }
+        return value.length() <= max ? value : value.substring(0, max);
     }
 
     private EmailImportData mapRow(ResultSet rs, int rowNum) throws SQLException {

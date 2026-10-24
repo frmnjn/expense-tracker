@@ -22,33 +22,55 @@ public class IdempotencyService {
         this.objectMapper = objectMapper;
     }
 
-    public Optional<ApiResponse> find(String key) {
+    /**
+     * Klaim key sebelum side effect dijalankan. Bila key sudah selesai, hasil
+     * lama dikembalikan. Bila request lain masih memproses key yang sama,
+     * lempar {@link DuplicateRequestException} agar tidak terjadi double write.
+     */
+    public Optional<ApiResponse> begin(String key) {
         if (key == null || key.isBlank()) {
+            return Optional.empty();
+        }
+        if (idempotencyRepository.claim(key)) {
+            idempotencyRepository.deleteOlderThan(LocalDateTime.now().minusHours(TTL_HOURS));
             return Optional.empty();
         }
         String json = idempotencyRepository.find(key);
         if (json == null) {
-            return Optional.empty();
+            throw new DuplicateRequestException("Permintaan dengan Idempotency-Key yang sama sedang diproses");
         }
-        try {
-            Map<?, ?> parsed = objectMapper.readValue(json, Map.class);
-            Object data = parsed.get("data");
-            return Optional.of(new ApiResponse(true, null, data));
-        } catch (Exception e) {
-            return Optional.empty();
+        if (json.contains("\"pending\":true")) {
+            throw new DuplicateRequestException("Permintaan dengan Idempotency-Key yang sama sedang diproses");
         }
+        return Optional.of(parse(json));
     }
 
-    public void save(String key, ApiResponse response) {
+    public void complete(String key, ApiResponse response) {
         if (key == null || key.isBlank()) {
             return;
         }
         try {
-            String json = objectMapper.writeValueAsString(response);
-            idempotencyRepository.save(key, json);
+            idempotencyRepository.complete(key, objectMapper.writeValueAsString(response));
         } catch (Exception e) {
+            idempotencyRepository.delete(key);
+        }
+    }
+
+    /** Lepas klaim agar request yang gagal bisa dicoba ulang dengan key yang sama. */
+    public void abort(String key) {
+        if (key == null || key.isBlank()) {
             return;
         }
-        idempotencyRepository.deleteOlderThan(LocalDateTime.now().minusHours(TTL_HOURS));
+        idempotencyRepository.delete(key);
+    }
+
+    private ApiResponse parse(String json) {
+        try {
+            Map<?, ?> parsed = objectMapper.readValue(json, Map.class);
+            Object data = parsed.get("data");
+            return new ApiResponse(true, null, data);
+        } catch (Exception e) {
+            throw new DuplicateRequestException("Respons idempotensi tidak valid");
+        }
     }
 }

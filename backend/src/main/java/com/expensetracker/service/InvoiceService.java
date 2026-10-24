@@ -36,7 +36,7 @@ public class InvoiceService {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(InvoiceService.class);
 
-    private static final Set<String> ALLOWED_EXTENSIONS = Set.of("jpg", "jpeg", "png", "pdf");
+    private static final Set<String> ALLOWED_EXTENSIONS = Set.of("jpg", "jpeg", "png", "webp", "gif", "pdf");
 
     /** Status scan yang boleh dihapus dari halaman scan (belum pernah di-submit jadi expense). */
     private static final Set<String> DELETABLE_SCAN_STATUSES = Set.of(
@@ -162,7 +162,7 @@ public class InvoiceService {
         }
         String ext = extensionOf(originalName);
         if (!ALLOWED_EXTENSIONS.contains(ext)) {
-            throw new ValidationException("Only jpg, png, and pdf are allowed");
+            throw new ValidationException("Only jpg, png, webp, gif, and pdf are allowed");
         }
         String invoiceId = UUID.randomUUID().toString();
         String filename = invoiceId + "." + ext;
@@ -183,7 +183,7 @@ public class InvoiceService {
         }
         String ext = extensionOf(file.getOriginalFilename());
         if (!ALLOWED_EXTENSIONS.contains(ext)) {
-            throw new ValidationException("Only jpg, png, and pdf are allowed");
+            throw new ValidationException("Only jpg, png, webp, gif, and pdf are allowed");
         }
         String invoiceId = UUID.randomUUID().toString();
         String filename = "pdf".equals(ext) ? invoiceId + ".pdf" : invoiceId + ".jpg";
@@ -207,6 +207,20 @@ public class InvoiceService {
 
     public void markSubmitted(String id) {
         invoiceRepository.updateStatus(id, InvoiceStatus.SUBMITTED.value());
+    }
+
+    /**
+     * Invoice hasil scan hanya boleh dipakai sekali, yaitu saat statusnya masih
+     * TO_REVIEW. Invoice foto biasa (non scan) tetap boleh dipakai ulang.
+     */
+    public void requireUsableForExpense(String id) {
+        InvoiceData invoice = requireInvoice(id);
+        if (!invoiceRepository.isScanFlow(id)) {
+            return;
+        }
+        if (!InvoiceStatus.TO_REVIEW.value().equals(invoice.status())) {
+            throw new ValidationException("Struk ini sudah diproses dan tidak bisa dipakai lagi");
+        }
     }
 
     /** Perbarui periode invoice agar sesuai tanggal belanja yang dipilih. */

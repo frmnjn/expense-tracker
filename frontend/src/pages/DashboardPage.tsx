@@ -23,7 +23,7 @@ import { previousPeriod, parsePeriodStart, elapsedDayCount } from '../utils/peri
 import { buildInsights } from '../utils/insights'
 
 function DashboardPage() {
-  const { data: periodsData, isPending: periodsLoading } = usePeriods()
+  const { data: periodsData, isPending: periodsLoading, isError: periodsError } = usePeriods()
   const { data: options, isPending: optionsLoading, isError: optionsError } = useOptions()
   const [period, setPeriod] = useState<string | null>(null)
   const [selectedTopUpBudget, setSelectedTopUpBudget] = useState<string | null>(null)
@@ -102,7 +102,7 @@ function DashboardPage() {
   }, [summary, comparison, budgets, comparisonNote, expensesData])
 
   return (
-    <Container size="lg" px={{ base: 'md', sm: 'md' }} py={{ base: 'md', sm: 'md' }} pb={{ base: 88, sm: 'md' }}>
+    <Container size="lg" px={{ base: 'md', sm: 'md' }} py={{ base: 'md', sm: 'md' }} pb={{ base: 'calc(96px + env(safe-area-inset-bottom))', sm: 'md' }}>
       <Stack gap="xl">
         <PageHeader
           eyebrow="Ringkasan"
@@ -180,7 +180,7 @@ function DashboardPage() {
           prevTotal={comparison.prevTotal}
           comparisonNote={comparisonNote}
           isLoading={summaryLoading || prevExpensesLoading}
-          isError={summaryError || prevExpensesError}
+          isError={summaryError || prevExpensesError || periodsError}
           hasPeriod={!!period}
         />
 

@@ -19,6 +19,7 @@
 #   0 3 * * * /root/expense-tracker/scripts/backup_mysql.sh >> /var/log/expense-backup.log 2>&1
 
 set -euo pipefail
+umask 077
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
@@ -65,5 +66,6 @@ ls -1t "${BACKUP_DIR}/${DB_NAME}"_*.sql.gz 2>/dev/null | tail -n +$((KEEP + 1)) 
     rm -f "${old}"
 done
 
+chmod 600 "${OUT}"
 echo "==> Selesai. Backup tersimpan:"
 ls -lh "${BACKUP_DIR}/${DB_NAME}"_*.sql.gz | tail -n "${KEEP}"

@@ -34,8 +34,12 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.Set;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -57,7 +61,10 @@ public class VoiceNoteAnalysisService implements ApplicationRunner {
     private final BudgetRepository budgetRepository;
     private final ObjectMapper objectMapper;
     private final HttpClient httpClient;
-    private final ExecutorService executor = Executors.newFixedThreadPool(2);
+    private final ThreadPoolExecutor executor = new ThreadPoolExecutor(
+            2, 2, 0L, TimeUnit.MILLISECONDS, new ArrayBlockingQueue<>(100),
+            runnable -> new Thread(runnable, "voice-analysis"));
+    private final Set<String> inFlight = ConcurrentHashMap.newKeySet();
 
     private final String apiKey;
     private final String model;
@@ -93,7 +100,22 @@ public class VoiceNoteAnalysisService implements ApplicationRunner {
     }
 
     public void trigger(String voiceNoteId) {
-        executor.execute(MdcTask.wrap(() -> analyze(voiceNoteId)));
+        if (!inFlight.add(voiceNoteId)) {
+            LOGGER.info("voice note {} is already queued/analyzing, skipping duplicate trigger", voiceNoteId);
+            return;
+        }
+        try {
+            executor.execute(MdcTask.wrap(() -> {
+                try {
+                    analyze(voiceNoteId);
+                } finally {
+                    inFlight.remove(voiceNoteId);
+                }
+            }));
+        } catch (RejectedExecutionException e) {
+            inFlight.remove(voiceNoteId);
+            LOGGER.warn("voice analysis queue full, rejecting {}", voiceNoteId);
+        }
     }
 
     @Override

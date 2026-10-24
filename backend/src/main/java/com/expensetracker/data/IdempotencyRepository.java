@@ -25,19 +25,26 @@ public class IdempotencyRepository {
         return rows.isEmpty() ? null : rows.get(0);
     }
 
-    /**
-     * Menyimpan key baru. Mengembalikan false jika key sudah ada (menangani race
-     * dua request bersamaan dengan key yang sama) atau gagal disimpan.
-     */
-    public boolean save(String key, String responseJson) {
+    /** Klaim key secara atomik. False berarti key sudah diklaim request lain. */
+    public boolean claim(String key) {
         try {
             jdbcTemplate.update(
                     "INSERT INTO idempotency_keys (id_key, response_json, created_at) VALUES (?, ?, ?)",
-                    key, responseJson, Timestamp.valueOf(LocalDateTime.now()));
+                    key, "{\"pending\":true}", Timestamp.valueOf(LocalDateTime.now()));
             return true;
         } catch (DuplicateKeyException e) {
             return false;
         }
+    }
+
+    public void complete(String key, String responseJson) {
+        jdbcTemplate.update(
+                "UPDATE idempotency_keys SET response_json = ? WHERE id_key = ?",
+                responseJson, key);
+    }
+
+    public void delete(String key) {
+        jdbcTemplate.update("DELETE FROM idempotency_keys WHERE id_key = ?", key);
     }
 
     public void deleteOlderThan(LocalDateTime cutoff) {

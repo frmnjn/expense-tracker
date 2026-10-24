@@ -418,7 +418,7 @@ public class EmailInboxService {
             return null;
         }
         try (InputStream in = part.getInputStream()) {
-            byte[] bytes = in.readAllBytes();
+            byte[] bytes = in.readNBytes((int) MAX_ATTACHMENT_BYTES + 1);
             if (bytes.length == 0 || bytes.length > MAX_ATTACHMENT_BYTES) {
                 return null;
             }

@@ -15,7 +15,7 @@ export function useVoiceNotes(period: string | null) {
     enabled: !!period,
     refetchInterval: (query) => {
       const hasAnalyzing = query.state.data?.voiceNotes.some((n) => n.status === 'ANALYZING')
-      return hasAnalyzing ? 1000 : false
+      return hasAnalyzing ? 3000 : false
     },
   })
 }
@@ -25,7 +25,7 @@ export function useVoiceNoteDetail(id: string | null) {
     queryKey: ['voice-note-detail', id],
     queryFn: () => getVoiceNoteDetail(id ?? ''),
     enabled: !!id,
-    refetchInterval: (query) => (query.state.data?.status === 'ANALYZING' ? 1000 : false),
+    refetchInterval: (query) => (query.state.data?.status === 'ANALYZING' ? 3000 : false),
   })
 }
 

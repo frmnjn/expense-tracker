@@ -55,6 +55,14 @@ public class InvoiceRepository {
         jdbcTemplate.update("UPDATE invoices SET scan_flow = TRUE WHERE id = ?", id);
     }
 
+    public boolean isScanFlow(String id) {
+        List<Boolean> rows = jdbcTemplate.query(
+                "SELECT scan_flow FROM invoices WHERE id = ? AND deleted = FALSE",
+                (rs, rowNum) -> rs.getBoolean("scan_flow"),
+                id);
+        return !rows.isEmpty() && rows.get(0);
+    }
+
     public InvoiceData findById(String id) {
         List<InvoiceData> rows = jdbcTemplate.query(
                 "SELECT id, period, photo_path, created_at, status, original_name, retry_count, retry_max, ai_provider FROM invoices "
@@ -152,7 +160,7 @@ public class InvoiceRepository {
 
     public int countExpensesUsing(String id) {
         List<Integer> counts = jdbcTemplate.query(
-                "SELECT COUNT(*) FROM expenses WHERE invoice_id = ?",
+                "SELECT COUNT(*) FROM expenses WHERE invoice_id = ? AND deleted = FALSE",
                 (rs, rowNum) -> rs.getInt(1),
                 id);
         return counts.isEmpty() ? 0 : counts.get(0);

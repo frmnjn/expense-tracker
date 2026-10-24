@@ -39,6 +39,7 @@ import { useOptions } from '../hooks/useOptions'
 import PhotoInput, { type PhotoSelection } from '../components/PhotoInput'
 import { TransactionCard } from '../components/TransactionCard'
 import { AppPagination } from '../components/AppPagination'
+import { ErrorState } from '../components/ErrorState'
 import { useToast } from '../components/Toast'
 import { getPhotoUrl } from '../services/expense'
 import { getVoiceNoteAudioUrl } from '../services/voiceNotes'
@@ -66,7 +67,7 @@ function HistoryPage() {
   const { data: periodsData, isPending: periodsLoading } = usePeriods()
   const { data: options } = useOptions()
   const [period, setPeriod] = useState<string | null>(null)
-  const { data: expensesData, isPending: expensesLoading } = useExpenses(period)
+  const { data: expensesData, isPending: expensesLoading, isError: expensesError, refetch: refetchExpenses } = useExpenses(period)
   const isMobile = useMediaQuery('(max-width: 48em)')
 
   useEffect(() => {
@@ -364,7 +365,9 @@ function HistoryPage() {
             overlayProps={{ radius: 'lg', blur: 1 }}
           />
 
-          {expenses.length === 0 ? (
+          {expensesError ? (
+            <ErrorState message="Gagal memuat pengeluaran." onRetry={() => void refetchExpenses()} />
+          ) : expenses.length === 0 ? (
             <Stack align="center" gap="sm" py="lg">
               <Text c="dimmed" ta="center">
                 {period ? 'Belum ada pengeluaran pada periode ini.' : 'Pilih periode untuk melihat pengeluaran.'}

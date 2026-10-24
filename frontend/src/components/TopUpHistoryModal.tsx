@@ -15,7 +15,7 @@ function TopUpHistoryModal({
   const { data: topUpsData } = useTopUps()
 
   const history = useMemo(
-    () => (topUpsData?.topUps ?? []).filter((t) => t.budget === budget).slice().reverse(),
+    () => (topUpsData?.topUps ?? []).filter((t) => t.budget === budget).slice(),
     [topUpsData, budget],
   )
 

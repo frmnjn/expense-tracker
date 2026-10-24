@@ -17,10 +17,10 @@
 #
 # Alur (semua dijalankan di VPS via SSH):
 #   1. git pull (update kode + compose)
-#   2. docker build image backend JVM (backend/Dockerfile)
-#   3. docker compose up -d --build (rebuild frontend + start backend)
-#   4. docker image prune -f (bersihkan dangling)
-#   5. verifikasi container & health
+#   2. backup database sebelum migrasi
+#   3. docker build image backend JVM (tag commit + latest)
+#   4. docker compose up -d --build (rebuild frontend + start backend)
+#   5. health gate (/ready) + bersihkan dangling
 
 set -euo pipefail
 
@@ -51,27 +51,38 @@ if ! ssh -o BatchMode=yes -o ConnectTimeout=10 "root@${VPS_HOST}" 'true' >/dev/n
     exit 1
 fi
 
-step "[1/5] git pull di VPS" \
+step "[1/6] git pull di VPS" \
     ssh -o BatchMode=yes "root@${VPS_HOST}" \
     "cd ${VPS_DIR} && git checkout -- . && git pull --ff-only origin master"
 
-step "[2/5] build image backend JVM di VPS (${IMAGE})" \
+step "[2/6] backup database sebelum migrasi" \
     ssh -o BatchMode=yes "root@${VPS_HOST}" \
-    "cd ${VPS_DIR} && docker build -f backend/Dockerfile -t ${IMAGE} backend/"
+    "cd ${VPS_DIR} && ./scripts/backup_mysql.sh"
 
-step "[3/5] docker compose up -d --build (rebuild frontend + start backend)" \
+step "[3/6] build image backend JVM di VPS (${IMAGE})" \
+    ssh -o BatchMode=yes "root@${VPS_HOST}" \
+    "cd ${VPS_DIR} && SHA=\$(git rev-parse --short HEAD) && \
+     PREV=\$(docker image inspect ${IMAGE} --format '{{.Id}}' 2>/dev/null || true) && \
+     if [ -n \"\$PREV\" ]; then docker tag \$PREV ${IMAGE%-latest}:rollback-\$(date +%Y%m%d%H%M%S); fi && \
+     docker build -f backend/Dockerfile -t ${IMAGE} -t ${IMAGE%-latest}:\$SHA backend/"
+
+step "[4/6] docker compose up -d --build (rebuild frontend + start backend)" \
     ssh -o BatchMode=yes "root@${VPS_HOST}" \
     "cd ${VPS_DIR} && docker compose -f docker-compose.prod.yml up -d --build"
 
-step "[4/5] bersihkan image dangling di VPS" \
-    ssh -o BatchMode=yes "root@${VPS_HOST}" "docker image prune -f" || true
-
-step "[5/5] verifikasi" \
+step "[5/6] health gate /ready" \
     ssh -o BatchMode=yes "root@${VPS_HOST}" \
-    "cd ${VPS_DIR} && docker compose -f docker-compose.prod.yml ps"
+    "cd ${VPS_DIR} && for i in \$(seq 1 30); do \
+       if docker compose -f docker-compose.prod.yml exec -T backend curl -fsS http://localhost:8080/ready >/dev/null; then \
+         echo 'backend ready'; exit 0; fi; sleep 2; done; \
+     echo 'ERROR: backend tidak ready' >&2; docker compose -f docker-compose.prod.yml logs --tail=80 backend >&2; exit 1"
+
+step "[6/6] bersihkan image dangling di VPS" \
+    ssh -o BatchMode=yes "root@${VPS_HOST}" "docker image prune -f" || true
 
 echo ""
 printf 'Total semua step: %d.%03ds\n' $((TOTAL_MS / 1000)) $((TOTAL_MS % 1000))
 echo ""
 echo "Deploy VPS selesai. Cek health:"
-echo "  curl -s http://localhost:23824/api/health"
+echo "  curl -s https://expense.frmnjn.my.id/api/health"
+echo "Rollback: gunakan image ${IMAGE%-latest}:rollback-<timestamp> lalu compose up -d."

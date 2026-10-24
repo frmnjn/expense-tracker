@@ -20,6 +20,7 @@ import dayjs from 'dayjs'
 import { useInvoiceDetail, useCreateExpenseBatch } from '../hooks/useScan'
 import { useOptions } from '../hooks/useOptions'
 import { getInvoicePhotoUrl } from '../services/expense'
+import { ErrorState } from './ErrorState'
 import type { BudgetOption } from '../types/expense'
 import { formatCurrency } from '../utils/currency'
 import { getErrorMessage } from '../utils/error'
@@ -78,8 +79,9 @@ function ReviewModal({
   invoiceId: string
   onClose: () => void
   onSubmitted: () => void
-}) {  const { data, isPending } = useInvoiceDetail(invoiceId)
-  const { data: options } = useOptions()
+}) {
+  const { data, isPending, isError, refetch } = useInvoiceDetail(invoiceId)
+  const { data: options, isError: optionsError, refetch: refetchOptions } = useOptions()
   const batch = useCreateExpenseBatch()
   const toast = useToast()
   const isMobile = useMediaQuery('(max-width: 48em)')
@@ -153,12 +155,12 @@ function ReviewModal({
   // tidak boleh menimpa editan user, jadi kunci dengan invoiceId.
   const initializedInvoiceRef = useRef<string | null>(null)
   useEffect(() => {
-    if (!analysis) return
+    if (!analysis || !options) return
     if (initializedInvoiceRef.current === invoiceId) return
     initializedInvoiceRef.current = invoiceId
     setItems(toEditItems(analysis, budgets))
     setGroupNames({})
-  }, [analysis, budgets, invoiceId])
+  }, [analysis, budgets, invoiceId, options])
 
   const updateItem = (key: string, patch: Partial<EditItem>) => {
     setItems((prev) => prev.map((it) => (it.key === key ? { ...it, ...patch } : it)))
@@ -240,6 +242,10 @@ function ReviewModal({
 
   const handleSubmit = () => {
     if (batch.isPending) return
+    if (groups.length === 0) {
+      toast.error('Belum ada item dengan budget yang valid', { title: 'Belum lengkap' })
+      return
+    }
     if (invalid) {
       toast.error('Periksa item yang ditandai di bawah', { title: 'Belum lengkap' })
       return
@@ -304,6 +310,14 @@ function ReviewModal({
         <Group justify="center" py="xl">
           <Loader />
         </Group>
+      ) : isError || optionsError ? (
+        <ErrorState
+          message="Gagal memuat detail struk atau daftar budget."
+          onRetry={() => {
+            void refetch()
+            void refetchOptions()
+          }}
+        />
       ) : data?.status === 'ERROR' ? (
         <Text size="sm" c="red">
           Analisis gagal{data.errorMessage ? `: ${data.errorMessage}` : ''}. Coba lagi dari halaman Scan.
@@ -590,11 +604,18 @@ function ReviewModal({
             </Stack>
           )}
 
+          {groups.length === 0 && (
+            <Text size="xs" c="orange">
+              Tambahkan minimal satu item dan pilih budget sebelum menyimpan.
+            </Text>
+          )}
+
           <Button
             fullWidth
             size="md"
             onClick={handleSubmit}
             loading={batch.isPending}
+            disabled={groups.length === 0}
           >
             Buat {groups.length} Pengeluaran
           </Button>

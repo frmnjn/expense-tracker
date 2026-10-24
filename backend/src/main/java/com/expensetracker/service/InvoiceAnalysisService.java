@@ -41,8 +41,12 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.Set;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.imageio.ImageIO;
@@ -60,6 +64,7 @@ public class InvoiceAnalysisService implements ApplicationRunner {
     private static final String GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta";
     private static final String PROVIDER_GEMINI = "GEMINI";
     private static final String PROVIDER_DEEPSEEK = "DEEPSEEK";
+    private static final long MAX_PDF_PIXELS = 40_000_000L;
     private static final Pattern RETRY_IN = Pattern.compile("retry in ([0-9]+(?:\\.[0-9]+)?)s",
             Pattern.CASE_INSENSITIVE);
     private static final DateTimeFormatter REFERENCE_TIME_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
@@ -76,7 +81,10 @@ public class InvoiceAnalysisService implements ApplicationRunner {
     private final PeriodService periodService;
     private final Clock clock;
     private final HttpClient httpClient;
-    private final ExecutorService executor = Executors.newFixedThreadPool(2);
+    private final ThreadPoolExecutor executor = new ThreadPoolExecutor(
+            2, 2, 0L, TimeUnit.MILLISECONDS, new ArrayBlockingQueue<>(100),
+            runnable -> new Thread(runnable, "invoice-analysis"));
+    private final Set<String> inFlight = ConcurrentHashMap.newKeySet();
 
     private final String apiKey;
     private final String model;
@@ -132,7 +140,23 @@ public class InvoiceAnalysisService implements ApplicationRunner {
     }
 
     public void trigger(String invoiceId) {
-        executor.execute(MdcTask.wrap(() -> analyze(invoiceId)));
+        if (!inFlight.add(invoiceId)) {
+            LOGGER.info("invoice {} is already queued/analyzing, skipping duplicate trigger", invoiceId);
+            return;
+        }
+        try {
+            executor.execute(MdcTask.wrap(() -> {
+                try {
+                    analyze(invoiceId);
+                } finally {
+                    inFlight.remove(invoiceId);
+                }
+            }));
+        } catch (RejectedExecutionException e) {
+            inFlight.remove(invoiceId);
+            LOGGER.warn("invoice analysis queue full, rejecting {}", invoiceId);
+            invoiceRepository.updateError(invoiceId, "Antrian analisis penuh, coba lagi nanti");
+        }
     }
 
     /** Dipanggil saat startup: analisis ulang invoice yang stuck ANALYZING. */
@@ -305,6 +329,13 @@ public class InvoiceAnalysisService implements ApplicationRunner {
         try (PDDocument document = Loader.loadPDF(pdf)) {
             if (document.getNumberOfPages() == 0) {
                 throw new IOException("PDF has no pages");
+            }
+            org.apache.pdfbox.pdmodel.PDPage page = document.getPage(0);
+            float width = page.getCropBox().getWidth();
+            float height = page.getCropBox().getHeight();
+            long pixels = (long) ((width / 72.0) * 200) * (long) ((height / 72.0) * 200);
+            if (pixels > MAX_PDF_PIXELS) {
+                throw new IOException("PDF page is too large to render");
             }
             BufferedImage image = new PDFRenderer(document).renderImageWithDPI(0, 200);
             ByteArrayOutputStream out = new ByteArrayOutputStream();
@@ -601,7 +632,20 @@ public class InvoiceAnalysisService implements ApplicationRunner {
     }
 
     private String mimeTypeOf(String photoPath) {
-        return photoPath.toLowerCase(Locale.ROOT).endsWith(".pdf") ? "application/pdf" : "image/jpeg";
+        String lower = photoPath.toLowerCase(Locale.ROOT);
+        if (lower.endsWith(".pdf")) {
+            return "application/pdf";
+        }
+        if (lower.endsWith(".png")) {
+            return "image/png";
+        }
+        if (lower.endsWith(".webp")) {
+            return "image/webp";
+        }
+        if (lower.endsWith(".gif")) {
+            return "image/gif";
+        }
+        return "image/jpeg";
     }
 
     @PreDestroy

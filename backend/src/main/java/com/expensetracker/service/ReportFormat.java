@@ -9,7 +9,8 @@ import java.util.Locale;
 
 public final class ReportFormat {
 
-    private static final NumberFormat RUPIAH = NumberFormat.getIntegerInstance(new Locale("id", "ID"));
+    private static final ThreadLocal<NumberFormat> RUPIAH =
+            ThreadLocal.withInitial(() -> NumberFormat.getIntegerInstance(new Locale("id", "ID")));
     private static final Locale INDONESIAN = new Locale("id", "ID");
     private static final DateTimeFormatter DATE = DateTimeFormatter.ofPattern("dd MMM yyyy", INDONESIAN);
     private static final DateTimeFormatter DATE_TIME =
@@ -20,7 +21,7 @@ public final class ReportFormat {
 
     public static String rupiah(long value) {
         String sign = value < 0 ? "-" : "";
-        return sign + "Rp" + RUPIAH.format(Math.abs(value));
+        return sign + "Rp" + RUPIAH.get().format(Math.abs(value));
     }
 
     public static String percent(BigDecimal value) {

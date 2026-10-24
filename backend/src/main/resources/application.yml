@@ -20,13 +20,14 @@ upload:
 
 access:
   code: ${ACCESS_CODE:}
+  allow-blank: ${ACCESS_ALLOW_BLANK:false}
 
 ai:
   gemini-api-key: ${GEMINI_API_KEY:}
   model: ${AI_MODEL:gemini-3.5-flash-lite}
   voice-model: ${AI_VOICE_MODEL:gemini-3.5-flash-lite}
-  timeout: ${AI_TIMEOUT:600}
-  max-attempts: ${AI_MAX_ATTEMPTS:50}
+  timeout: ${AI_TIMEOUT:60}
+  max-attempts: ${AI_MAX_ATTEMPTS:5}
   retry-delay-ms: ${AI_RETRY_DELAY_MS:2000}
   retry-after-cap-ms: ${AI_RETRY_AFTER_CAP_MS:120000}
   deepseek-api-key: ${DEEPSEEK_API_KEY:}

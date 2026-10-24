@@ -96,9 +96,14 @@ public class AccessAttemptLimiter {
         if (attempts.size() <= MAX_TRACKED_IPS) {
             return;
         }
+        // Buang entri yang sudah tidak aktif lebih dulu.
         attempts.entrySet().removeIf(entry -> {
             Attempt attempt = entry.getValue();
             return attempt.blockedUntil < now && now - attempt.windowStart > FAILURE_WINDOW_MS;
         });
+        // Batas keras: jangan biarkan key dari klien menumbuhkan map tanpa batas.
+        if (attempts.size() > MAX_TRACKED_IPS) {
+            attempts.clear();
+        }
     }
 }

@@ -47,11 +47,6 @@ public class ExpenseController {
         this.idempotencyService = idempotencyService;
     }
 
-    @GetMapping("/health")
-    public ApiResponse health() {
-        return ApiResponse.ok();
-    }
-
     @GetMapping("/options")
     public ResponseEntity<ApiResponse> getOptions() {
         try {
@@ -66,20 +61,22 @@ public class ExpenseController {
     @PostMapping("/budgets")
     public ResponseEntity<ApiResponse> createBudget(@RequestBody BudgetCreateRequest request,
                                                     @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
-        Optional<ApiResponse> cached = idempotencyService.find(idempotencyKey);
+        Optional<ApiResponse> cached = idempotencyService.begin(idempotencyKey);
         if (cached.isPresent()) {
             return ResponseEntity.ok(cached.get());
         }
         try {
             expenseService.createBudget(request);
             ApiResponse response = ApiResponse.ok();
-            idempotencyService.save(idempotencyKey, response);
+            idempotencyService.complete(idempotencyKey, response);
             return ResponseEntity.ok(response);
         } catch (ValidationException e) {
+            idempotencyService.abort(idempotencyKey);
             LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
+            idempotencyService.abort(idempotencyKey);
             LOGGER.error("internal error creating budget", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("Internal server error"));
@@ -137,20 +134,22 @@ public class ExpenseController {
     @PostMapping("/categories")
     public ResponseEntity<ApiResponse> createCategory(@RequestBody CategoryCreateRequest request,
                                                       @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
-        Optional<ApiResponse> cached = idempotencyService.find(idempotencyKey);
+        Optional<ApiResponse> cached = idempotencyService.begin(idempotencyKey);
         if (cached.isPresent()) {
             return ResponseEntity.ok(cached.get());
         }
         try {
             expenseService.createCategory(request);
             ApiResponse response = ApiResponse.ok();
-            idempotencyService.save(idempotencyKey, response);
+            idempotencyService.complete(idempotencyKey, response);
             return ResponseEntity.ok(response);
         } catch (ValidationException e) {
+            idempotencyService.abort(idempotencyKey);
             LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
+            idempotencyService.abort(idempotencyKey);
             LOGGER.error("internal error creating category", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("Internal server error"));
@@ -274,20 +273,22 @@ public class ExpenseController {
     @PostMapping("/topups")
     public ResponseEntity<ApiResponse> createTopUp(@RequestBody TopUpRequest request,
                                                    @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
-        Optional<ApiResponse> cached = idempotencyService.find(idempotencyKey);
+        Optional<ApiResponse> cached = idempotencyService.begin(idempotencyKey);
         if (cached.isPresent()) {
             return ResponseEntity.ok(cached.get());
         }
         try {
             expenseService.createTopUp(request);
             ApiResponse response = ApiResponse.ok();
-            idempotencyService.save(idempotencyKey, response);
+            idempotencyService.complete(idempotencyKey, response);
             return ResponseEntity.ok(response);
         } catch (ValidationException e) {
+            idempotencyService.abort(idempotencyKey);
             LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
+            idempotencyService.abort(idempotencyKey);
             LOGGER.error("internal error creating top up", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("Internal server error"));
@@ -297,20 +298,22 @@ public class ExpenseController {
     @PostMapping("/expenses")
     public ResponseEntity<ApiResponse> createExpense(@RequestBody ExpenseRequest request,
                                                      @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
-        Optional<ApiResponse> cached = idempotencyService.find(idempotencyKey);
+        Optional<ApiResponse> cached = idempotencyService.begin(idempotencyKey);
         if (cached.isPresent()) {
             return ResponseEntity.ok(cached.get());
         }
         try {
             String id = expenseService.createExpense(request);
             ApiResponse response = ApiResponse.ok(Map.of("id", id));
-            idempotencyService.save(idempotencyKey, response);
+            idempotencyService.complete(idempotencyKey, response);
             return ResponseEntity.ok(response);
         } catch (ValidationException e) {
+            idempotencyService.abort(idempotencyKey);
             LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
+            idempotencyService.abort(idempotencyKey);
             LOGGER.error("internal error creating expense", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("Internal server error"));
@@ -320,20 +323,22 @@ public class ExpenseController {
     @PostMapping("/expenses/batch")
     public ResponseEntity<ApiResponse> createExpenseBatch(@RequestBody BatchExpenseRequest request,
                                                           @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
-        Optional<ApiResponse> cached = idempotencyService.find(idempotencyKey);
+        Optional<ApiResponse> cached = idempotencyService.begin(idempotencyKey);
         if (cached.isPresent()) {
             return ResponseEntity.ok(cached.get());
         }
         try {
             int count = expenseService.createExpenseBatch(request);
             ApiResponse response = ApiResponse.ok(Map.of("count", count));
-            idempotencyService.save(idempotencyKey, response);
+            idempotencyService.complete(idempotencyKey, response);
             return ResponseEntity.ok(response);
         } catch (ValidationException e) {
+            idempotencyService.abort(idempotencyKey);
             LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
+            idempotencyService.abort(idempotencyKey);
             LOGGER.error("internal error creating expenses batch", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("Internal server error"));
@@ -343,20 +348,22 @@ public class ExpenseController {
     @PostMapping(value = "/expenses/{id}/photo", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)    public ResponseEntity<ApiResponse> uploadPhoto(@PathVariable String id,
                                                    @RequestParam("file") MultipartFile file,
                                                    @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
-        Optional<ApiResponse> cached = idempotencyService.find(idempotencyKey);
+        Optional<ApiResponse> cached = idempotencyService.begin(idempotencyKey);
         if (cached.isPresent()) {
             return ResponseEntity.ok(cached.get());
         }
         try {
             expenseService.attachPhoto(id, file);
             ApiResponse response = ApiResponse.ok();
-            idempotencyService.save(idempotencyKey, response);
+            idempotencyService.complete(idempotencyKey, response);
             return ResponseEntity.ok(response);
         } catch (ValidationException e) {
+            idempotencyService.abort(idempotencyKey);
             LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
+            idempotencyService.abort(idempotencyKey);
             LOGGER.error("internal error uploading photo", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("Internal server error"));

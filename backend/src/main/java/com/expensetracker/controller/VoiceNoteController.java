@@ -76,7 +76,7 @@ public class VoiceNoteController {
                                                        @RequestParam("date") String date,
                                                        @RequestParam(value = "durationMs", required = false) Integer durationMs,
                                                        @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
-        Optional<ApiResponse> cached = idempotencyService.find(idempotencyKey);
+        Optional<ApiResponse> cached = idempotencyService.begin(idempotencyKey);
         if (cached.isPresent()) {
             return ResponseEntity.ok(cached.get());
         }
@@ -84,12 +84,14 @@ public class VoiceNoteController {
             String voiceNoteId = voiceNoteService.createForAi(file, date, durationMs);
             voiceNoteAnalysisService.trigger(voiceNoteId);
             ApiResponse response = ApiResponse.ok(Map.of("voiceNoteId", voiceNoteId));
-            idempotencyService.save(idempotencyKey, response);
+            idempotencyService.complete(idempotencyKey, response);
             return ResponseEntity.ok(response);
         } catch (ValidationException e) {
+            idempotencyService.abort(idempotencyKey);
             LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
+            idempotencyService.abort(idempotencyKey);
             LOGGER.error("internal error creating voice note", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("Internal server error"));

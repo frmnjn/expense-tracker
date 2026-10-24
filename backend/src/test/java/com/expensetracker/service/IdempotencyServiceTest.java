@@ -9,16 +9,13 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import tools.jackson.databind.ObjectMapper;
 
-import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
-import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -37,23 +34,28 @@ class IdempotencyServiceTest {
     }
 
     @Test
-    void find_keyWithoutCachedResponse_shouldReturnEmpty() {
-        when(idempotencyRepository.find("key-1")).thenReturn(null);
-        assertEquals(Optional.empty(), idempotencyService.find("key-1"));
+    void begin_newKey_shouldClaimAndReturnEmpty() {
+        when(idempotencyRepository.claim("key-1")).thenReturn(true);
+
+        assertEquals(Optional.empty(), idempotencyService.begin("key-1"));
+        verify(idempotencyRepository).claim("key-1");
     }
 
     @Test
-    void find_blankOrNullKey_shouldReturnEmpty() {
-        assertEquals(Optional.empty(), idempotencyService.find(null));
-        assertEquals(Optional.empty(), idempotencyService.find("  "));
-        verify(idempotencyRepository, never()).find(anyString());
+    void begin_blankOrNullKey_shouldReturnEmpty() {
+        assertEquals(Optional.empty(), idempotencyService.begin(null));
+        assertEquals(Optional.empty(), idempotencyService.begin("  "));
+        verify(idempotencyRepository, never()).claim(anyString());
     }
 
     @Test
-    void find_existingCachedResponse_shouldReturnReconstructedResponse() throws Exception {
+    void begin_completedKey_shouldReturnCachedResponse() throws Exception {
         String json = new ObjectMapper().writeValueAsString(ApiResponse.ok(Map.of("id", "abc")));
+        when(idempotencyRepository.claim("key-1")).thenReturn(false);
         when(idempotencyRepository.find("key-1")).thenReturn(json);
-        Optional<ApiResponse> result = idempotencyService.find("key-1");
+
+        Optional<ApiResponse> result = idempotencyService.begin("key-1");
+
         assertTrue(result.isPresent());
         assertTrue(result.get().success());
         @SuppressWarnings("unchecked")
@@ -62,17 +64,32 @@ class IdempotencyServiceTest {
     }
 
     @Test
-    void save_shouldPersistAndCleanupOldRows() {
-        idempotencyService.save("key-1", ApiResponse.ok());
-        verify(idempotencyRepository).save(eq("key-1"), anyString());
-        verify(idempotencyRepository).deleteOlderThan(any(LocalDateTime.class));
+    void begin_pendingKey_shouldRejectConcurrentRequest() {
+        when(idempotencyRepository.claim("key-1")).thenReturn(false);
+        when(idempotencyRepository.find("key-1")).thenReturn("{\"pending\":true}");
+
+        assertThrows(DuplicateRequestException.class, () -> idempotencyService.begin("key-1"));
     }
 
     @Test
-    void save_blankOrNullKey_shouldDoNothing() {
-        idempotencyService.save(null, ApiResponse.ok());
-        idempotencyService.save("", ApiResponse.ok());
-        verify(idempotencyRepository, never()).save(anyString(), anyString());
-        verify(idempotencyRepository, never()).deleteOlderThan(any(LocalDateTime.class));
+    void complete_shouldPersistSerializedResponse() {
+        idempotencyService.complete("key-1", ApiResponse.ok());
+
+        verify(idempotencyRepository).complete("key-1", "{\"success\":true}");
+    }
+
+    @Test
+    void abort_shouldDeleteClaim() {
+        idempotencyService.abort("key-1");
+
+        verify(idempotencyRepository).delete("key-1");
+    }
+
+    @Test
+    void complete_blankKey_shouldDoNothing() {
+        idempotencyService.complete(null, ApiResponse.ok());
+        idempotencyService.complete("", ApiResponse.ok());
+
+        verify(idempotencyRepository, never()).complete(anyString(), anyString());
     }
 }

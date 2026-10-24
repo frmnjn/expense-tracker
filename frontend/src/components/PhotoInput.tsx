@@ -100,14 +100,22 @@ function PhotoInput({
         accept="image/*"
         capture="environment"
         style={{ display: 'none' }}
-        onChange={(e) => void pick(e.target.files?.[0] ?? null)}
+        onChange={(e) => {
+          const file = e.target.files?.[0] ?? null
+          e.currentTarget.value = ''
+          void pick(file)
+        }}
       />
       <input
         ref={galleryRef}
         type="file"
         accept="image/*,application/pdf"
         style={{ display: 'none' }}
-        onChange={(e) => void pick(e.target.files?.[0] ?? null)}
+        onChange={(e) => {
+          const file = e.target.files?.[0] ?? null
+          e.currentTarget.value = ''
+          void pick(file)
+        }}
       />
 
       <Modal opened={opened} onClose={() => setOpened(false)} title="Tambah Foto Invoice" centered>

@@ -2,12 +2,18 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { createBudget, deleteBudget, updateBudget } from '../services/expense'
 import type { BudgetCreateRequest, BudgetUpdateRequest, OptionsResponse } from '../types/expense'
 
+function invalidateBudgetData(queryClient: ReturnType<typeof useQueryClient>) {
+  for (const queryKey of ['options', 'summary', 'trend', 'expenses', 'periods']) {
+    queryClient.invalidateQueries({ queryKey: [queryKey] })
+  }
+}
+
 export function useCreateBudget() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (request: BudgetCreateRequest) => createBudget(request),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['options'] })
+      invalidateBudgetData(queryClient)
     },
   })
 }
@@ -28,7 +34,7 @@ export function useDeleteBudget() {
       if (context?.previous) queryClient.setQueryData(['options'], context.previous)
     },
     onSettled: () => {
-      queryClient.invalidateQueries({ queryKey: ['options'] })
+      invalidateBudgetData(queryClient)
     },
   })
 }
@@ -39,7 +45,7 @@ export function useUpdateBudget() {
     mutationFn: ({ name, request }: { name: string; request: BudgetUpdateRequest }) =>
       updateBudget(name, request),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['options'] })
+      invalidateBudgetData(queryClient)
     },
   })
 }

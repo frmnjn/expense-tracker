@@ -78,7 +78,7 @@ public class ExpenseRepository {
 
     public ExpenseData findById(String id) {
         List<ExpenseData> rows = jdbcTemplate.query(
-                SELECT_COLS + "WHERE e.id = ?",
+                SELECT_COLS + "WHERE e.id = ? AND e.deleted = FALSE",
                 this::mapRow,
                 id);
         return rows.isEmpty() ? null : rows.get(0);
@@ -105,7 +105,7 @@ public class ExpenseRepository {
     }
 
     public void softDelete(String id) {
-        jdbcTemplate.update("UPDATE expenses SET deleted = TRUE WHERE id = ?", id);
+        jdbcTemplate.update("UPDATE expenses SET deleted = TRUE WHERE id = ? AND deleted = FALSE", id);
     }
 
     public void attachInvoice(String id, String invoiceId) {

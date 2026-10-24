@@ -329,7 +329,7 @@ class InvoiceServiceTest {
         when(file.getOriginalFilename()).thenReturn("invoice.exe");
         ValidationException ex = assertThrows(ValidationException.class,
                 () -> invoiceService.createInvoice("2026-JUL-AUG", LocalDate.of(2026, 7, 25), file));
-        assertEquals("Only jpg, png, and pdf are allowed", ex.getMessage());
+        assertEquals("Only jpg, png, webp, gif, and pdf are allowed", ex.getMessage());
     }
 
     @Test

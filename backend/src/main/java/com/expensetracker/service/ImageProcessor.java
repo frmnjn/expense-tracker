@@ -36,6 +36,7 @@ public final class ImageProcessor {
     private static final String APP_SIGNATURE = "ExpenseTracker";
     private static final float JPEG_QUALITY = 0.75f;
     private static final int MAX_IMAGE_SIZE = 1600;
+    private static final long MAX_PIXELS = 25_000_000L;
 
     private static final DateTimeFormatter EXIF_TIMESTAMP = DateTimeFormatter.ofPattern("yyyy:MM:dd HH:mm:ss");
     private static final DateTimeFormatter ISO_TIMESTAMP = DateTimeFormatter.ISO_LOCAL_DATE_TIME;
@@ -51,6 +52,9 @@ public final class ImageProcessor {
 
         if (original == null) {
             throw new ValidationException("Invalid image");
+        }
+        if ((long) original.getWidth() * original.getHeight() > MAX_PIXELS) {
+            throw new ValidationException("Resolusi gambar terlalu besar");
         }
 
         BufferedImage resized = resizeImage(original, MAX_IMAGE_SIZE);

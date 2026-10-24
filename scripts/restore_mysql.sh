@@ -11,8 +11,13 @@
 
 set -euo pipefail
 
+FORCE=0
+if [ "${1:-}" = "-f" ] || [ "${1:-}" = "--force" ]; then
+    FORCE=1
+    shift
+fi
 if [ $# -lt 1 ]; then
-    echo "Usage: $0 <backup.sql.gz>" >&2
+    echo "Usage: $0 [-f] <backup.sql.gz>" >&2
     exit 1
 fi
 
@@ -35,6 +40,17 @@ if [ -z "${DB_USER}" ] || [ -z "${DB_PASSWORD}" ]; then
     echo "ERROR: DB_USER/DB_PASSWORD kosong di .env" >&2
     exit 1
 fi
+
+if [ "${FORCE}" != "1" ]; then
+    read -r -p "Restore akan MENIMPA ${DB_NAME}. Lanjutkan? [y/N] " answer
+    if [ "${answer}" != "y" ] && [ "${answer}" != "Y" ]; then
+        echo "Dibatalkan."
+        exit 1
+    fi
+fi
+
+echo "==> Backup data saat ini sebelum restore"
+"${SCRIPT_DIR}/backup_mysql.sh"
 
 echo "==> Restore ${BACKUP_FILE} ke ${DB_NAME} (container ${MYSQL_CONTAINER})"
 gzip -dc "${BACKUP_FILE}" | docker exec -i "${MYSQL_CONTAINER}" \

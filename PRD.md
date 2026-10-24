@@ -35,7 +35,7 @@ Target: sederhana, mudah dijalankan dengan Docker, mudah dikembangkan.
 * Java 25 + Spring Boot 4
 * Spring JDBC (JdbcTemplate)
 * Flyway (DB migration)
-* GraalVM 25 Native Image (produksi)
+* JVM (Temurin 25) — default produksi; GraalVM Native Image opsional/legacy
 
 ### Storage
 
@@ -87,7 +87,7 @@ Tabel:
 | `budgets` | `id` PK, `name` UNIQUE, `balance`, `is_active`, `alert_threshold` (0 = nonaktif), `description` (nullable, dipakai AI saat menyarankan budget) |
 | `categories` | `id` PK, `budget_id` FK→`budgets`, `name`, `description` (nullable, dipakai AI), `is_active`, `created_at`; UNIQUE(`budget_id`, `name`) |
 | `expenses` | `id` PK, `period`, `period_start`, `date_time`, `budget_id` FK→`budgets`, `category_id` FK→`categories` (nullable, NULL = "Uncategorized"), `name`, `amount`, `description` (TEXT), `deleted`, `invoice_id` FK→`invoices` (nullable), `voice_note_id` FK→`voice_notes` (nullable), `created_at` (DATETIME(6), untuk pengurutan deterministik) |
-| `invoices` | `id` PK, `period`, `period_start`, `photo_path`, `deleted`, `status` (`ANALYZING`/`TO_REVIEW`/`SUBMITTED`/`ERROR`), `analysis_json`, `error_message`, `scan_flow` |
+| `invoices` | `id` PK, `period`, `period_start`, `photo_path`, `deleted`, `status` (`ANALYZING`/`TO_REVIEW`/`SUBMITTED`/`ERROR`/`NOT_INVOICE`), `analysis_json`, `error_message`, `scan_flow` |
 | `voice_notes` | `id` PK, `period`, `period_start`, `reference_date`, `file_path`, `mime_type`, `duration_ms`, `transcript`, `status` (`ANALYZING`/`TO_REVIEW`/`SUBMITTED`/`ERROR`/`NOT_EXPENSE`), `analysis_json`, `error_message`, `retry_count`, `retry_max`, `ai_provider`, `created_at` |
 | `idempotency_keys` | `id_key` PK, `response_json`, `created_at` |
 | `top_ups` | `id` PK, `date_time`, `budget_id` FK→`budgets`, `amount`, `description` (TEXT) |
@@ -124,7 +124,7 @@ Index yang ada: `budgets` PK(id) + UNIQUE(name); `expenses` PK(id), `budget_id` 
 
 Satu **invoice** adalah pemilik satu file foto/PDF dan dapat dirujuk oleh **banyak** expense (`invoice_id`). Karena itu satu foto invoice bisa dipakai untuk beberapa catatan pengeluaran (mis. satu struk untuk beberapa budget). `hasPhoto` pada respons expense berarti `invoice_id` terisi; `photoType` (`image`/`pdf`) diturunkan dari jenis file. Menghapus foto pada sebuah expense melepas referensi (`invoice_id = NULL`); invoice & file foto **baru dihapus jika tidak ada expense lain yang masih memakainya** — jika masih dipakai expense lain, invoice & file dipertahankan.
 
-Invoice hasil alur `/scan` ditandai `scan_flow = TRUE` dan memiliki state machine analisis AI: `ANALYZING` (upload sukses, AI berjalan async) → `TO_REVIEW` (AI selesai, menunggu konfirmasi user) → `SUBMITTED` (expense dibuat) atau `ERROR` (analisis gagal, bisa retry). Foto biasa pada form Catat berstatus langsung `SUBMITTED` (bukan alur AI).
+Invoice hasil alur `/scan` ditandai `scan_flow = TRUE` dan memiliki state machine analisis AI: `ANALYZING` (upload sukses, AI berjalan async) → `TO_REVIEW` (AI selesai, menunggu konfirmasi user) → `SUBMITTED` (expense dibuat) `ERROR` (analisis gagal, bisa retry), atau `NOT_INVOICE` (bukan struk, terminal). Foto biasa pada form Catat berstatus langsung `SUBMITTED` (bukan alur AI).
 
 Periode (format `YYYY-MON-MON`, contoh `2026-JAN-FEB`) dihitung dari `date_time` dengan aturan tanggal gajian: default tanggal 25, digeser mundur ke hari kerja sebelumnya bila jatuh pada Sabtu/Minggu. Tanggal merah atau gajian yang maju/mundur dapat di-override manual per periode dari Dashboard (bulan berjalan s/d 6 bulan ke depan); override memicu hitung ulang periode data terkait. `period` disimpan untuk filter cepat.
 
@@ -148,7 +148,7 @@ Field:
 | Name | String (maks 255) | Ya |
 | Budget | Dropdown | Ya |
 | Nominal | Number (> 0) | Ya |
-| Description | String (maks 255) | Tidak |
+| Description | String (maks 10.000) | Tidak |
 | Foto invoice | Gambar (opsional) | Tidak |
 
 * Waktu bisa otomatis (waktu sistem) atau manual.
@@ -165,9 +165,9 @@ Alur untuk belanja supermarket yang memakai banyak budget dalam satu struk, tanp
 Alur:
 
 1. **Upload** struk (foto kamera/galeri, atau PDF) → invoice dibuat dengan status `ANALYZING`, AI menganalisis **async** di background.
-2. **Menunggu AI** → status berubah otomatis (polling ~3 detik) menjadi `TO_REVIEW` saat selesai, atau `ERROR` (mis. bukan struk) dengan tombol "Coba lagi".
+2. **Menunggu AI** → status berubah otomatis (polling ~3 detik) menjadi `TO_REVIEW` saat selesai, `ERROR` untuk kegagalan teknis (dengan tombol "Coba lagi"), atau `NOT_INVOICE` bila gambar bukan struk (terminal).
 3. **Review** (modal): daftar item hasil AI (nama, nominal, **saran budget** + **saran category**). User mengoreksi: ganti nama/nominal, ganti/pilih budget & category tiap item, tambah/hapus item. Category opsional (kosong = "Uncategorized"). Item diskon/promo dibaca sebagai nominal negatif (mengurangi total group).
-4. **Group per budget** otomatis: item di-budget yang sama dijumlah → 1 expense per budget; nama default "Belanja {toko}", deskripsi berisi daftar item. Tampil warning bila jumlah item ≠ total struk.
+4. **Group per budget + category** otomatis: item dengan budget & category yang sama dijumlah → 1 expense per group; nama default "Belanja {toko}", deskripsi berisi daftar item. Tampil warning bila jumlah item ≠ total struk.
 5. **Buat N Pengeluaran** → `POST /expenses/batch` (satu transaksi) → semua expense dibuat, saldo tiap budget di-adjust, invoice ditandai `SUBMITTED`.
 
 Detail teknis:
@@ -176,7 +176,7 @@ Detail teknis:
 * Satu struk dipakai sebagai `invoice_id` pada **semua** expense hasil split (satu foto untuk banyak catatan).
 * Deskripsi auto-generate bisa melebihi 255 karakter; di-truncate di frontend, dan DB `description` = `TEXT`.
 * Pengurutan riwayat pakai `date_time DESC, created_at ASC` (created_at mikrodetik) agar urutan batch scan stabil & urut sesuai urutan item.
-* **Retry AI & fallback provider**: analisa di-retry untuk error transien (HTTP 429/5xx) memakai `ai.max-attempts`/`ai.retry-delay-ms` (default 50×, 2 detik), dengan jeda menghormati `Retry-After` provider (dibatasi `ai.retry-after-cap-ms`). Bila semua attempt Gemini habis, fallback **sekali** ke DeepSeek (`DEEPSEEK_API_KEY`, model `AI_DEEPSEEK_MODEL`). Invoice menyimpan `ai_provider` (GEMINI/DEEPSEEK) dan counter retry di-reset saat berpindah provider; frontend menampilkan label provider (mis. "Gemini retry 12×", "DeepSeek 1/1"). Untuk PDF, halaman pertama dirender ke PNG sebelum dikirim ke DeepSeek (DeepSeek tidak menerima PDF).
+* **Retry AI & fallback provider**: analisa di-retry untuk error transien (HTTP 429/5xx) memakai `ai.max-attempts`/`ai.retry-delay-ms` (default 5×, 2 detik), dengan jeda menghormati `Retry-After` provider (dibatasi `ai.retry-after-cap-ms`). Bila semua attempt Gemini habis, fallback **sekali** ke DeepSeek (`DEEPSEEK_API_KEY`, model `AI_DEEPSEEK_MODEL`). Invoice menyimpan `ai_provider` (GEMINI/DEEPSEEK) dan counter retry di-reset saat berpindah provider; frontend menampilkan label provider (mis. "Gemini retry 12×", "DeepSeek 1/1"). Untuk PDF, halaman pertama dirender ke PNG sebelum dikirim ke DeepSeek (DeepSeek tidak menerima PDF).
 * **Perlakuan pajak (PPN/PB1)**: prompt AI membedakan dua pola struk. **(A) inklusif** — harga item sudah termasuk pajak (ciri "Termasuk PPN"/"Sub Total (Termasuk PPN)", bagian bawah hanya rekap `DPP/PPN/BTKP/BKP`); PPN **tidak** dijadikan item dan baris rekap diabaikan. **(B) eksklusif** — baris pajak/service terpisah dan grand total = Σ item + pajak; PPN/PB1/service masuk sebagai item positif. Penentu: bila Σ harga item sudah sama dengan grand total → pola A; bila grand total = Σ item + pajak → pola B. Baris ringkasan (`Hemat Produk/Member`, `Total Hemat`, `Total Item`, `Pembayaran`, saldo, kembalian) diabaikan; diskon per-produk tetap item negatif.
 * Konfigurasi AI: `GEMINI_API_KEY`, `AI_MODEL` (default `gemini-3.5-flash-lite`), `AI_TIMEOUT`, `DEEPSEEK_API_KEY`, `AI_DEEPSEEK_MODEL` (default `deepseek-flash`), `AI_DEEPSEEK_BASE_URL`.
 
@@ -308,11 +308,11 @@ Transaksi dari email notifikasi bank dibaca **backend** via **IMAP Gmail** (App 
 * Anti-loop: email difilter berdasarkan **whitelist domain pengirim** (`INBOX_SENDERS`), jadi email notifikasi milik aplikasi sendiri tidak ikut diproses.
 * Import expense memakai jalur yang sama dengan pencatatan manual (`ExpenseService.createExpense`) sehingga saldo budget & notifikasi tetap konsisten.
 * **Deteksi duplikat**: saat import, bila sudah ada expense aktif dengan **nominal persis sama** di **periode yang sama**, import ditolak dengan konfirmasi (HTTP 409). User tetap bisa melanjutkan dengan `force=true` (nominal sama bisa saja transaksi berbeda).
-* **Retry AI**: fallback Gemini di-retry untuk error transien (HTTP 429/5xx) memakai `ai.max-attempts`/`ai.retry-delay-ms` (default 50×, 2 detik, menghormati `Retry-After`), sama seperti Scan Struk. Bila semua attempt habis, fallback sekali ke DeepSeek.
+* **Retry AI**: fallback Gemini di-retry untuk error transien (HTTP 429/5xx) memakai `ai.max-attempts`/`ai.retry-delay-ms` (default 5×, 2 detik, menghormati `Retry-After`), sama seperti Scan Struk. Bila semua attempt habis, fallback sekali ke DeepSeek.
 * **Status**: email transaksi → `PENDING_REVIEW`; bukan transaksi pengeluaran (mis. promo) → `DISCARDED`; gagal parse/error teknis → `FAILED`; email dengan lampiran yang di-auto-scan → `SCANNED` (terminal, lihat di `/scan`).
 * **Retry manual**: baris `FAILED` bisa diproses ulang lewat `POST /email-imports/{id}/retry` (email diambil ulang dari IMAP berdasarkan Message-ID, lalu parse lagi).
 * **Custom discard rule**: merchant yang cocok dengan keyword di `INBOX_DISCARD_MERCHANTS` otomatis ditandai `DISCARDED` (case-insensitive, toleran spasi/tanda baca — mis. `superindo` menangkap `SUPERINDO CNE` & `SUPER INDO`).
-* **Auto-scan attachment**: email dari pengirim di `INBOX_SCAN_SENDERS` (mis. e-receipt `do-not-reply@superindo.co.id`) yang punya lampiran `pdf/jpg/jpeg/png` otomatis dibuatkan invoice scan (status `ANALYZING`, `scan_flow=TRUE`) lalu dianalisis AI — jadi struk langsung siap direview di `/scan`, tanpa lewat `/inbox`. Lampiran dideteksi dari **ekstensi nama file** (bukan content-type, karena Superindo memakai `application/octet-stream`). Bila email Superindo **tanpa** lampiran (mis. notifikasi BCA "SUPERINDO CNE"), tetap diproses seperti biasa (parse → discard). Baris dicatat di `email_imports` (status `DISCARDED`, catatan "Auto-scan") untuk dedup `Message-ID`.
+* **Auto-scan attachment**: email dari pengirim di `INBOX_SCAN_SENDERS` (mis. e-receipt `do-not-reply@superindo.co.id`) yang punya lampiran `pdf/jpg/jpeg/png` otomatis dibuatkan invoice scan (status `ANALYZING`, `scan_flow=TRUE`) lalu dianalisis AI — jadi struk langsung siap direview di `/scan`, tanpa lewat `/inbox`. Lampiran dideteksi dari **ekstensi nama file** (bukan content-type, karena Superindo memakai `application/octet-stream`). Bila email Superindo **tanpa** lampiran (mis. notifikasi BCA "SUPERINDO CNE"), tetap diproses seperti biasa (parse → discard). Baris dicatat di `email_imports` (status `SCANNED`, catatan "Auto-scan") untuk dedup `Message-ID`.
 
 > Catatan: IMAP keluar dari VPS (Linode) tidak diblokir (port 993), berbeda dengan SMTP keluar. Fitur ini berjalan di backend Java (image JVM); notifier tetap khusus kirim email.
 
@@ -582,7 +582,7 @@ Memproses ulang baris `FAILED`: ambil ulang email dari inbox (IMAP, by Message-I
 
 ### POST /email-imports/poll
 
-Memicu pembacaan inbox IMAP secara manual (dipakai tombol Refresh). Mengembalikan `{ "count": N }`.
+Memicu pembacaan inbox IMAP secara manual (dipakai tombol Refresh). Berjalan async dan mengembalikan HTTP 202 `{ "started": true }`; progres dicek lewat `GET /email-imports/poll/status`.
 
 ### GET /reports
 
@@ -608,6 +608,8 @@ DB_URL=jdbc:mysql://host.docker.internal:33060/expense_tracker?useSSL=false&allo
 DB_USER=expense_tracker_user
 DB_PASSWORD=password-kuat
 UPLOAD_DIR=/app/uploads
+ACCESS_CODE=123456                 # shared access code; wajib di produksi
+ACCESS_ALLOW_BLANK=false           # true hanya untuk dev (mematikan auth)
 GEMINI_API_KEY=AIza...            # untuk Scan Struk dengan AI
 AI_MODEL=gemini-3.5-flash-lite    # opsional, default; dipakai scan & inbox
 AI_VOICE_MODEL=gemini-3.5-flash-lite  # opsional, model khusus analisis voice note
@@ -668,14 +670,15 @@ Untuk **produksi**, `docker-compose.prod.yml` memakai MySQL VPS dan image backen
 
 ---
 
-## Out of Scope
+## Out of Scope (v1)
 
-* Login / authentication
-* Multi-user
-* Kategori/tag
+* Multi-user / akun per pengguna
+* Login berbasis username/password (v1 memakai satu shared access code)
 * Grafik detail
 * Export PDF/Excel manual (report PDF otomatis per periode sudah tersedia)
 * Notifikasi via WhatsApp (email sudah ada; WhatsApp bisa ditambahkan via Twilio/Meta Cloud API bila diperlukan)
+
+Catatan: kategori/tag, PWA/offline, dan konversi mata uang asing sudah diimplementasikan meski tidak ada di draft awal; fitur tersebut termasuk dalam scope v1.
 
 ---
 
