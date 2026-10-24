@@ -1,7 +1,17 @@
 const BASE = new URL(self.registration.scope).pathname
 const CACHE_NAME = `expense-tracker${BASE.replace(/\//g, '_')}-__BUILD_VERSION__`
 const INDEX = `${BASE}index.html`
-const APP_SHELL = [BASE, INDEX, `${BASE}manifest.webmanifest`, `${BASE}icon-192.png`, `${BASE}icon-512.png`]
+const APP_SHELL = [
+  BASE,
+  INDEX,
+  `${BASE}manifest.webmanifest`,
+  `${BASE}favicon.svg`,
+  `${BASE}favicon.ico`,
+  `${BASE}icon-192.png`,
+  `${BASE}icon-512.png`,
+  `${BASE}icon-512-maskable.png`,
+  `${BASE}apple-touch-icon.png`,
+]
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
