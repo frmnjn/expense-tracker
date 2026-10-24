@@ -19,10 +19,15 @@ import java.io.IOException;
 import java.net.http.HttpHeaders;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Clock;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.atLeastOnce;
@@ -51,15 +56,17 @@ class InvoiceAnalysisServiceTest {
         String deepseekResponse = null;
         byte[] lastDeepSeekBytes = null;
         String lastDeepSeekMime = null;
+        String lastPrompt = null;
 
-        TestService(InvoiceRepository repo, BudgetRepository budgetRepo, PeriodService periodService) {
+        TestService(InvoiceRepository repo, BudgetRepository budgetRepo, PeriodService periodService, Clock clock) {
             super(repo, budgetRepo, new ObjectMapper(), new ExchangeRateService(new ObjectMapper(), "", 8000L),
-                    periodService, "key", "gemini-test", 600L, 50, 0L,
+                    periodService, clock, "key", "gemini-test", 600L, 50, 0L,
                     "dsk-key", "deepseek-flash", "https://api.deepseek.com", 120000L);
         }
 
         @Override
         protected String callGemini(byte[] bytes, String mime, String prompt) throws Exception {
+            lastPrompt = prompt;
             String r = responses[call];
             call++;
             if ("503".equals(r)) {
@@ -90,12 +97,16 @@ class InvoiceAnalysisServiceTest {
         }
     }
 
+    private static final ZoneId ZONE = ZoneId.of("Asia/Jakarta");
+    private static final Clock FIXED_CLOCK =
+            Clock.fixed(Instant.parse("2026-10-24T01:10:00Z"), ZONE);
+
     private TestService service;
 
     @BeforeEach
     void setUp() throws IOException {
         service = new TestService(invoiceRepository, budgetRepository,
-                new PeriodService(paydayOverrideRepository));
+                new PeriodService(paydayOverrideRepository), FIXED_CLOCK);
         ReflectionTestUtils.setField(service, "uploadDir", "/tmp");
         Files.write(Path.of("/tmp", "inv.jpg"), new byte[]{1, 2, 3});
     }
@@ -233,6 +244,50 @@ class InvoiceAnalysisServiceTest {
 
         verify(invoiceRepository, never()).updateAnalysis(anyString(), anyString(), anyString());
         verify(invoiceRepository).updateError(eq(id), anyString());
+    }
+
+    @Test
+    void cleanDate_futureDate_shouldBecomeEmpty() {
+        LocalDateTime now = LocalDateTime.of(2026, 10, 24, 8, 10);
+
+        assertEquals("", InvoiceAnalysisService.cleanDate("2026-10-25 07:50:00", now));
+    }
+
+    @Test
+    void cleanDate_futureTimeToday_shouldDropTime() {
+        LocalDateTime now = LocalDateTime.of(2026, 10, 24, 8, 10);
+
+        assertEquals("2026-10-24", InvoiceAnalysisService.cleanDate("2026-10-24 17:50:00", now));
+        assertEquals("2026-10-24", InvoiceAnalysisService.cleanDate("2026-10-24T17:50:00", now));
+    }
+
+    @Test
+    void cleanDate_morningTimeFromReceipt_shouldKeepTime() {
+        LocalDateTime now = LocalDateTime.of(2026, 10, 24, 8, 10);
+
+        assertEquals("2026-10-24 07:50:19",
+                InvoiceAnalysisService.cleanDate("2026-10-24 07:50:19", now));
+    }
+
+    @Test
+    void cleanDate_oldDate_shouldBecomeEmpty() {
+        LocalDateTime now = LocalDateTime.of(2026, 10, 24, 8, 10);
+
+        assertEquals("", InvoiceAnalysisService.cleanDate("2023-10-24 07:50:00", now));
+    }
+
+    @Test
+    void analyze_promptIncludesReferenceTimeAndFutureGuard() {
+        String id = "inv-prompt";
+        stubInvoice(id);
+        service.responses = new String[]{
+                "{\"storeName\":\"Surya\",\"total\":27400,\"dateTime\":\"2026-10-24 07:50:19\","
+                        + "\"items\":[{\"name\":\"Belanja\",\"amount\":27400,\"suggestedBudget\":\"Makan\"}]}"};
+
+        service.analyzeForTest(id);
+
+        assertTrue(service.lastPrompt.contains("Waktu sekarang (WIB): 2026-10-24 08:10"));
+        assertTrue(service.lastPrompt.contains("JANGAN diubah menjadi 17:50:19"));
     }
 
     @Test

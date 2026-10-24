@@ -31,8 +31,11 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.Clock;
 import java.time.Duration;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Base64;
 import java.util.List;
@@ -59,11 +62,19 @@ public class InvoiceAnalysisService implements ApplicationRunner {
     private static final String PROVIDER_DEEPSEEK = "DEEPSEEK";
     private static final Pattern RETRY_IN = Pattern.compile("retry in ([0-9]+(?:\\.[0-9]+)?)s",
             Pattern.CASE_INSENSITIVE);
+    private static final DateTimeFormatter REFERENCE_TIME_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+    private static final List<DateTimeFormatter> TIME_FORMATS = List.of(
+            DateTimeFormatter.ofPattern("HH:mm:ss"),
+            DateTimeFormatter.ofPattern("HH:mm"),
+            DateTimeFormatter.ofPattern("H:mm:ss"),
+            DateTimeFormatter.ofPattern("H:mm"));
 
     private final InvoiceRepository invoiceRepository;
     private final BudgetRepository budgetRepository;
     private final ObjectMapper objectMapper;
+    private final ExchangeRateService exchangeRateService;
     private final PeriodService periodService;
+    private final Clock clock;
     private final HttpClient httpClient;
     private final ExecutorService executor = Executors.newFixedThreadPool(2);
 
@@ -76,7 +87,6 @@ public class InvoiceAnalysisService implements ApplicationRunner {
     private final String deepseekApiKey;
     private final String deepseekModel;
     private final String deepseekBaseUrl;
-    private final ExchangeRateService exchangeRateService;
 
     @Value("${upload.dir:/app/uploads}")
     private String uploadDir;
@@ -86,6 +96,7 @@ public class InvoiceAnalysisService implements ApplicationRunner {
                                   ObjectMapper objectMapper,
                                   ExchangeRateService exchangeRateService,
                                   PeriodService periodService,
+                                  Clock clock,
                                   @Value("${ai.gemini-api-key:}") String apiKey,
                                   @Value("${ai.model:gemini-3.5-flash-lite}") String model,
                                   @Value("${ai.timeout:600}") long timeoutSeconds,
@@ -100,6 +111,7 @@ public class InvoiceAnalysisService implements ApplicationRunner {
         this.objectMapper = objectMapper;
         this.exchangeRateService = exchangeRateService;
         this.periodService = periodService;
+        this.clock = clock;
         this.apiKey = apiKey == null ? "" : apiKey.trim();
         this.model = model == null ? "gemini-3.5-flash-lite" : model;
         this.timeout = Duration.ofSeconds(timeoutSeconds);
@@ -151,7 +163,7 @@ public class InvoiceAnalysisService implements ApplicationRunner {
             Path resolved = Path.of(uploadDir).resolve(photoPath).normalize();
             byte[] bytes = Files.readAllBytes(resolved);
             String mime = mimeTypeOf(photoPath);
-            String prompt = buildPrompt();
+            String prompt = buildPrompt(LocalDateTime.now(clock));
 
             invoiceRepository.setProvider(invoiceId, PROVIDER_GEMINI);
             invoiceRepository.initRetry(invoiceId, maxAttempts);
@@ -172,7 +184,7 @@ public class InvoiceAnalysisService implements ApplicationRunner {
             // Bersihkan tanggal halusinasi AI sebelum disimpan & dipakai frontend.
             // Periode invoice TIDAK dipindah di sini — tetap di periode upload hingga submit,
             // agar invoice selalu tampil di daftar /scan periode berjalan.
-            String cleanedDate = cleanDate(analysis.dateTime());
+            String cleanedDate = cleanDate(analysis.dateTime(), LocalDateTime.now(clock));
             AiAnalysisResponse clean = applyCurrencyConversion(analysis, cleanedDate);
             invoiceRepository.updateAnalysis(invoiceId, InvoiceStatus.TO_REVIEW.value(),
                     objectMapper.writeValueAsString(clean));
@@ -337,21 +349,50 @@ public class InvoiceAnalysisService implements ApplicationRunner {
         }
     }
 
-    /** Normalisasi & validasi tanggal hasil AI; "" bila blank / tidak masuk akal (masa depan / terlalu tua). */
-    private static String cleanDate(String raw) {
+    /**
+     * Normalisasi & validasi tanggal/jam hasil AI; "" bila blank / tidak masuk akal
+     * (tanggal masa depan / terlalu tua). Bila tanggalnya hari ini tetapi jamnya
+     * melebihi waktu sekarang, jam dibuang (tanggal tetap) agar tidak ada transaksi future.
+     */
+    static String cleanDate(String raw, LocalDateTime now) {
         if (raw == null || raw.isBlank()) {
             return "";
         }
+        String value = raw.trim();
         try {
-            LocalDate date = parseFlexibleDate(raw.trim());
-            LocalDate today = LocalDate.now();
+            LocalDate date = parseFlexibleDate(value);
+            LocalDate today = now.toLocalDate();
             if (date.isAfter(today) || date.isBefore(today.minusYears(2))) {
                 return "";
             }
-            return raw.trim();
+            LocalDateTime dateTime = parseDateTime(value, date);
+            if (dateTime != null && dateTime.isAfter(now)) {
+                LOGGER.warn("ignoring future AI time {} (now {})", value, now);
+                return date.toString();
+            }
+            return value;
         } catch (Exception e) {
             return "";
         }
+    }
+
+    private static LocalDateTime parseDateTime(String raw, LocalDate date) {
+        int separator = raw.indexOf(' ');
+        if (separator < 0) {
+            separator = raw.indexOf('T');
+        }
+        if (separator < 0 || separator == raw.length() - 1) {
+            return null;
+        }
+        String timePart = raw.substring(separator + 1).trim();
+        for (DateTimeFormatter format : TIME_FORMATS) {
+            try {
+                return LocalDateTime.of(date, LocalTime.parse(timePart, format));
+            } catch (Exception ignored) {
+                // coba format jam berikutnya
+            }
+        }
+        return null;
     }
 
     /** Parse tanggal yang bisa berbentuk YYYY-MM-DD maupun dd-MM-yyyy (format umum struk Indonesia). */
@@ -484,7 +525,7 @@ public class InvoiceAnalysisService implements ApplicationRunner {
         return line;
     }
 
-    private String buildPrompt() {
+    private String buildPrompt(LocalDateTime now) {
         List<BudgetOption> options = budgetRepository.getOptions();
         List<String> lines = new java.util.ArrayList<>();
         for (BudgetOption budget : options) {
@@ -497,6 +538,12 @@ public class InvoiceAnalysisService implements ApplicationRunner {
                 ? "(tidak ada budget terdaftar)"
                 : String.join("\n", lines);
         return "Kamu adalah asisten pencatat keuangan. Baca struk/invoice berikut dan ekstrak item belanjanya.\n"
+                + "Waktu sekarang (WIB): " + now.format(REFERENCE_TIME_FORMAT) + ".\n"
+                + "PENTING soal tanggal & jam: tanggal/jam belanja TIDAK BOLEH melewati waktu sekarang. "
+                + "Struk Indonesia umumnya memakai format 24 jam, jadi jam '7:50:19' berarti 07:50:19 (pagi), "
+                + "JANGAN diubah menjadi 17:50:19. Jika hasil pembacaan jatuh di masa depan, periksa ulang dan "
+                + "pilih tafsiran paling masuk akal yang tidak melewati waktu sekarang (mis. 07:50); bila tetap "
+                + "ragu, kosongkan jamnya.\n"
                 + "Berikan output HANYA JSON tanpa teks lain, dengan struktur:\n"
                 + "{\"storeName\":\"nama toko\",\"total\":<jumlah total integer dalam IDR>,"
                 + "\"dateTime\":\"tanggal & jam belanja dari struk. PENTING: struk Indonesia biasanya menulis tanggal "
