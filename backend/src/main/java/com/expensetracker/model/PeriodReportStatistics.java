@@ -44,6 +44,7 @@ public record PeriodReportStatistics(
 
     public record BudgetStat(
             String budget,
+            long openingBalance,
             long topUps,
             long expenses,
             int count,

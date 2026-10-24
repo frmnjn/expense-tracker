@@ -7,6 +7,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -60,5 +61,12 @@ public class PeriodReportRepository {
         } catch (DuplicateKeyException e) {
             return false;
         }
+    }
+
+    public boolean updateFile(String period, String fileName, long sizeBytes,
+                              LocalDateTime generatedAt) {
+        return jdbcTemplate.update(
+                "UPDATE period_reports SET file_name = ?, size_bytes = ?, generated_at = ? WHERE period = ?",
+                fileName, sizeBytes, Timestamp.valueOf(generatedAt), period) > 0;
     }
 }

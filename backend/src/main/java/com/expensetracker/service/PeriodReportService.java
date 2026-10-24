@@ -8,6 +8,7 @@ import com.expensetracker.data.TopUpRepository;
 import com.expensetracker.model.BudgetOption;
 import com.expensetracker.model.PeriodReportData;
 import com.expensetracker.model.PeriodReportResponse;
+import com.expensetracker.model.PeriodReportRegenerationResponse;
 import com.expensetracker.model.PeriodReportStatistics;
 import com.expensetracker.model.PeriodReportsResponse;
 import com.expensetracker.model.TopUpResponse;
@@ -114,37 +115,12 @@ public class PeriodReportService {
             return;
         }
 
-        List<ExpenseData> expenses = expenseRepository.getExpenses(previous);
-        LocalDate previousStart = calendar.paydayForPeriod(previous);
-        List<TopUpResponse> topUps = topUpRepository.findByDateRange(
-                previousStart.atStartOfDay(), currentStart.atStartOfDay());
-        if (expenses.isEmpty() && topUps.isEmpty()) {
+        PeriodReportData data = loadReportData(calendar, previous, LocalDateTime.now(clock));
+        if (data.expenses().isEmpty() && data.topUps().isEmpty()) {
             LOGGER.info("period report skipped: no transactions in {}", previous);
             return;
         }
 
-        List<BudgetOption> budgets = budgetRepository.getOptions();
-        long expenseTotal = expenses.stream().mapToLong(ExpenseData::amount).sum();
-        long topUpTotal = topUps.stream()
-                .map(TopUpResponse::amount)
-                .filter(java.util.Objects::nonNull)
-                .mapToLong(Long::longValue)
-                .sum();
-        long databaseExpenseTotal = expenseRepository.totalForPeriod(previous);
-        int databaseTransactionCount = expenseRepository.countForPeriod(previous);
-        PeriodReportData data = new PeriodReportData(
-                previous,
-                previousStart,
-                currentStart.minusDays(1),
-                LocalDateTime.now(clock),
-                clock.getZone().getId(),
-                expenses,
-                topUps,
-                budgets,
-                expenseTotal,
-                topUpTotal,
-                databaseExpenseTotal,
-                databaseTransactionCount);
         PeriodReportStatistics statistics = PeriodReportCalculator.calculate(data);
 
         byte[] pdf = renderer.render(data, statistics);
@@ -157,14 +133,85 @@ public class PeriodReportService {
         notificationService.sendPeriodReport(
                 previous,
                 EMAIL_DATE_FORMAT.format(data.startDate()) + " - " + EMAIL_DATE_FORMAT.format(data.endDate()),
-                expenseTotal,
-                expenses.size(),
-                topUpTotal,
+                data.expenseTotal(),
+                data.expenses().size(),
+                data.topUpTotal(),
                 pdf,
                 fileName);
         LOGGER.info("period report generated: period={} file={} size={} transactions={} expenseTotal={} topUpTotal={} reconciled={}",
-                previous, fileName, pdf.length, expenses.size(), expenseTotal, topUpTotal,
+                previous, fileName, pdf.length, data.expenses().size(), data.expenseTotal(), data.topUpTotal(),
                 statistics.integrity().ok());
+    }
+
+    /**
+     * Render ulang seluruh PDF report yang sudah tercatat tanpa mengirim email.
+     * Saldo budget dihitung pada akhir periode masing-masing report, sebelum
+     * top-up dan pengeluaran periode berikutnya.
+     */
+    public PeriodReportRegenerationResponse regenerateAll() {
+        List<PeriodReportResponse> reports = periodReportRepository.findAll();
+        List<String> regenerated = new ArrayList<>();
+        List<String> failed = new ArrayList<>();
+        if (reports.isEmpty()) {
+            return new PeriodReportRegenerationResponse(regenerated, failed);
+        }
+
+        PaydayCalendar calendar = periodService.calendar();
+        LocalDateTime generatedAt = LocalDateTime.now(clock);
+        for (PeriodReportResponse report : reports) {
+            String period = report.period();
+            if (PaydayCalendar.parsePeriod(period).isEmpty()) {
+                LOGGER.warn("period report regeneration skipped: invalid period {}", period);
+                failed.add(period);
+                continue;
+            }
+            try {
+                PeriodReportData data = loadReportData(calendar, period, generatedAt);
+                PeriodReportStatistics statistics = PeriodReportCalculator.calculate(data);
+                byte[] pdf = renderer.render(data, statistics);
+                String fileName = "report-" + period + ".pdf";
+                save(fileName, pdf);
+                periodReportRepository.updateFile(period, fileName, pdf.length, generatedAt);
+                regenerated.add(period);
+                LOGGER.info("period report regenerated: period={} file={} size={} transactions={} reconciled={}",
+                        period, fileName, pdf.length, data.expenses().size(), statistics.integrity().ok());
+            } catch (RuntimeException e) {
+                LOGGER.error("period report regeneration failed: period={}", period, e);
+                failed.add(period);
+            }
+        }
+        return new PeriodReportRegenerationResponse(regenerated, failed);
+    }
+
+    private PeriodReportData loadReportData(PaydayCalendar calendar, String period,
+                                            LocalDateTime generatedAt) {
+        LocalDate start = calendar.paydayForPeriod(period);
+        LocalDate nextStart = calendar.paydayForPeriod(calendar.nextPeriod(period));
+        List<BudgetOption> budgets = budgetRepository.getOptionsAt(nextStart.atStartOfDay());
+        List<ExpenseData> expenses = expenseRepository.getExpenses(period);
+        List<TopUpResponse> topUps = topUpRepository.findByDateRange(
+                start.atStartOfDay(), nextStart.atStartOfDay());
+        long expenseTotal = expenses.stream().mapToLong(ExpenseData::amount).sum();
+        long topUpTotal = topUps.stream()
+                .map(TopUpResponse::amount)
+                .filter(java.util.Objects::nonNull)
+                .mapToLong(Long::longValue)
+                .sum();
+        long databaseExpenseTotal = expenseRepository.totalForPeriod(period);
+        int databaseTransactionCount = expenseRepository.countForPeriod(period);
+        return new PeriodReportData(
+                period,
+                start,
+                nextStart.minusDays(1),
+                generatedAt,
+                clock.getZone().getId(),
+                expenses,
+                topUps,
+                budgets,
+                expenseTotal,
+                topUpTotal,
+                databaseExpenseTotal,
+                databaseTransactionCount);
     }
 
     public PeriodReportsResponse getReports() {

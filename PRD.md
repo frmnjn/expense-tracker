@@ -278,14 +278,14 @@ Saat **periode baru dimulai**, backend otomatis membuat report PDF untuk **perio
 * Pemicu: scheduler harian (`REPORT_CRON`, default `0 5 0 * * *`) memeriksa pergantian periode berdasarkan tanggal gajian/override. Report hanya dibuat bila awal periode berjalan masih dalam `REPORT_GRACE_DAYS` (default 1 hari) dan periode tersebut belum pernah dicatat di `period_reports`.
 * Bahasa **PDF report: Bahasa Indonesia**; **subject + body email report tetap Bahasa Inggris** (sama seperti notifikasi email lain).
 * Isi PDF:
-  * **Ringkasan Eksekutif** — total pengeluaran, jumlah transaksi, rata-rata per hari, kategori terbesar, kondisi budget, dan 3–5 temuan utama;
+  * **Ringkasan Eksekutif** — total pengeluaran, jumlah transaksi, rata-rata per hari, kategori terbesar, ringkasan kondisi budget berupa butir-butir terpisah (saldo minus, saldo menipis, batas pengingat belum diatur, atau semua normal), dan 3–5 temuan utama;
   * **Rincian Pengeluaran** — agregasi per budget + kategori dan peringkat kategori dengan nominal, jumlah transaksi, dan persentase;
-  * **Ringkasan Budget** — top-up periode, pengeluaran periode, perubahan bersih, saldo berjalan, ambang peringatan, dan status `NEGATIF`/`RENDAH`/`OK`/`TANPA AMBANG`;
-  * **Analisis Keuangan** — observasi faktual, rekomendasi, dan transaksi terbesar;
+  * **Ringkasan Budget** — ringkasan jumlah budget dengan saldo minus/nol atau lebih, total uang ditambahkan dan uang dipakai periode, lalu tabel: nama budget, saldo awal periode, uang yang ditambahkan periode, uang yang dipakai periode, sisa saldo akhir periode, dan kondisi budget (`Saldo Minus`/`Saldo Menipis`/`Saldo Tersedia`, dengan keterangan `Batas pengingat belum diatur` bila threshold tidak dikonfigurasi); budget minus diurutkan paling atas;
+  * **Analisis Keuangan** — rekomendasi dan transaksi terbesar;
   * **Lampiran A: Daftar Transaksi** — seluruh transaksi periode (tanggal, nama, deskripsi, budget, kategori, nominal);
-  * **Lampiran B: Top-up** — seluruh top-up periode.
+  * **Lampiran B: Uang yang Ditambahkan** — seluruh top-up periode.
 * Budget tanpa kategori adalah kondisi normal. Transaksi tanpa kategori tetap ditampilkan sebagai **"Tanpa Kategori"** di tabel agar total tetap akurat, tetapi tidak dijadikan temuan khusus, rekomendasi, atau section tersendiri.
-* Opening balance dan period-end closing balance **tidak direkonstruksi** karena `budgets.balance` adalah saldo running yang dapat diedit dan tidak ada ledger riwayat saldo. Report memakai carry-over/current balance saat report dibuat dan menjelaskan batasan ini. Budget utilization tidak tersedia karena tidak ada field limit budget; `alert_threshold` hanya peringatan saldo rendah.
+* Saldo awal periode sama dengan saldo akhir periode sebelumnya. Karena `budgets.balance` adalah saldo running yang dapat diedit dan tidak ada ledger riwayat saldo, saldo awal dan akhir periode direkonstruksi dari saldo tersimpan saat ini dan transaksi setelah cutoff; penyesuaian saldo manual tidak dapat dilacak. Sisa saldo akhir periode tidak menghitung top-up dan pengeluaran periode berikutnya. Budget utilization tidak tersedia karena tidak ada field limit budget; `alert_threshold` hanya peringatan saldo rendah.
 * Report memakai **HTML/CSS → PDF** via Flying Saucer + OpenPDF (open source) dan tetap memakai PDFBox untuk stempel nomor halaman; tabel header berulang antar halaman, nominal right-aligned, persentase, dan deskripsi panjang di-wrap.
 * Report menampilkan status rekonsiliasi total/count terhadap database serta peringatan bila ada transaksi di luar rentang periode atau period tidak cocok.
 * PDF disimpan di `$UPLOAD_DIR/reports/report-<periode>.pdf` dan dilampirkan ke email (`NOTIFY_EMAILS`) dengan subject `📊 Period report: <periode>`.
@@ -600,6 +600,10 @@ Daftar report PDF yang sudah dibuat, urut periode terbaru (bukan tanggal generat
 ### GET /reports/{period}
 
 Mengambil report PDF periode yang sudah dibuat (`application/pdf`). Default `Content-Disposition: attachment` (unduh); tambahkan `?inline=true` untuk membuka PDF langsung di browser. `404` bila report belum ada. Mendukung query `access_code` seperti endpoint media lain.
+
+### POST /reports/regenerate
+
+Merender ulang seluruh PDF report yang sudah tercatat di `period_reports` memakai data terbaru, lalu menimpa file dan memperbarui `size_bytes`/`generated_at`. Tidak mengirim email ulang dan tidak membuat periode baru. Saldo budget dihitung pada akhir periode masing-masing report (transaksi periode berikutnya tidak dihitung). Respons berisi daftar periode berhasil (`regenerated`) dan gagal (`failed`).
 
 ### Traceability (X-Trace-Id)
 

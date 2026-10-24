@@ -21,6 +21,7 @@ import com.expensetracker.model.OptionsResponse;
 import com.expensetracker.model.PaydayOverrideRequest;
 import com.expensetracker.model.PeriodRange;
 import com.expensetracker.model.PeriodReportResponse;
+import com.expensetracker.model.PeriodReportRegenerationResponse;
 import com.expensetracker.model.PeriodReportsResponse;
 import com.expensetracker.model.PeriodsResponse;
 import com.expensetracker.model.SummaryResponse;
@@ -64,6 +65,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
         PeriodRange.class,
         PeriodReportResponse.class,
         PeriodReportResponse[].class,
+        PeriodReportRegenerationResponse.class,
         PeriodReportsResponse.class,
         PeriodsResponse.class,
         SummaryResponse.class,

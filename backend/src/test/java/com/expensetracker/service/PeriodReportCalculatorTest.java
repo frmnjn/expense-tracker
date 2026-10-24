@@ -55,10 +55,32 @@ class PeriodReportCalculatorTest {
         assertEquals(3, stats.budgetCategories().size());
 
         assertEquals(BudgetStatus.LOW, budget(stats, "Daily").status());
+        assertEquals(65_000, budget(stats, "Daily").openingBalance());
         assertEquals(50_000, budget(stats, "Daily").topUps());
         assertEquals(50_000, budget(stats, "Daily").expenses());
         assertEquals(0, budget(stats, "Daily").netChange());
         assertEquals(BudgetStatus.NEGATIVE, budget(stats, "Other").status());
+        assertEquals(79_000, budget(stats, "Other").openingBalance());
+    }
+
+    @Test
+    void budgetStats_shouldReconcileOpeningPlusTopUpsMinusExpensesToEnding() {
+        List<ExpenseData> expenses = List.of(
+                expense("e1", "2026-10-22 18:09", "Sate", "Daily", "Eating Out", 35_000, ""));
+        List<TopUpResponse> topUps = List.of(
+                new TopUpResponse("t1", "2026-10-01 06:12", "Daily", 50_000L, ""));
+        List<BudgetOption> budgets = List.of(
+                new BudgetOption("Daily", 65_000, 100_000, null),
+                new BudgetOption("Zero", 0, 0, null));
+
+        PeriodReportStatistics stats = PeriodReportCalculator.calculate(
+                data(expenses, topUps, budgets, 35_000, 1));
+
+        for (PeriodReportStatistics.BudgetStat budget : stats.budgets()) {
+            assertEquals(budget.balance(),
+                    budget.openingBalance() + budget.topUps() - budget.expenses());
+        }
+        assertEquals(budget(stats, "Zero").balance(), budget(stats, "Zero").openingBalance());
     }
 
     @Test
@@ -96,6 +118,57 @@ class PeriodReportCalculatorTest {
         assertTrue(stats.observations().size() >= 1);
         assertTrue(stats.observations().get(0).contains("Total pengeluaran Rp0"));
         assertTrue(stats.recommendations().get(0).contains("Tidak ada tindakan mendesak"));
+    }
+
+    @Test
+    void calculate_shouldSortNegativeBudgetsFirstAndKeepZeroActivityBudget() {
+        List<BudgetOption> budgets = List.of(
+                new BudgetOption("Alpha", 100_000, 0, null),
+                new BudgetOption("Bravo", 100_000, 50_000, null),
+                new BudgetOption("NegKecil", -5_000, 0, null),
+                new BudgetOption("NegBesar", -50_000, 0, null),
+                new BudgetOption("Low", 10_000, 50_000, null),
+                new BudgetOption("Zero", 0, 0, null));
+
+        PeriodReportStatistics stats = PeriodReportCalculator.calculate(
+                data(List.of(), List.of(), budgets, 0, 0));
+
+        assertEquals(List.of("NegBesar", "NegKecil", "Low", "Zero", "Alpha", "Bravo"),
+                stats.budgets().stream().map(PeriodReportStatistics.BudgetStat::budget).toList());
+        assertEquals(BudgetStatus.NEGATIVE, budget(stats, "NegBesar").status());
+        assertEquals(BudgetStatus.LOW, budget(stats, "Low").status());
+        assertEquals(BudgetStatus.NO_THRESHOLD, budget(stats, "Zero").status());
+        assertEquals(BudgetStatus.OK, budget(stats, "Bravo").status());
+        assertEquals(0, budget(stats, "Zero").expenses());
+        assertEquals(0, budget(stats, "Zero").topUps());
+    }
+
+    @Test
+    void recommendations_shouldAskToConfigureThresholdsWithoutClaimingBalancesAreSafe() {
+        List<BudgetOption> budgets = List.of(
+                new BudgetOption("A", 100_000, 0, null),
+                new BudgetOption("B", 50_000, 0, null));
+
+        PeriodReportStatistics stats = PeriodReportCalculator.calculate(
+                data(List.of(), List.of(), budgets, 0, 0));
+
+        assertTrue(stats.recommendations().stream()
+                .anyMatch(recommendation -> recommendation.contains("Atur batas pengingat saldo rendah")));
+        assertTrue(stats.observations().stream()
+                .noneMatch(observation -> observation.contains("batas pengingat")));
+        assertTrue(stats.observations().stream()
+                .noneMatch(observation -> observation.contains("ambang")));
+    }
+
+    @Test
+    void budgetBalanceEqualToThreshold_shouldNotBeLow() {
+        PeriodReportStatistics stats = PeriodReportCalculator.calculate(
+                data(List.of(), List.of(),
+                        List.of(new BudgetOption("Boundary", 50_000, 50_000, null)), 0, 0));
+
+        assertEquals(BudgetStatus.OK, budget(stats, "Boundary").status());
+        assertTrue(stats.recommendations().stream()
+                .noneMatch(recommendation -> recommendation.contains("perlu mulai dihemat")));
     }
 
     @Test

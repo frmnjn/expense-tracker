@@ -7,6 +7,8 @@ import com.expensetracker.data.PeriodReportRepository;
 import com.expensetracker.data.TopUpRepository;
 import com.expensetracker.model.BudgetOption;
 import com.expensetracker.model.PeriodReportData;
+import com.expensetracker.model.PeriodReportRegenerationResponse;
+import com.expensetracker.model.PeriodReportResponse;
 import com.expensetracker.model.PeriodReportStatistics;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -22,6 +24,7 @@ import java.nio.file.Path;
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
 import java.util.Map;
@@ -92,6 +95,7 @@ class PeriodReportServiceTest {
         assertEquals(LocalDate.of(2026, 10, 22), data.getValue().endDate());
         assertEquals(35000, data.getValue().databaseExpenseTotal());
         assertEquals(1, data.getValue().databaseTransactionCount());
+        verify(budgetRepository).getOptionsAt(LocalDateTime.of(2026, 10, 23, 0, 0));
     }
 
     @Test
@@ -135,11 +139,45 @@ class PeriodReportServiceTest {
                 anyInt(), anyLong(), any(byte[].class), anyString());
     }
 
+    @Test
+    void regenerateAll_shouldRewriteStoredReportsWithoutSendingEmail() {
+        when(periodReportRepository.findAll()).thenReturn(List.of(
+                new PeriodReportResponse(
+                        "2026-SEP-OCT", "report-2026-SEP-OCT.pdf", 10, "2026-10-23 00:00"),
+                new PeriodReportResponse(
+                        "2026-AUG-SEP", "report-2026-AUG-SEP.pdf", 20, "2026-09-25 00:00")));
+        when(budgetRepository.getOptionsAt(any()))
+                .thenReturn(List.of(new BudgetOption("Daily", 65_000, 0, null)));
+        when(expenseRepository.getExpenses("2026-SEP-OCT")).thenReturn(List.of(
+                new ExpenseData("e1", "2026-SEP-OCT", "2026-10-22 18:09", "Makan Siang", "Daily",
+                        35_000, "", false, false, null, null, null, "Eating Out", null)));
+        when(expenseRepository.totalForPeriod("2026-SEP-OCT")).thenReturn(35_000L);
+        when(expenseRepository.countForPeriod("2026-SEP-OCT")).thenReturn(1);
+        when(topUpRepository.findByDateRange(any(), any())).thenReturn(List.of());
+        byte[] pdf = "%PDF-regenerated".getBytes(StandardCharsets.UTF_8);
+        when(renderer.render(any(PeriodReportData.class), any(PeriodReportStatistics.class))).thenReturn(pdf);
+
+        PeriodReportRegenerationResponse response = service.regenerateAll();
+
+        assertEquals(List.of("2026-SEP-OCT", "2026-AUG-SEP"), response.regenerated());
+        assertTrue(response.failed().isEmpty());
+        verify(renderer, times(2)).render(any(PeriodReportData.class), any(PeriodReportStatistics.class));
+        verify(periodReportRepository).updateFile(eq("2026-SEP-OCT"), eq("report-2026-SEP-OCT.pdf"),
+                eq((long) pdf.length), any());
+        verify(periodReportRepository).updateFile(eq("2026-AUG-SEP"), eq("report-2026-AUG-SEP.pdf"),
+                eq((long) pdf.length), any());
+        verify(budgetRepository).getOptionsAt(LocalDateTime.of(2026, 10, 23, 0, 0));
+        verify(budgetRepository).getOptionsAt(LocalDateTime.of(2026, 9, 25, 0, 0));
+        verifyNoInteractions(notificationService);
+        assertTrue(Files.exists(tempDir.resolve("reports/report-2026-SEP-OCT.pdf")));
+        assertTrue(Files.exists(tempDir.resolve("reports/report-2026-AUG-SEP.pdf")));
+    }
+
     private void stubReportData(String period, List<ExpenseData> expenses) {
         when(periodReportRepository.exists(period)).thenReturn(false);
         when(expenseRepository.getExpenses(period)).thenReturn(expenses);
         when(topUpRepository.findByDateRange(any(), any())).thenReturn(List.of());
-        when(budgetRepository.getOptions()).thenReturn(List.of(new BudgetOption("Daily", 65000, 0, null)));
+        when(budgetRepository.getOptionsAt(any())).thenReturn(List.of(new BudgetOption("Daily", 65000, 0, null)));
         when(expenseRepository.totalForPeriod(period))
                 .thenReturn(expenses.stream().mapToLong(ExpenseData::amount).sum());
         when(expenseRepository.countForPeriod(period)).thenReturn(expenses.size());

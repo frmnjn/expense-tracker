@@ -19,6 +19,7 @@ import org.xhtmlrenderer.pdf.ITextRenderer;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -62,6 +63,15 @@ public class PeriodReportPdfRenderer {
                 .append(".page-break { page-break-before: always; }")
                 .append(".keep { page-break-inside: avoid; }")
                 .append(".desc { color: #555555; font-size: 7.5pt; }")
+                .append(".status-detail { white-space: nowrap; }")
+                .append(".negative { color: #a00020; font-weight: bold; }")
+                .append(".budget-table { table-layout: fixed; }")
+                .append(".budget-table th { white-space: normal; }")
+                .append(".budget-table tr { page-break-inside: avoid; }")
+                .append(".col-budget-name { width: 18%; }")
+                .append(".col-budget-opening { width: 15%; }")
+                .append(".col-budget-amount { width: 16%; }")
+                .append(".col-budget-status { width: 19%; }")
                 .append(".date { white-space: nowrap; }")
                 .append(".col-date { width: 17%; }")
                 .append(".col-budget { width: 15%; }")
@@ -110,7 +120,7 @@ public class PeriodReportPdfRenderer {
                 .append(summaryRow("Jumlah transaksi", String.valueOf(stats.transactionCount())))
                 .append(summaryRow("Rata-rata per hari", ReportFormat.rupiah(stats.averageDailyExpense())
                         + " selama " + stats.periodDays() + " hari"))
-                .append(summaryRow("Total top-up", ReportFormat.rupiah(stats.topUpTotal())
+                .append(summaryRow("Total uang ditambahkan", ReportFormat.rupiah(stats.topUpTotal())
                         + " (tidak termasuk pengeluaran)"))
                 .append("</table>");
 
@@ -131,11 +141,13 @@ public class PeriodReportPdfRenderer {
 
         long negative = stats.budgets().stream().filter(b -> b.status() == BudgetStatus.NEGATIVE).count();
         long low = stats.budgets().stream().filter(b -> b.status() == BudgetStatus.LOW).count();
-        html.append("<h3>Kondisi budget</h3>")
-                .append("<p>").append(stats.budgets().size()).append(" budget: ")
-                .append(negative).append(" negatif, ")
-                .append(low).append(" di bawah ambang peringatan, ")
-                .append(stats.budgets().size() - negative - low).append(" tanpa peringatan.</p>");
+        long noThreshold = stats.budgets().stream()
+                .filter(b -> b.status() == BudgetStatus.NO_THRESHOLD).count();
+        html.append("<h3>Kondisi budget</h3><ul>");
+        for (String condition : budgetConditionLines(negative, low, noThreshold, stats.budgets().size())) {
+            html.append("<li>").append(h(condition)).append("</li>");
+        }
+        html.append("</ul>");
 
         appendList(html, "Temuan Utama", stats.observations());
     }
@@ -181,32 +193,53 @@ public class PeriodReportPdfRenderer {
             html.append("<p class=\"muted\">Tidak ada budget aktif.</p>");
             return;
         }
-        html.append("<table><thead><tr><th>Budget</th><th class=\"amount\">Top-up</th>")
-                .append("<th class=\"amount\">Pengeluaran</th><th class=\"amount\">Perubahan bersih</th>")
-                .append("<th class=\"amount\">Saldo berjalan</th><th class=\"amount\">Ambang peringatan</th>")
-                .append("<th>Status</th></tr></thead><tbody>");
+
+        long negative = stats.budgets().stream().filter(b -> b.status() == BudgetStatus.NEGATIVE).count();
+        long nonNegative = stats.budgets().size() - negative;
+
+        html.append("<div class=\"keep\"><table class=\"summary-grid\">")
+                .append(summaryRow("Budget dengan saldo minus", String.valueOf(negative)))
+                .append(summaryRow("Budget dengan saldo nol atau lebih", String.valueOf(nonNegative)))
+                .append(summaryRow("Total uang ditambahkan periode ini",
+                        ReportFormat.rupiah(stats.topUpTotal())))
+                .append(summaryRow("Total uang dipakai periode ini",
+                        ReportFormat.rupiah(stats.expenseTotal())))
+                .append("</table></div>");
+
+        html.append("<p class=\"note\"><strong>Cara membaca angka:</strong> ")
+                .append("<em>Saldo awal periode</em> adalah saldo budget pada awal periode, sama dengan ")
+                .append("saldo akhir periode sebelumnya. <em>Uang yang ditambahkan</em> adalah dana yang ")
+                .append("dialokasikan ke budget tersebut selama periode laporan, bukan pengeluaran atau ")
+                .append("pemasukan. <em>Uang yang dipakai</em> adalah pengeluaran dari budget tersebut selama ")
+                .append("periode laporan. <em>Sisa saldo akhir periode</em> adalah saldo budget pada hari ")
+                .append("terakhir periode, sebelum transaksi periode berikutnya. Dengan begitu: ")
+                .append("saldo awal + uang ditambahkan - uang dipakai = saldo akhir periode. ")
+                .append("Penyesuaian saldo manual tidak dapat dilacak. ")
+                .append("Saldo bertanda minus berarti budget sudah melewati saldo yang tersedia.</p>");
+
+        html.append("<table class=\"budget-table\"><thead><tr><th class=\"col-budget-name\">Nama budget</th>")
+                .append("<th class=\"amount col-budget-opening\">Saldo awal periode</th>")
+                .append("<th class=\"amount col-budget-amount\">Uang yang ditambahkan selama periode</th>")
+                .append("<th class=\"amount col-budget-amount\">Uang yang dipakai selama periode</th>")
+                .append("<th class=\"amount col-budget-amount\">Sisa saldo akhir periode</th>")
+                .append("<th class=\"col-budget-status\">Kondisi budget</th></tr></thead><tbody>");
         for (BudgetStat budget : stats.budgets()) {
             html.append("<tr><td>").append(h(budget.budget())).append("</td>")
+                    .append("<td class=\"amount")
+                    .append(budget.openingBalance() < 0 ? " negative" : "")
+                    .append("\">").append(h(ReportFormat.rupiah(budget.openingBalance()))).append("</td>")
                     .append("<td class=\"amount\">").append(h(ReportFormat.rupiah(budget.topUps()))).append("</td>")
                     .append("<td class=\"amount\">").append(h(ReportFormat.rupiah(budget.expenses()))).append("</td>")
-                    .append("<td class=\"amount\">").append(h(ReportFormat.rupiah(budget.netChange()))).append("</td>")
-                    .append("<td class=\"amount\">").append(h(ReportFormat.rupiah(budget.balance()))).append("</td>")
-                    .append("<td class=\"amount\">")
-                    .append(budget.alertThreshold() > 0 ? h(ReportFormat.rupiah(budget.alertThreshold())) : "Nonaktif")
-                    .append("</td><td>").append(status(budget.status())).append("</td></tr>");
+                    .append("<td class=\"amount")
+                    .append(budget.balance() < 0 ? " negative" : "")
+                    .append("\">").append(h(ReportFormat.rupiah(budget.balance()))).append("</td>")
+                    .append("<td>").append(budgetStatusCell(budget)).append("</td></tr>");
         }
-        html.append("</tbody></table>")
-                .append("<p class=\"note\">Top-up dan pengeluaran dibatasi pada periode laporan. ")
-                .append("Saldo berjalan adalah saldo budget saat laporan dibuat; ")
-                .append("saldo awal dan saldo akhir periode tidak direkonstruksi karena saldo budget ")
-                .append("dapat diedit langsung dan tidak ada riwayat saldo. ")
-                .append("Utilisasi budget tidak tersedia karena budget tidak memiliki field limit; ")
-                .append("ambang peringatan hanya penanda saldo rendah.</p>");
+        html.append("</tbody></table>");
     }
 
     private void appendInsights(StringBuilder html, PeriodReportStatistics stats) {
         html.append("<h2>Analisis Keuangan</h2>");
-        appendList(html, "Observasi", stats.observations());
         appendList(html, "Rekomendasi", stats.recommendations());
 
         if (!stats.largestTransactions().isEmpty()) {
@@ -251,9 +284,9 @@ public class PeriodReportPdfRenderer {
     }
 
     private void appendTopUps(StringBuilder html, PeriodReportData data, PeriodReportStatistics stats) {
-        html.append("<h2>Lampiran B: Top-up</h2>");
+        html.append("<h2>Lampiran B: Uang yang Ditambahkan</h2>");
         if (data.topUps().isEmpty()) {
-            html.append("<p class=\"muted\">Tidak ada top-up pada periode ini.</p>");
+            html.append("<p class=\"muted\">Tidak ada uang yang ditambahkan pada periode ini.</p>");
             return;
         }
         html.append("<table><thead><tr><th class=\"col-date\">Tanggal</th><th class=\"col-budget\">Budget</th><th class=\"amount col-amount\">Nominal</th>")
@@ -282,13 +315,40 @@ public class PeriodReportPdfRenderer {
         return "<tr><td class=\"label\">" + h(label) + "</td><td class=\"value\">" + h(value) + "</td></tr>";
     }
 
-    private static String status(BudgetStatus status) {
-        return switch (status) {
-            case NEGATIVE -> "<span class=\"warn\">NEGATIF</span>";
-            case LOW -> "<span class=\"warn\">RENDAH</span>";
-            case OK -> "<span class=\"ok\">OK</span>";
-            case NO_THRESHOLD -> "<span class=\"muted\">TANPA AMBANG</span>";
+    private static String budgetStatusCell(BudgetStat budget) {
+        return switch (budget.status()) {
+            case NEGATIVE -> "<span class=\"warn\">Saldo Minus</span>";
+            case LOW -> "<span class=\"warn\">Saldo Menipis</span><div class=\"desc status-detail\">"
+                    + "Batas " + h(ReportFormat.rupiah(budget.alertThreshold())) + "</div>";
+            case OK -> "<span class=\"ok\">Saldo Tersedia</span>";
+            case NO_THRESHOLD -> "<span class=\"ok\">Saldo Tersedia</span>"
+                    + "<div class=\"desc status-detail\">Batas belum diatur</div>";
         };
+    }
+
+    private static List<String> budgetConditionLines(long negative, long low, long noThreshold, int budgetCount) {
+        List<String> lines = new ArrayList<>();
+        if (budgetCount == 0) {
+            lines.add("Belum ada budget yang bisa diringkas. Tambahkan budget untuk mulai memantau pengeluaran.");
+            return lines;
+        }
+        if (negative > 0) {
+            lines.add(negative + " budget memiliki saldo minus. Periksa pengeluaran dan kondisi saldo "
+                    + "budget tersebut.");
+        }
+        if (low > 0) {
+            lines.add(low + " budget perlu mulai dihemat. Saldonya sudah di bawah batas pengingat "
+                    + "yang ditentukan.");
+        }
+        if (noThreshold > 0) {
+            lines.add(noThreshold + " budget belum memiliki batas pengingat saldo rendah. Atur batasnya "
+                    + "agar kamu mendapat pengingat saat saldo mulai menipis.");
+        }
+        if (negative == 0 && low == 0 && noThreshold == 0) {
+            lines.add("Semua budget masih di atas atau sama dengan batas pengingat saldo rendah. "
+                    + "Tetap pantau pengeluaran agar saldo tidak cepat habis.");
+        }
+        return lines;
     }
 
     private static byte[] renderPdf(String html) {

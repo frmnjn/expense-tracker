@@ -6,6 +6,8 @@ import org.springframework.dao.DuplicateKeyException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -14,6 +16,9 @@ import java.util.Map;
 @Repository
 public class BudgetRepository {
 
+    private static final DateTimeFormatter SQL_DATE_TIME =
+            DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+
     private final JdbcTemplate jdbcTemplate;
 
     public BudgetRepository(JdbcTemplate jdbcTemplate) {
@@ -21,6 +26,30 @@ public class BudgetRepository {
     }
 
     public List<BudgetOption> getOptions() {
+        return queryOptions(
+                "SELECT name, balance, alert_threshold, description FROM budgets "
+                        + "WHERE is_active = TRUE ORDER BY name");
+    }
+
+    /**
+     * Budget dengan saldo pada saat {@code cutoffExclusive}: saldo tersimpan
+     * sekarang dikurangi top-up dan ditambah pengeluaran aktif setelah cutoff.
+     * Dipakai untuk report periode lama yang dibuat/diregenerasi belakangan.
+     */
+    public List<BudgetOption> getOptionsAt(LocalDateTime cutoffExclusive) {
+        String cutoff = cutoffExclusive.format(SQL_DATE_TIME);
+        return queryOptions(
+                "SELECT b.name, "
+                        + "b.balance - COALESCE((SELECT SUM(t.amount) FROM top_ups t "
+                        + "WHERE t.budget_id = b.id AND t.date_time >= ?), 0) "
+                        + "+ COALESCE((SELECT SUM(e.amount) FROM expenses e "
+                        + "WHERE e.budget_id = b.id AND e.deleted = FALSE AND e.date_time >= ?), 0) AS balance, "
+                        + "b.alert_threshold, b.description FROM budgets b "
+                        + "WHERE b.is_active = TRUE ORDER BY b.name",
+                cutoff, cutoff);
+    }
+
+    private List<BudgetOption> queryOptions(String sql, Object... args) {
         Map<String, List<CategoryOption>> categoriesByBudget = new LinkedHashMap<>();
         jdbcTemplate.query(
                 "SELECT b.name AS budget_name, c.id AS category_id, c.name AS category_name, c.description AS category_description "
@@ -32,11 +61,11 @@ public class BudgetRepository {
                             .add(new CategoryOption(rs.getLong("category_id"), rs.getString("category_name"),
                                     rs.getString("category_description")));
                 });
-        return jdbcTemplate.query(
-                "SELECT name, balance, alert_threshold, description FROM budgets WHERE is_active = TRUE ORDER BY name",
+        return jdbcTemplate.query(sql,
                 (rs, rowNum) -> new BudgetOption(rs.getString("name"), rs.getLong("balance"),
                         rs.getLong("alert_threshold"), rs.getString("description"),
-                        categoriesByBudget.getOrDefault(rs.getString("name"), List.of())));
+                        categoriesByBudget.getOrDefault(rs.getString("name"), List.of())),
+                args);
     }
 
     public Long findIdByName(String name) {

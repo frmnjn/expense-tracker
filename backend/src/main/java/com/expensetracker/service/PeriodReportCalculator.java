@@ -31,6 +31,11 @@ public final class PeriodReportCalculator {
 
     private static final String TANPA_KATEGORI = "Tanpa Kategori";
 
+    private static final Comparator<BudgetStat> BUDGET_ATTENTION_ORDER =
+            Comparator.comparingInt((BudgetStat budget) -> budgetPriority(budget.status()))
+                    .thenComparingLong(BudgetStat::balance)
+                    .thenComparing(BudgetStat::budget);
+
     private PeriodReportCalculator() {
     }
 
@@ -111,6 +116,7 @@ public final class PeriodReportCalculator {
                     int count = countByBudget.getOrDefault(budget.name(), 0);
                     return new BudgetStat(
                             budget.name(),
+                            budget.balance() - topUps + expenses,
                             topUps,
                             expenses,
                             count,
@@ -119,6 +125,7 @@ public final class PeriodReportCalculator {
                             budget.alertThreshold(),
                             budgetStatus(budget.balance(), budget.alertThreshold()));
                 })
+                .sorted(BUDGET_ATTENTION_ORDER)
                 .toList();
 
         List<ExpenseData> largestTransactions = data.expenses().stream()
@@ -132,7 +139,7 @@ public final class PeriodReportCalculator {
 
         List<String> observations = buildObservations(
                 data, expenseTotal, topUpTotal, periodDays, averageDaily,
-                categories, budgetStats, largestTransactions, integrity);
+                categories, largestTransactions, integrity);
         List<String> recommendations = buildRecommendations(budgetStats, integrity);
 
         return new PeriodReportStatistics(
@@ -157,7 +164,6 @@ public final class PeriodReportCalculator {
             int periodDays,
             long averageDaily,
             List<CategoryTotal> categories,
-            List<BudgetStat> budgetStats,
             List<ExpenseData> largestTransactions,
             Integrity integrity) {
         List<String> observations = new ArrayList<>();
@@ -175,15 +181,6 @@ public final class PeriodReportCalculator {
                     + " dari pengeluaran).");
         }
 
-        long negative = budgetStats.stream().filter(b -> b.status() == BudgetStatus.NEGATIVE).count();
-        long low = budgetStats.stream().filter(b -> b.status() == BudgetStatus.LOW).count();
-        if (negative > 0 || low > 0) {
-            observations.add(negative + " budget memiliki saldo negatif dan " + low
-                    + " berada di bawah ambang peringatan.");
-        } else {
-            observations.add("Tidak ada saldo budget negatif; ambang peringatan yang dikonfigurasi terpenuhi.");
-        }
-
         if (!largestTransactions.isEmpty()) {
             ExpenseData largest = largestTransactions.get(0);
             observations.add("Transaksi terbesar adalah " + largest.name() + " pada "
@@ -192,8 +189,8 @@ public final class PeriodReportCalculator {
                     + ReportFormat.percent(percent(largest.amount(), expenseTotal)) + " dari total).");
         }
         if (topUpTotal != 0) {
-            observations.add("Top-up periode ini sebesar " + ReportFormat.rupiah(topUpTotal)
-                    + "; nominal ini tidak termasuk pengeluaran.");
+            observations.add("Uang yang ditambahkan periode ini sebesar " + ReportFormat.rupiah(topUpTotal)
+                    + "; nominal ini bukan pengeluaran.");
         }
         return observations.stream().limit(MAX_OBSERVATIONS).toList();
     }
@@ -207,7 +204,7 @@ public final class PeriodReportCalculator {
                 .map(BudgetStat::budget)
                 .toList();
         if (!negative.isEmpty()) {
-            recommendations.add("Pulihkan saldo budget negatif atau sesuaikan alokasi: "
+            recommendations.add("Budget berikut saldonya minus. Periksa pengeluaran atau tambahkan saldo: "
                     + String.join(", ", negative) + ".");
         }
         List<String> low = budgetStats.stream()
@@ -215,7 +212,16 @@ public final class PeriodReportCalculator {
                 .map(BudgetStat::budget)
                 .toList();
         if (!low.isEmpty()) {
-            recommendations.add("Tinjau budget di bawah ambang peringatan: " + String.join(", ", low) + ".");
+            recommendations.add("Budget berikut perlu mulai dihemat karena saldonya sudah di bawah "
+                    + "batas pengingat: " + String.join(", ", low) + ".");
+        }
+        List<String> noThreshold = budgetStats.stream()
+                .filter(budget -> budget.status() == BudgetStatus.NO_THRESHOLD)
+                .map(BudgetStat::budget)
+                .toList();
+        if (!noThreshold.isEmpty()) {
+            recommendations.add("Atur batas pengingat saldo rendah untuk budget berikut agar kamu mendapat "
+                    + "pengingat otomatis: " + String.join(", ", noThreshold) + ".");
         }
         if (!integrity.ok()) {
             recommendations.add("Periksa kembali klasifikasi periode dan total terhadap database "
@@ -258,6 +264,15 @@ public final class PeriodReportCalculator {
             return BudgetStatus.LOW;
         }
         return alertThreshold > 0 ? BudgetStatus.OK : BudgetStatus.NO_THRESHOLD;
+    }
+
+    private static int budgetPriority(BudgetStatus status) {
+        return switch (status) {
+            case NEGATIVE -> 0;
+            case LOW -> 1;
+            case NO_THRESHOLD -> 2;
+            case OK -> 3;
+        };
     }
 
     private static boolean isUncategorized(ExpenseData expense) {
