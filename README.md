@@ -30,20 +30,20 @@ Tampilan desktop memakai sidebar di kiri, konten lebar, dan tabel untuk daftar t
 
 
 <p align="center">
-  <img src="docs/screenshots/dashboard-desktop.jpg" alt="Dashboard desktop" width="100%" />
+  <img src="docs/screenshots/dashboard-desktop.jpg" alt="Dashboard desktop" width="900" />
 </p>
 
 | Catat Pengeluaran | Riwayat Pengeluaran |
 |---|---|
-| ![Catat desktop](docs/screenshots/catat-desktop.jpg) | ![Riwayat desktop](docs/screenshots/riwayat-desktop.jpg) |
+| <img src="docs/screenshots/catat-desktop.jpg" alt="Catat desktop" width="480" /> | <img src="docs/screenshots/riwayat-desktop.jpg" alt="Riwayat desktop" width="480" /> |
 
 | Scan Struk | Inbox Email |
 |---|---|
-| ![Scan desktop](docs/screenshots/scan-desktop.jpg) | ![Inbox desktop](docs/screenshots/inbox-desktop.jpg) |
+| <img src="docs/screenshots/scan-desktop.jpg" alt="Scan desktop" width="480" /> | <img src="docs/screenshots/inbox-desktop.jpg" alt="Inbox desktop" width="480" /> |
 
 | Voice Assistant | Laporan |
 |---|---|
-| ![Voice desktop](docs/screenshots/voice-desktop.jpg) | ![Laporan desktop](docs/screenshots/laporan-desktop.jpg) |
+| <img src="docs/screenshots/voice-desktop.jpg" alt="Voice desktop" width="480" /> | <img src="docs/screenshots/laporan-desktop.jpg" alt="Laporan desktop" width="480" /> |
 
 ### Mobile
 
@@ -51,15 +51,15 @@ Tampilan mobile mengganti sidebar menjadi **bottom navigation**, form menjadi sa
 
 | Dashboard | Catat | Riwayat |
 |---|---|---|
-| <img src="docs/screenshots/dashboard-mobile.jpg" width="100%" /> | <img src="docs/screenshots/catat-mobile.jpg" width="100%" /> | <img src="docs/screenshots/riwayat-mobile.jpg" width="100%" /> |
+| <img src="docs/screenshots/dashboard-mobile.jpg" width="200" /> | <img src="docs/screenshots/catat-mobile.jpg" width="200" /> | <img src="docs/screenshots/riwayat-mobile.jpg" width="200" /> |
 
 | Scan | Inbox | Voice |
 |---|---|---|
-| <img src="docs/screenshots/scan-mobile.jpg" width="100%" /> | <img src="docs/screenshots/inbox-mobile.jpg" width="100%" /> | <img src="docs/screenshots/voice-mobile.jpg" width="100%" /> |
+| <img src="docs/screenshots/scan-mobile.jpg" width="200" /> | <img src="docs/screenshots/inbox-mobile.jpg" width="200" /> | <img src="docs/screenshots/voice-mobile.jpg" width="200" /> |
 
 | Laporan |
 |---|
-| <img src="docs/screenshots/laporan-mobile.jpg" width="100%" /> |
+| <img src="docs/screenshots/laporan-mobile.jpg" width="200" /> |
 
 ---
 

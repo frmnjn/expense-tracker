@@ -9,7 +9,7 @@ import {
   Text,
 } from '@mantine/core'
 import { useMediaQuery } from '@mantine/hooks'
-import { IconDownload, IconEye, IconFileText, IconRefresh } from '@tabler/icons-react'
+import { IconDownload, IconEye, IconFileText } from '@tabler/icons-react'
 import dayjs from 'dayjs'
 import { PageHeader } from '../components/PageHeader'
 import { AppPagination } from '../components/AppPagination'
@@ -56,7 +56,7 @@ function ReportActions({ report }: { report: PeriodReport }) {
 }
 
 function ReportsPage() {
-  const { data, isPending, isError, isFetching, refetch } = useReports()
+  const { data, isPending, isError, refetch } = useReports()
   const isMobile = useMediaQuery('(max-width: 48em)')
   const reports = data?.reports ?? []
 
@@ -71,17 +71,6 @@ function ReportsPage() {
           eyebrow="Laporan"
           title="Laporan Periode"
           subtitle="Semua report PDF periode yang sudah dibuat."
-          right={
-            <Button
-              variant="light"
-              size="sm"
-              leftSection={<IconRefresh size={16} />}
-              onClick={() => refetch()}
-              loading={isFetching}
-            >
-              Segarkan
-            </Button>
-          }
         />
 
         {isPending ? (
