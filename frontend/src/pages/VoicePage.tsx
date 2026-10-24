@@ -23,7 +23,7 @@ import VoiceNoteDetailModal from '../components/VoiceNoteDetailModal'
 import { useToast } from '../components/Toast'
 import { useDeleteVoiceNote, useRetryVoiceNote, useUploadVoiceNote, useVoiceNotes } from '../hooks/useVoiceNotes'
 import { usePeriods } from '../hooks/useExpenses'
-import { currentPeriod } from '../utils/period'
+import { currentPeriod as fallbackCurrentPeriod } from '../utils/period'
 import { getErrorMessage } from '../utils/error'
 import type { VoiceNote } from '../types/expense'
 
@@ -36,10 +36,11 @@ interface PendingRecording {
 }
 
 function VoicePage() {
-  const runningPeriod = currentPeriod()
   const { data: periodsData } = usePeriods()
-  const [period, setPeriod] = useState(runningPeriod)
-  const { data, isPending, isError, refetch } = useVoiceNotes(period)
+  const runningPeriod = periodsData?.currentPeriod || fallbackCurrentPeriod()
+  const [period, setPeriod] = useState<string | null>(null)
+  const activePeriod = period ?? runningPeriod
+  const { data, isPending, isError, refetch } = useVoiceNotes(activePeriod)
   const upload = useUploadVoiceNote()
   const retry = useRetryVoiceNote()
   const remove = useDeleteVoiceNote()
@@ -160,8 +161,8 @@ function VoicePage() {
         <Select
           label="Periode"
           data={periodOptions}
-          value={period}
-          onChange={(value) => setPeriod(value ?? runningPeriod)}
+          value={activePeriod}
+          onChange={setPeriod}
           searchable
           size="sm"
         />

@@ -15,6 +15,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.text.NumberFormat;
 import java.time.Duration;
+import java.util.Base64;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
@@ -134,15 +135,43 @@ public class NotificationService {
         send("📋 Expenses recorded: " + RUPIAH.format(total), body);
     }
 
+    public void sendPeriodReport(String period, String dateRange, long total, int count, long topUpTotal,
+                                 byte[] pdf, String fileName) {
+        String body = buildEmail(
+                "Period report",
+                "Attached is the PDF report for " + period + ".",
+                total,
+                "Total expenses",
+                row("Period", period),
+                row("Date range", dateRange),
+                row("Transactions", String.valueOf(count)),
+                row("Total top-ups", RUPIAH.format(topUpTotal)));
+        send("📊 Period report: " + period, body, new Attachment(fileName, pdf));
+    }
+
     private void send(String subject, String body) {
+        send(subject, body, null);
+    }
+
+    private void send(String subject, String body, Attachment attachment) {
         if (notifierUrl == null || notifierUrl.isBlank() || emails.isEmpty()) {
             return;
         }
-        String json = "{\"to\":" + toJsonArray(emails)
-                + ",\"subject\":" + toJsonString(subject)
-                + ",\"body\":" + toJsonString(body)
-                + ",\"contentType\":\"text/html\"}";
-        executor.execute(MdcTask.wrap(() -> doSend(json)));
+        StringBuilder json = new StringBuilder("{\"to\":")
+                .append(toJsonArray(emails))
+                .append(",\"subject\":").append(toJsonString(subject))
+                .append(",\"body\":").append(toJsonString(body))
+                .append(",\"contentType\":\"text/html\"");
+        if (attachment != null) {
+            json.append(",\"attachments\":[{\"filename\":")
+                    .append(toJsonString(attachment.fileName()))
+                    .append(",\"contentBase64\":")
+                    .append(toJsonString(Base64.getEncoder().encodeToString(attachment.content())))
+                    .append("}]");
+        }
+        json.append("}");
+        String payload = json.toString();
+        executor.execute(MdcTask.wrap(() -> doSend(payload)));
     }
 
     private void doSend(String json) {
@@ -178,6 +207,12 @@ public class NotificationService {
 
     private static String buildEmail(String title, String subtitle, long heroAmount, String heroLabel,
                                      String... rows) {
+        return buildEmailWithFooter(title, subtitle, heroAmount, heroLabel,
+                "Automated message from Expense Tracker. Replies to this address are not monitored.", rows);
+    }
+
+    private static String buildEmailWithFooter(String title, String subtitle, long heroAmount, String heroLabel,
+                                               String footer, String... rows) {
         return "<!DOCTYPE html><html lang=\"en\"><body style=\"margin:0;padding:0;background:#f2f3f7\">"
                 + "<table role=\"presentation\" width=\"100%\" cellpadding=\"0\" cellspacing=\"0\">"
                 + "<tr><td align=\"center\" style=\"padding:28px 16px\">"
@@ -195,7 +230,7 @@ public class NotificationService {
                 + buildRows(rows)
                 + "<div style=\"border-top:1px solid #eeeeee;margin-top:20px;padding-top:14px;"
                 + "color:#9aa0a6;font-size:12px;line-height:1.5\">"
-                + "Automated message from Expense Tracker. Replies to this address are not monitored.</div>"
+                + esc(footer) + "</div>"
                 + "</td></tr>"
                 + "</table></td></tr></table></body></html>";
     }
@@ -224,6 +259,9 @@ public class NotificationService {
 
     private static String toJsonString(String value) {
         return "\"" + esc(value) + "\"";
+    }
+
+    private record Attachment(String fileName, byte[] content) {
     }
 
     private static String esc(String value) {

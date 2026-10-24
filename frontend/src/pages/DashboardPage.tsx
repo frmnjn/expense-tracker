@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Container, Select, SimpleGrid, Stack } from '@mantine/core'
+import { Button, Container, Grid, Group, Select, SimpleGrid, Stack } from '@mantine/core'
+import { useMediaQuery } from '@mantine/hooks'
+import { Link } from 'react-router-dom'
+import { IconCalendarEvent, IconFileText } from '@tabler/icons-react'
 import { PageHeader } from '../components/PageHeader'
 import { useExpenses, usePeriods, useSummary, useTrend } from '../hooks/useExpenses'
 import { useOptions } from '../hooks/useOptions'
@@ -9,13 +12,14 @@ import AddBudgetModal from '../components/AddBudgetModal'
 import EditBudgetModal from '../components/EditBudgetModal'
 import DeleteBudgetModal from '../components/DeleteBudgetModal'
 import ManageCategoriesModal from '../components/ManageCategoriesModal'
+import PaydaySettingsModal from '../components/PaydaySettingsModal'
 import { SpendingSummary } from '../components/dashboard/SpendingSummary'
 import { BudgetHealth } from '../components/dashboard/BudgetHealth'
 import { SpendingTrend } from '../components/dashboard/SpendingTrend'
 import { SpendingByBudget } from '../components/dashboard/SpendingByBudget'
 import { FinancialInsights } from '../components/dashboard/FinancialInsights'
 import { RecentExpenses } from '../components/dashboard/RecentExpenses'
-import { previousPeriod, parsePeriodStart, periodEnd, elapsedDays } from '../utils/period'
+import { previousPeriod, parsePeriodStart, elapsedDayCount } from '../utils/period'
 import { buildInsights } from '../utils/insights'
 
 function DashboardPage() {
@@ -28,6 +32,8 @@ function DashboardPage() {
   const [deleteBudgetName, setDeleteBudgetName] = useState<string | null>(null)
   const [manageCategoriesBudget, setManageCategoriesBudget] = useState<string | null>(null)
   const [editBudget, setEditBudget] = useState<{ name: string; balance: number | undefined; alertThreshold: number | undefined; description: string | undefined } | null>(null)
+  const [paydaySettingsOpened, setPaydaySettingsOpened] = useState(false)
+  const isMobile = useMediaQuery('(max-width: 48em)')
 
   useEffect(() => {
     if (!period && periodsData && periodsData.periods.length > 0) {
@@ -35,6 +41,7 @@ function DashboardPage() {
     }
   }, [period, periodsData])
 
+  const calendar = useMemo(() => periodsData?.calendar ?? [], [periodsData])
   const prevPeriod = period ? previousPeriod(period) : null
   const { data: summary, isPending: summaryLoading, isError: summaryError } = useSummary(period)
   const {
@@ -56,25 +63,30 @@ function DashboardPage() {
     ? budgets.find((b) => b.name === selectedTopUpBudget)?.balance
     : undefined
 
-  // Perbandingan date-to-date dengan periode sebelumnya (Plan A):
-  // total periode berjalan dibandingkan dengan pengeluaran periode sebelumnya
-  // hanya sampai tanggal yang sama, bukan seluruh periode.
+  // Perbandingan jumlah hari: N hari pertama periode ini dibandingkan dengan
+  // N hari pertama periode sebelumnya. Untuk periode lama, bandingkan periode penuh.
   const comparison = useMemo(() => {
-    if (!period || !prevPeriod) return { prevTotal: null as number | null, partial: false }
-    const days = elapsedDays(period, new Date())
-    const prevStart = parsePeriodStart(prevPeriod)
-    if (days === null || !prevStart) return { prevTotal: null, partial: false }
-    const cutoff = new Date(prevStart.getFullYear(), prevStart.getMonth(), prevStart.getDate() + days)
-    const total = (prevExpensesData?.expenses ?? [])
-      .filter((e) => new Date(e.dateTime.replace(' ', 'T')) <= cutoff)
-      .reduce((s, e) => s + e.amount, 0)
-    const end = periodEnd(period)
-    const partial = end !== null && new Date() < end
-    return { prevTotal: total > 0 ? total : null, partial }
-  }, [period, prevPeriod, prevExpensesData])
+    if (!period || !prevPeriod) return { prevTotal: null as number | null, partial: false, days: null as number | null }
+    const prevExpenses = prevExpensesData?.expenses ?? []
+    const isRunning = period === periodsData?.currentPeriod
 
-  const comparisonNote = comparison.partial
-    ? 'dibanding periode sebelumnya (tanggal yang sama)'
+    if (!isRunning) {
+      const total = prevExpenses.reduce((s, e) => s + e.amount, 0)
+      return { prevTotal: total > 0 ? total : null, partial: false, days: null }
+    }
+
+    const days = elapsedDayCount(period, new Date(), calendar)
+    const prevStart = parsePeriodStart(prevPeriod, calendar)
+    if (days === null || !prevStart) return { prevTotal: null, partial: false, days: null }
+    const cutoff = new Date(prevStart.getFullYear(), prevStart.getMonth(), prevStart.getDate() + days)
+    const total = prevExpenses
+      .filter((e) => new Date(e.dateTime.replace(' ', 'T')) < cutoff)
+      .reduce((s, e) => s + e.amount, 0)
+    return { prevTotal: total > 0 ? total : null, partial: true, days }
+  }, [period, prevPeriod, prevExpensesData, calendar, periodsData?.currentPeriod])
+
+  const comparisonNote = comparison.partial && comparison.days
+    ? `dibanding ${comparison.days} hari pertama periode sebelumnya`
     : 'dibanding periode sebelumnya'
 
   const insights = useMemo(() => {
@@ -97,16 +109,69 @@ function DashboardPage() {
           title="Dashboard"
           subtitle="Ringkasan keuangan dan budget kamu."
           right={
-            <Select
-              w={{ base: '100%', sm: 190 }}
-              placeholder={periodsLoading ? 'Memuat...' : 'Pilih periode'}
-              data={periods}
-              value={period}
-              onChange={setPeriod}
-              searchable
-              size="sm"
-              aria-label="Periode"
-            />
+            isMobile ? (
+              <Stack gap="xs">
+                <Select
+                  w="100%"
+                  placeholder={periodsLoading ? 'Memuat...' : 'Pilih periode'}
+                  data={periods}
+                  value={period}
+                  onChange={setPeriod}
+                  searchable
+                  size="sm"
+                  aria-label="Periode"
+                />
+                <Group grow gap="xs">
+                  <Button
+                    variant="light"
+                    size="sm"
+                    leftSection={<IconCalendarEvent size={16} />}
+                    onClick={() => setPaydaySettingsOpened(true)}
+                  >
+                    Atur Gajian
+                  </Button>
+                  <Button
+                    component={Link}
+                    to="/laporan"
+                    variant="light"
+                    size="sm"
+                    leftSection={<IconFileText size={16} />}
+                  >
+                    Laporan
+                  </Button>
+                </Group>
+              </Stack>
+            ) : (
+              <Group align="flex-end" gap="xs" wrap="nowrap">
+                <Select
+                  w={190}
+                  placeholder={periodsLoading ? 'Memuat...' : 'Pilih periode'}
+                  data={periods}
+                  value={period}
+                  onChange={setPeriod}
+                  searchable
+                  size="sm"
+                  aria-label="Periode"
+                />
+                <Button
+                  variant="light"
+                  size="sm"
+                  leftSection={<IconCalendarEvent size={16} />}
+                  onClick={() => setPaydaySettingsOpened(true)}
+                >
+                  Atur Gajian
+                </Button>
+                <Button
+                  component={Link}
+                  to="/laporan"
+                  variant="light"
+                  size="sm"
+                  leftSection={<IconFileText size={16} />}
+                >
+                  Laporan
+                </Button>
+              </Group>
+            )
           }
         />
 
@@ -119,26 +184,30 @@ function DashboardPage() {
           hasPeriod={!!period}
         />
 
-        <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="xl">
-          <BudgetHealth
-            budgets={budgets}
-            byBudget={byBudget}
-            isLoading={optionsLoading}
-            isError={optionsError}
-            onAddBudget={() => setAddBudgetOpened(true)}
-            onTopUp={(name) => setSelectedTopUpBudget(name)}
-            onHistory={(name) => setSelectedTopUpHistoryBudget(name)}
-            onManageCategories={(name) => setManageCategoriesBudget(name)}
-            onEdit={setEditBudget}
-            onDelete={(name) => setDeleteBudgetName(name)}
-          />
-          <SpendingTrend
-            periods={trend?.periods ?? []}
-            selectedPeriod={period}
-            isLoading={trendLoading}
-            isError={trendError}
-          />
-        </SimpleGrid>
+        <Grid gap="xl">
+          <Grid.Col span={{ base: 12, sm: 8 }}>
+            <BudgetHealth
+              budgets={budgets}
+              byBudget={byBudget}
+              isLoading={optionsLoading}
+              isError={optionsError}
+              onAddBudget={() => setAddBudgetOpened(true)}
+              onTopUp={(name) => setSelectedTopUpBudget(name)}
+              onHistory={(name) => setSelectedTopUpHistoryBudget(name)}
+              onManageCategories={(name) => setManageCategoriesBudget(name)}
+              onEdit={setEditBudget}
+              onDelete={(name) => setDeleteBudgetName(name)}
+            />
+          </Grid.Col>
+          <Grid.Col span={{ base: 12, sm: 4 }}>
+            <SpendingTrend
+              periods={trend?.periods ?? []}
+              selectedPeriod={period}
+              isLoading={trendLoading}
+              isError={trendError}
+            />
+          </Grid.Col>
+        </Grid>
 
         <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="xl">
           <SpendingByBudget
@@ -188,6 +257,12 @@ function DashboardPage() {
             onClose={() => setManageCategoriesBudget(null)}
           />
         )}
+        <PaydaySettingsModal
+          opened={paydaySettingsOpened}
+          calendar={calendar}
+          currentPeriod={periodsData?.currentPeriod ?? period ?? ''}
+          onClose={() => setPaydaySettingsOpened(false)}
+        />
       </Stack>
     </Container>
   )

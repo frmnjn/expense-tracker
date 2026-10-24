@@ -1,6 +1,7 @@
 package com.expensetracker.service;
 
 import com.expensetracker.data.EmailImportRepository;
+import com.expensetracker.data.PaydayOverrideRepository;
 import jakarta.activation.DataHandler;
 import jakarta.mail.Message;
 import jakarta.mail.Session;
@@ -45,13 +46,16 @@ class EmailInboxServiceTest {
     private InvoiceService invoiceService;
     @Mock
     private InvoiceAnalysisService invoiceAnalysisService;
+    @Mock
+    private PaydayOverrideRepository paydayOverrideRepository;
 
     private EmailInboxService service;
 
     @BeforeEach
     void setUp() {
         service = new EmailInboxService(emailImportRepository, emailParserService, merchantDiscardRule,
-                invoiceService, invoiceAnalysisService, true, "imap.gmail.com", 993, "user", "pass", "INBOX",
+                invoiceService, invoiceAnalysisService, new PeriodService(paydayOverrideRepository),
+                true, "imap.gmail.com", 993, "user", "pass", "INBOX",
                 "klikbca.com,bca.co.id", "superindo.co.id", 3, 50);
     }
 
@@ -137,7 +141,8 @@ class EmailInboxServiceTest {
         CountDownLatch started = new CountDownLatch(1);
         CountDownLatch release = new CountDownLatch(1);
         EmailInboxService asyncService = new EmailInboxService(emailImportRepository, emailParserService,
-                merchantDiscardRule, invoiceService, invoiceAnalysisService, true, "imap.gmail.com", 993, "user",
+                merchantDiscardRule, invoiceService, invoiceAnalysisService, new PeriodService(paydayOverrideRepository),
+                true, "imap.gmail.com", 993, "user",
                 "pass", "INBOX", "klikbca.com,bca.co.id", "superindo.co.id", 3, 50) {
             @Override
             public int poll() {
@@ -168,7 +173,8 @@ class EmailInboxServiceTest {
     @Test
     void triggerPoll_shouldReturnFalseWhenDisabled() {
         EmailInboxService disabledService = new EmailInboxService(emailImportRepository, emailParserService,
-                merchantDiscardRule, invoiceService, invoiceAnalysisService, false, "imap.gmail.com", 993, "user",
+                merchantDiscardRule, invoiceService, invoiceAnalysisService, new PeriodService(paydayOverrideRepository),
+                false, "imap.gmail.com", 993, "user",
                 "pass", "INBOX", "klikbca.com,bca.co.id", "superindo.co.id", 3, 50);
         try {
             assertFalse(disabledService.triggerPoll());

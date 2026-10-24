@@ -214,6 +214,12 @@ docker compose up --build
 
 Foto invoice tersimpan di direktori `./uploads` (bind mount) — jangan ubah menjadi named volume.
 
+### Demo statis (tanpa backend)
+
+Demo **tidak memakai backend/MySQL/notifier**. Frontend mode `VITE_DEMO_MODE=true` mengambil data dari `frontend/public/demo/data.json`, aset dari `frontend/public/demo/assets/`, dan PDF dari `frontend/public/demo/reports/`.
+
+Data + PDF digenerate oleh `scripts/generate_demo.sh` (Python untuk JSON, lalu renderer Java `PeriodReportPdfRenderer` untuk PDF) dan dijalankan harian via `scripts/install_demo_cron.sh`. `docker-compose.demo.yml` hanya menjalankan frontend dan me-bind-mount `./frontend/public/demo`. Jangan menambahkan service backend/DB untuk demo.
+
 ---
 
 ## Dependency Rules

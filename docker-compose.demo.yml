@@ -1,22 +1,10 @@
 name: expense-demo
 
 services:
-  backend:
-    image: expense-tracker-backend-jvm:latest
-    restart: unless-stopped
-    mem_limit: 512m
-    env_file:
-      - ./backend/.env.demo
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    volumes:
-      - ./uploads-demo:/app/uploads-demo
-
   frontend:
     build:
       context: ./frontend
       args:
-        VITE_API_URL: /expense-tracker-demo/api
         VITE_BASE_PATH: /expense-tracker-demo/
         VITE_DEMO_MODE: "true"
     image: expense-tracker-demo-frontend:latest
@@ -24,5 +12,5 @@ services:
     mem_limit: 128m
     expose:
       - "80"
-    depends_on:
-      - backend
+    volumes:
+      - ./frontend/public/demo:/usr/share/nginx/html/demo:ro

@@ -10,16 +10,16 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "@mantine/core": "^9.5.1",
-    "@mantine/dates": "^9.5.1",
-    "@mantine/hooks": "^9.5.1",
-    "@tabler/icons-react": "^3.48.0",
-    "@tanstack/react-query": "^5.101.4",
-    "axios": "^1.19.0",
-    "dayjs": "^1.11.21",
+    "@mantine/core": "^9.7.3",
+    "@mantine/dates": "^9.7.3",
+    "@mantine/hooks": "^9.7.3",
+    "@tabler/icons-react": "^3.49.0",
+    "@tanstack/react-query": "^5.104.5",
+    "axios": "^1.20.0",
+    "dayjs": "^1.11.23",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
-    "react-router-dom": "^7.18.4"
+    "react-router-dom": "^7.18.2"
   },
   "devDependencies": {
     "@types/node": "^24.13.3",
