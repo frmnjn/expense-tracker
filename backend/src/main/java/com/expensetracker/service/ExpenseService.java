@@ -55,6 +55,7 @@ public class ExpenseService {
     private final InvoiceService invoiceService;
     private final VoiceNoteService voiceNoteService;
     private final NotificationService notificationService;
+    private final PeriodService periodService;
 
     public ExpenseService(BudgetRepository budgetRepository,
                           CategoryRepository categoryRepository,
@@ -62,7 +63,8 @@ public class ExpenseService {
                           TopUpRepository topUpRepository,
                           InvoiceService invoiceService,
                           VoiceNoteService voiceNoteService,
-                          NotificationService notificationService) {
+                          NotificationService notificationService,
+                          PeriodService periodService) {
         this.budgetRepository = budgetRepository;
         this.categoryRepository = categoryRepository;
         this.expenseRepository = expenseRepository;
@@ -70,6 +72,7 @@ public class ExpenseService {
         this.invoiceService = invoiceService;
         this.voiceNoteService = voiceNoteService;
         this.notificationService = notificationService;
+        this.periodService = periodService;
     }
 
     public OptionsResponse getOptions() {
@@ -228,8 +231,9 @@ public class ExpenseService {
         Long categoryId = requireCategoryId(budgetId, request.category());
         validateVoiceNoteForSubmit(request.voiceNoteId());
         String id = UUID.randomUUID().toString();
-        String period = PeriodSheetName.forDate(dateTime.toLocalDate());
-        LocalDate periodStart = PeriodSheetName.periodStart(dateTime.toLocalDate());
+        PaydayCalendar calendar = periodService.calendar();
+        String period = calendar.forDate(dateTime.toLocalDate());
+        LocalDate periodStart = calendar.periodStart(dateTime.toLocalDate());
         expenseRepository.insert(
                 id,
                 period,
@@ -280,8 +284,8 @@ public class ExpenseService {
         if (request.groups() == null || request.groups().isEmpty()) {
             throw new ValidationException("At least one expense is required");
         }
-        String period = PeriodSheetName.forDate(dateTime.toLocalDate());
-        LocalDate periodStart = PeriodSheetName.periodStart(dateTime.toLocalDate());
+        String period = periodService.forDate(dateTime.toLocalDate());
+        LocalDate periodStart = periodService.periodStart(dateTime.toLocalDate());
 
         if (request.invoiceId() != null && !request.invoiceId().isBlank()) {
             invoiceService.requireInvoice(request.invoiceId());
@@ -362,7 +366,7 @@ public class ExpenseService {
     }
 
     public PeriodsResponse getPeriods() {
-        return new PeriodsResponse(expenseRepository.getPeriods());
+        return periodService.buildPeriods(expenseRepository.getPeriods());
     }
 
     public ExpensesResponse getExpenses(String period) {
@@ -490,7 +494,8 @@ public class ExpenseService {
 
         expenseRepository.update(
                 id,
-                PeriodSheetName.periodStart(dateTime.toLocalDate()),
+                periodService.forDate(dateTime.toLocalDate()),
+                periodService.periodStart(dateTime.toLocalDate()),
                 dateTime,
                 newBudgetId,
                 newCategoryId,
@@ -499,7 +504,7 @@ public class ExpenseService {
                 request.description());
 
         if (request.invoiceId() != null && !request.invoiceId().isBlank()) {
-            attachInvoiceToExpense(id, request.invoiceId(), PeriodSheetName.forDate(dateTime.toLocalDate()));
+            attachInvoiceToExpense(id, request.invoiceId(), periodService.forDate(dateTime.toLocalDate()));
         }
     }
 
@@ -527,7 +532,7 @@ public class ExpenseService {
     public void attachPhoto(String id, MultipartFile file) {
         ExpenseData expense = requireExpense(id);
         String period = expense.period();
-        LocalDate periodStart = PeriodSheetName.periodStart(
+        LocalDate periodStart = periodService.periodStart(
                 PeriodSheetName.parseLenient(expense.dateTime()).toLocalDate());
         String invoiceId = invoiceService.createInvoice(period, periodStart, file);
         expenseRepository.attachInvoice(id, invoiceId);

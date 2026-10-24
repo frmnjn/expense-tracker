@@ -1,6 +1,7 @@
 import apiClient from './api'
 import { newIdempotencyKey } from '../utils/idempotency'
 import { getAccessCode } from '../utils/access'
+import { demoAssetUrl, isDemoMode } from '../utils/demo'
 import type {
   ApiResponse,
   BatchExpenseRequest,
@@ -75,11 +76,30 @@ function accessSuffix(): string {
   return code ? `?access_code=${encodeURIComponent(code)}` : ''
 }
 
+const DEMO_EXPENSE_PHOTOS: Record<string, string> = {
+  'exp-demo-submitted-groceries': 'demo-receipt-submitted.png',
+  'exp-demo-submitted-household': 'demo-receipt-submitted.png',
+}
+
+const DEMO_INVOICE_PHOTOS: Record<string, string> = {
+  'inv-demo-review': 'demo-receipt-review.png',
+  'inv-demo-submitted': 'demo-receipt-submitted.png',
+  'inv-demo-not-invoice': 'demo-not-invoice.png',
+}
+
 export function getPhotoUrl(id: string): string {
+  if (isDemoMode) {
+    const fileName = DEMO_EXPENSE_PHOTOS[id]
+    return fileName ? demoAssetUrl(fileName) : ''
+  }
   return `${apiClient.defaults.baseURL}/expenses/${encodeURIComponent(id)}/photo${accessSuffix()}`
 }
 
 export function getInvoicePhotoUrl(id: string): string {
+  if (isDemoMode) {
+    const fileName = DEMO_INVOICE_PHOTOS[id]
+    return fileName ? demoAssetUrl(fileName) : ''
+  }
   return `${apiClient.defaults.baseURL}/invoices/${encodeURIComponent(id)}/photo${accessSuffix()}`
 }
 
@@ -158,7 +178,19 @@ export async function getOptions(): Promise<OptionsResponse> {
 
 export async function getPeriods(): Promise<PeriodsResponse> {
   const response = await apiClient.get<ApiResponse<PeriodsResponse>>('/periods')
-  return response.data.data ?? { periods: [] }
+  return response.data.data ?? { periods: [], currentPeriod: '', calendar: [] }
+}
+
+export async function savePaydayOverride(period: string, date: string): Promise<ApiResponse<void>> {
+  const response = await apiClient.put<ApiResponse<void>>(`/payday-overrides/${encodeURIComponent(period)}`, {
+    date,
+  })
+  return response.data
+}
+
+export async function deletePaydayOverride(period: string): Promise<ApiResponse<void>> {
+  const response = await apiClient.delete<ApiResponse<void>>(`/payday-overrides/${encodeURIComponent(period)}`)
+  return response.data
 }
 
 export async function getExpenses(period: string): Promise<ExpensesResponse> {

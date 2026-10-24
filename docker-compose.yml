@@ -36,6 +36,7 @@ services:
       DB_PASSWORD: expense-pass
       UPLOAD_DIR: /app/uploads
       NOTIFIER_URL: http://notifier:8081
+      TZ: Asia/Jakarta
     volumes:
       - ./uploads:/app/uploads
     depends_on:
