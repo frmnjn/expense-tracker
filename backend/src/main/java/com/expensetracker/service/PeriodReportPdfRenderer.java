@@ -278,7 +278,16 @@ public class PeriodReportPdfRenderer {
             html.append("<tr><td class=\"date\">").append(nowrap(ReportFormat.expenseDateTime(expense.dateTime()))).append("</td>")
                     .append("<td>").append(h(expense.name()));
             if (expense.description() != null && !expense.description().isBlank()) {
-                html.append("<div class=\"desc\">").append(h(expense.description())).append("</div>");
+                List<String> descriptionItems = descriptionItems(expense.description());
+                if (descriptionItems.isEmpty()) {
+                    html.append("<div class=\"desc\">").append(h(expense.description())).append("</div>");
+                } else {
+                    html.append("<ul class=\"desc\">");
+                    for (String item : descriptionItems) {
+                        html.append("<li>").append(h(item)).append("</li>");
+                    }
+                    html.append("</ul>");
+                }
             }
             html.append("</td><td>").append(h(expense.budgetName())).append("</td>")
                     .append("<td>").append(expense.categoryName() == null || expense.categoryName().isBlank()
@@ -316,6 +325,17 @@ public class PeriodReportPdfRenderer {
             html.append("<li>").append(h(item)).append("</li>");
         }
         html.append("</ul>");
+    }
+
+    static List<String> descriptionItems(String description) {
+        List<String> items = new ArrayList<>();
+        for (String part : description.split(",")) {
+            String item = part.trim();
+            if (!item.isEmpty()) {
+                items.add(item);
+            }
+        }
+        return items.size() >= 3 ? items : List.of();
     }
 
     private static String summaryRow(String label, String value) {

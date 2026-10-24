@@ -10,6 +10,7 @@ import {
   Select,
   Stack,
   Text,
+  Textarea,
   TextInput,
   Title,
 } from '@mantine/core'
@@ -322,13 +323,16 @@ function ExpenseForm() {
           </Paper>
         )}
 
-        <TextInput
+        <Textarea
           label="Deskripsi (opsional)"
           placeholder="Catatan tambahan"
           value={description}
           onChange={(event) => setDescription(event.currentTarget.value)}
           maxLength={10000}
           size="md"
+          autosize
+          minRows={2}
+          maxRows={6}
         />
 
         <PhotoInput

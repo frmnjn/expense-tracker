@@ -16,6 +16,7 @@ import {
   Stack,
   Table,
   Text,
+  Textarea,
   TextInput,
   Title,
 } from '@mantine/core'
@@ -781,12 +782,15 @@ function EditExpenseForm({
           </Paper>
         )}
 
-        <TextInput
+        <Textarea
           label="Deskripsi (opsional)"
           value={description}
           onChange={(e) => setDescription(e.currentTarget.value)}
           maxLength={10000}
           size="md"
+          autosize
+          minRows={2}
+          maxRows={6}
         />
 
         {expense.hasPhoto && !removePhoto && !photo && (

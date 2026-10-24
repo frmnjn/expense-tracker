@@ -5,6 +5,7 @@ import { IconFileTypePdf } from '@tabler/icons-react'
 import { useInvoiceDetail } from '../hooks/useScan'
 import { getInvoicePhotoUrl } from '../services/expense'
 import { formatCurrency } from '../utils/currency'
+import { ExpenseDescription } from './ExpenseDescription'
 import { InvoiceThumb } from './InvoiceThumb'
 import { usePdfViewer } from './PdfViewerContext'
 
@@ -74,7 +75,9 @@ function SubmittedExpensesModal({ invoiceId, type, onClose }: { invoiceId: strin
                 <Text size="sm" fw={700} style={{ whiteSpace: 'nowrap' }}>{formatCurrency(exp.amount)}</Text>
               </Group>
               {exp.description ? (
-                <Text size="xs" c="dimmed" mt={8} style={{ whiteSpace: 'pre-wrap' }}>{exp.description}</Text>
+                <Box mt={8}>
+                  <ExpenseDescription description={exp.description} size="xs" color="dimmed" />
+                </Box>
               ) : null}
             </Paper>
           ))}

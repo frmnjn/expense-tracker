@@ -6,6 +6,7 @@ import { useVoiceNoteDetail } from '../hooks/useVoiceNotes'
 import { getVoiceNoteAudioUrl } from '../services/voiceNotes'
 import { formatCurrency } from '../utils/currency'
 import type { Expense } from '../types/expense'
+import { ExpenseDescription } from './ExpenseDescription'
 
 const DATE_TIME_FORMAT = 'DD MMM YYYY HH:mm'
 
@@ -33,9 +34,7 @@ function ExpenseDetail({ expense }: { expense: Expense }) {
           </Text>
         ) : null}
         {expense.description ? (
-          <Text size="xs" c="dimmed" style={{ whiteSpace: 'pre-wrap' }}>
-            {expense.description}
-          </Text>
+          <ExpenseDescription description={expense.description} size="xs" color="dimmed" />
         ) : null}
       </Stack>
     </Paper>

@@ -5,6 +5,7 @@ import type { ReactNode } from 'react'
 import { useExpense } from '../hooks/useExpenses'
 import { formatCurrency } from '../utils/currency'
 import type { EmailImport } from '../types/emailImport'
+import { ExpenseDescription } from './ExpenseDescription'
 
 const DATE_TIME_FORMAT = 'DD MMM YYYY HH:mm'
 
@@ -70,7 +71,12 @@ function EmailRincianModal({ item, onClose }: { item: EmailImport; onClose: () =
               <DetailRow label="Nominal">{formatCurrency(expense.amount)}</DetailRow>
               <DetailRow label="Waktu transaksi">{dayjs(expense.dateTime).format(DATE_TIME_FORMAT)}</DetailRow>
               {expense.description ? (
-                <DetailRow label="Deskripsi">{expense.description}</DetailRow>
+                <Stack gap={4}>
+                  <Text size="sm" c="dimmed">
+                    Deskripsi
+                  </Text>
+                  <ExpenseDescription description={expense.description} size="sm" />
+                </Stack>
               ) : null}
             </Stack>
           </Paper>

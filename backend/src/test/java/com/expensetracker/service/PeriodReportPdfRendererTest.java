@@ -240,6 +240,18 @@ class PeriodReportPdfRendererTest {
         }
     }
 
+    @Test
+    void descriptionItems_shouldSplitWhenAtLeastThreeCommaSeparatedItems() {
+        assertEquals(List.of("Kopi", "Roti", "Susu"),
+                PeriodReportPdfRenderer.descriptionItems("Kopi, Roti, Susu"));
+    }
+
+    @Test
+    void descriptionItems_shouldNotSplitWhenFewerThanThreeItems() {
+        assertTrue(PeriodReportPdfRenderer.descriptionItems("Kopi, Roti").isEmpty());
+        assertTrue(PeriodReportPdfRenderer.descriptionItems("Nasi padang & es teh").isEmpty());
+    }
+
     private static PeriodReportData data(List<ExpenseData> expenses, List<TopUpResponse> topUps,
                                          List<BudgetOption> budgets) {
         long expenseTotal = expenses.stream().mapToLong(ExpenseData::amount).sum();
