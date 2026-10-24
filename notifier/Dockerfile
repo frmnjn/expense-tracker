@@ -1,10 +1,10 @@
-FROM golang:1.22-alpine AS build
+FROM golang:1.27-alpine AS build
 WORKDIR /app
 COPY go.mod ./
 COPY main.go ./
 RUN CGO_ENABLED=0 go build -o notifier .
 
-FROM alpine:3.20
+FROM alpine:3.24
 RUN apk add --no-cache ca-certificates tzdata
 WORKDIR /app
 COPY --from=build /app/notifier .
