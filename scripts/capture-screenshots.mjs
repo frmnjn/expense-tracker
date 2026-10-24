@@ -2,7 +2,6 @@ import { chromium } from 'playwright'
 import fs from 'node:fs/promises'
 
 const base = (process.env.DEMO_URL || 'https://frmnjn.my.id/expense-tracker-demo/').replace(/\/?$/, '/')
-const pin = process.env.DEMO_PIN || '2026'
 const outDir = process.env.OUT_DIR || '/out'
 const pages = [
   ['dashboard', 'dashboard'],
@@ -11,6 +10,7 @@ const pages = [
   ['scan', 'scan'],
   ['voice', 'voice'],
   ['inbox', 'inbox'],
+  ['laporan', 'laporan'],
 ]
 
 await fs.mkdir(outDir, { recursive: true })
@@ -54,16 +54,13 @@ async function expandMobileLayout(page) {
 async function capture(viewport, suffix, mobile) {
   const context = await browser.newContext({
     viewport,
-    deviceScaleFactor: 2,
+    deviceScaleFactor: 1,
     colorScheme: 'dark',
     locale: 'id-ID',
     isMobile: mobile,
     hasTouch: mobile,
     serviceWorkers: 'block',
   })
-  await context.addInitScript((code) => {
-    localStorage.setItem('expense-access-code', code)
-  }, pin)
   const page = await context.newPage()
   page.on('pageerror', (error) => errors.push(`${suffix}: ${error.message}`))
 
@@ -75,28 +72,13 @@ async function capture(viewport, suffix, mobile) {
     await page.screenshot({
       path: `${outDir}/${name}-${suffix}.jpg`,
       type: 'jpeg',
-      quality: 84,
+      quality: 80,
       fullPage,
     })
     console.log(`captured ${name}-${suffix}`)
   }
   await context.close()
 
-  const lockContext = await browser.newContext({
-    viewport,
-    deviceScaleFactor: 2,
-    colorScheme: 'dark',
-    locale: 'id-ID',
-    isMobile: mobile,
-    hasTouch: mobile,
-    serviceWorkers: 'block',
-  })
-  const lockPage = await lockContext.newPage()
-  await lockPage.goto(`${base}lock`, { waitUntil: 'networkidle', timeout: 60000 })
-  await lockPage.waitForTimeout(700)
-  await lockPage.screenshot({ path: `${outDir}/lock-${suffix}.jpg`, type: 'jpeg', quality: 84 })
-  console.log(`captured lock-${suffix}`)
-  await lockContext.close()
 }
 
 await capture({ width: 1440, height: 900 }, 'desktop', false)

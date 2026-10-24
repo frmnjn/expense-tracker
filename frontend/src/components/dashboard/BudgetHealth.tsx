@@ -1,20 +1,18 @@
-import { Fragment, useMemo } from 'react'
+import { useMemo } from 'react'
 import {
   ActionIcon,
   Button,
-  Divider,
   Group,
   Menu,
-  Popover,
+  Paper,
+  SimpleGrid,
   Skeleton,
-  Stack,
   Text,
 } from '@mantine/core'
 import {
   IconAlertTriangle,
   IconClipboardList,
   IconDots,
-  IconInfoCircle,
   IconPencil,
   IconPlus,
   IconTag,
@@ -77,11 +75,12 @@ export function BudgetHealth({
       }
     >
       {isLoading ? (
-        <Stack gap="sm">
-          <Skeleton h={40} />
-          <Skeleton h={40} />
-          <Skeleton h={40} />
-        </Stack>
+        <SimpleGrid cols={2} spacing="sm">
+          <Skeleton h={72} radius="md" />
+          <Skeleton h={72} radius="md" />
+          <Skeleton h={72} radius="md" />
+          <Skeleton h={72} radius="md" />
+        </SimpleGrid>
       ) : isError ? (
         <ErrorState message="Gagal memuat budget." />
       ) : budgets.length === 0 ? (
@@ -89,62 +88,54 @@ export function BudgetHealth({
           Belum ada budget. Tambahkan budget pertama kamu.
         </Text>
       ) : (
-        <Stack gap={0}>
-          {sorted.map((b, i) => {
+        <SimpleGrid cols={2} spacing="sm">
+          {sorted.map((b) => {
             const info = infoOf(b.name)
             const negative = b.balance < 0
             const belowThreshold = b.alertThreshold > 0 && b.balance < b.alertThreshold
             const warning = negative || belowThreshold
             return (
-              <Fragment key={b.name}>
-                {i > 0 && <Divider my="sm" />}
-                <Group justify="space-between" align="center" wrap="nowrap" py="xs">
-                  <div style={{ minWidth: 0, flex: 1 }}>
-                    <Group gap={6} wrap="nowrap">
-                      {warning && (
-                        <IconAlertTriangle size={15} color={negative ? 'var(--mantine-color-red-6)' : 'var(--mantine-color-orange-6)'} aria-hidden />
-                      )}
-                      <Text fw={600} truncate>
-                        {b.name}
-                      </Text>
-                      {b.description && (
-                        <Popover width={280} position="bottom-start" withArrow shadow="md">
-                          <Popover.Target>
-                            <ActionIcon
-                              size="xs"
-                              variant="subtle"
-                              color="blue"
-                              aria-label={`Deskripsi ${b.name}`}
-                              style={{ flexShrink: 0 }}
-                            >
-                              <IconInfoCircle size={14} />
-                            </ActionIcon>
-                          </Popover.Target>
-                          <Popover.Dropdown>
-                            <Text size="sm">{b.description}</Text>
-                          </Popover.Dropdown>
-                        </Popover>
-                      )}
-                    </Group>
-                    <Text size="xs" c="dimmed" truncate>
-                      {negative
-                        ? `-${formatCurrency(Math.abs(b.balance))}`
-                        : `${formatCurrency(b.balance)} tersisa`}
-                      {info ? ` · ${info.count} transaksi` : ''}
-                    </Text>
-                    {belowThreshold && (
-                      <Text size="xs" c="orange" fw={600}>
-                        di bawah ambang {formatCurrency(b.alertThreshold)}
-                      </Text>
-                    )}
-                  </div>
-                  <Menu shadow="md" width={200} position="bottom-end">
+              <Paper key={b.name} withBorder radius="md" p="sm" h="100%" style={{ display: 'flex', flexDirection: 'column' }}>
+                <Group gap={6} wrap="nowrap" align="flex-start">
+                  {warning && (
+                    <IconAlertTriangle
+                      size={15}
+                      color={negative ? 'var(--mantine-color-red-6)' : 'var(--mantine-color-orange-6)'}
+                      aria-hidden
+                      style={{ flexShrink: 0, marginTop: 2 }}
+                    />
+                  )}
+                  <Text size="sm" fw={600} title={b.name} style={{ minWidth: 0, overflowWrap: 'break-word' }}>
+                    {b.name}
+                  </Text>
+                </Group>
+                <Text size="sm" fw={600} c={negative ? 'red' : undefined} mt={4}>
+                  {negative
+                    ? `-${formatCurrency(Math.abs(b.balance))}`
+                    : formatCurrency(b.balance)}
+                </Text>
+                {belowThreshold && (
+                  <Text size="xs" c="orange" fw={600} mt={2}>
+                    di bawah ambang {formatCurrency(b.alertThreshold)}
+                  </Text>
+                )}
+                <Group justify="space-between" align="center" wrap="nowrap" gap="xs" style={{ marginTop: 'auto', paddingTop: 4 }}>
+                  <Text size="xs" c="dimmed">
+                    {info ? `${info.count} transaksi` : ''}
+                  </Text>
+                  <Menu shadow="md" width={220} position="bottom-end">
                     <Menu.Target>
-                      <ActionIcon variant="subtle" color="gray" aria-label={`Menu ${b.name}`}>
-                        <IconDots size={18} />
+                      <ActionIcon size="sm" variant="subtle" color="gray" aria-label={`Menu ${b.name}`} style={{ flexShrink: 0 }}>
+                        <IconDots size={16} />
                       </ActionIcon>
                     </Menu.Target>
                     <Menu.Dropdown>
+                      {b.description && (
+                        <>
+                          <Menu.Label style={{ whiteSpace: 'normal' }}>{b.description}</Menu.Label>
+                          <Menu.Divider />
+                        </>
+                      )}
                       <Menu.Item leftSection={<IconPlus size={16} />} onClick={() => onTopUp(b.name)}>
                         Top-up
                       </Menu.Item>
@@ -164,10 +155,10 @@ export function BudgetHealth({
                     </Menu.Dropdown>
                   </Menu>
                 </Group>
-              </Fragment>
+              </Paper>
             )
           })}
-        </Stack>
+        </SimpleGrid>
       )}
     </DashboardSection>
   )

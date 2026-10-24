@@ -63,6 +63,7 @@ public class InvoiceAnalysisService implements ApplicationRunner {
     private final InvoiceRepository invoiceRepository;
     private final BudgetRepository budgetRepository;
     private final ObjectMapper objectMapper;
+    private final PeriodService periodService;
     private final HttpClient httpClient;
     private final ExecutorService executor = Executors.newFixedThreadPool(2);
 
@@ -84,6 +85,7 @@ public class InvoiceAnalysisService implements ApplicationRunner {
                                   BudgetRepository budgetRepository,
                                   ObjectMapper objectMapper,
                                   ExchangeRateService exchangeRateService,
+                                  PeriodService periodService,
                                   @Value("${ai.gemini-api-key:}") String apiKey,
                                   @Value("${ai.model:gemini-3.5-flash-lite}") String model,
                                   @Value("${ai.timeout:600}") long timeoutSeconds,
@@ -97,6 +99,7 @@ public class InvoiceAnalysisService implements ApplicationRunner {
         this.budgetRepository = budgetRepository;
         this.objectMapper = objectMapper;
         this.exchangeRateService = exchangeRateService;
+        this.periodService = periodService;
         this.apiKey = apiKey == null ? "" : apiKey.trim();
         this.model = model == null ? "gemini-3.5-flash-lite" : model;
         this.timeout = Duration.ofSeconds(timeoutSeconds);
@@ -379,7 +382,7 @@ public class InvoiceAnalysisService implements ApplicationRunner {
                 LOGGER.warn("ignoring implausible AI date {} for invoice {}", raw, invoiceId);
                 return;
             }
-            invoiceRepository.updatePeriod(invoiceId, PeriodSheetName.forDate(date), PeriodSheetName.periodStart(date));
+            invoiceRepository.updatePeriod(invoiceId, periodService.forDate(date), periodService.periodStart(date));
         } catch (Exception e) {
             LOGGER.warn("invalid date from AI for {}: {}", invoiceId, raw);
         }

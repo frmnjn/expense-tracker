@@ -84,13 +84,24 @@ public class ExpenseRepository {
         return rows.isEmpty() ? null : rows.get(0);
     }
 
-    public void update(String id, LocalDate periodStart, LocalDateTime dateTime,
+    public void update(String id, String period, LocalDate periodStart, LocalDateTime dateTime,
                        long budgetId, Long categoryId, String name, long amount, String description) {
         jdbcTemplate.update(
                 "UPDATE expenses SET period = ?, period_start = ?, date_time = ?, budget_id = ?, category_id = ?, name = ?, amount = ?, description = ? "
                         + "WHERE id = ?",
-                PeriodSheetName.forDate(dateTime.toLocalDate()), periodStart, dateTime, budgetId, categoryId, name,
+                period, periodStart, dateTime, budgetId, categoryId, name,
                 amount, description == null ? "" : description, id);
+    }
+
+    public List<PeriodDateRow> findAllPeriodDates() {
+        return jdbcTemplate.query(
+                "SELECT id, DATE(date_time) AS period_date FROM expenses",
+                (rs, rowNum) -> new PeriodDateRow(rs.getString("id"), rs.getDate("period_date").toLocalDate()));
+    }
+
+    public void updatePeriod(String id, String period, LocalDate periodStart) {
+        jdbcTemplate.update("UPDATE expenses SET period = ?, period_start = ? WHERE id = ?",
+                period, periodStart, id);
     }
 
     public void softDelete(String id) {
@@ -137,11 +148,11 @@ public class ExpenseRepository {
         if (photoPath != null) {
             photoType = photoPath.toLowerCase().endsWith(".pdf") ? "pdf" : "image";
         }
+        LocalDateTime dateTime = rs.getObject("date_time", LocalDateTime.class);
         return new ExpenseData(
                 rs.getString("id"),
                 rs.getString("period"),
-                rs.getTimestamp("date_time") == null ? "" : rs.getTimestamp("date_time").toLocalDateTime()
-                        .format(PeriodSheetName.FORMATTER),
+                dateTime == null ? "" : dateTime.format(PeriodSheetName.FORMATTER),
                 rs.getString("name"),
                 rs.getString("budget_name"),
                 rs.getLong("amount"),

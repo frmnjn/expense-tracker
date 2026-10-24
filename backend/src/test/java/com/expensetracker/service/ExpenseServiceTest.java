@@ -6,6 +6,7 @@ import com.expensetracker.data.CategoryRepository;
 import com.expensetracker.data.ExpenseData;
 import com.expensetracker.data.ExpenseRepository;
 import com.expensetracker.data.InvoiceData;
+import com.expensetracker.data.PaydayOverrideRepository;
 import com.expensetracker.data.TopUpRepository;
 import com.expensetracker.data.VoiceNoteData;
 import com.expensetracker.model.BatchExpenseItem;
@@ -59,13 +60,16 @@ class ExpenseServiceTest {
     private VoiceNoteService voiceNoteService;
     @Mock
     private NotificationService notificationService;
+    @Mock
+    private PaydayOverrideRepository paydayOverrideRepository;
 
     private ExpenseService expenseService;
 
     @BeforeEach
     void setUp() {
         expenseService = new ExpenseService(budgetRepository, categoryRepository, expenseRepository, topUpRepository,
-                invoiceService, voiceNoteService, notificationService);
+                invoiceService, voiceNoteService, notificationService,
+                new PeriodService(paydayOverrideRepository));
     }
 
     private static ExpenseRequest validRequest() {
@@ -104,7 +108,7 @@ class ExpenseServiceTest {
     void createExpense_validRequest_shouldInsertAndDecrementBudget() {
         when(budgetRepository.findIdByName("Daily")).thenReturn(1L);
         assertDoesNotThrow(() -> expenseService.createExpense(validRequest()));
-        verify(expenseRepository).insert(anyString(), eq("2026-JUL-AUG"), eq(LocalDate.of(2026, 7, 25)),
+        verify(expenseRepository).insert(anyString(), eq("2026-JUL-AUG"), eq(LocalDate.of(2026, 7, 24)),
                 eq(LocalDateTime.of(2026, 8, 6, 14, 30)), eq(1L), eq(null), eq("Makan Siang"), eq(35000L), eq(null));
         verify(budgetRepository).adjustBalance("Daily", -35000L);
     }
@@ -225,7 +229,7 @@ class ExpenseServiceTest {
         ExpenseRequest request = new ExpenseRequest("2026-08-06 14:30", "Makan Siang", "Daily", 20000L, null, null);
         assertDoesNotThrow(() -> expenseService.updateExpense("id123", request));
         verify(budgetRepository).adjustBalance("Daily", 15000L);
-        verify(expenseRepository).update(eq("id123"), eq(LocalDate.of(2026, 7, 25)),
+        verify(expenseRepository).update(eq("id123"), eq("2026-JUL-AUG"), eq(LocalDate.of(2026, 7, 24)),
                 eq(LocalDateTime.of(2026, 8, 6, 14, 30)), eq(1L), eq(null), eq("Makan Siang"), eq(20000L), eq(null));
     }
 
@@ -467,11 +471,11 @@ class ExpenseServiceTest {
     @Test
     void attachPhoto_shouldCreateInvoiceAndAttach() {
         when(expenseRepository.findById("id123")).thenReturn(expenseData());
-        when(invoiceService.createInvoice(eq("2026-JUL-AUG"), eq(LocalDate.of(2026, 7, 25)), any()))
+        when(invoiceService.createInvoice(eq("2026-JUL-AUG"), eq(LocalDate.of(2026, 7, 24)), any()))
                 .thenReturn("inv-new");
         MultipartFile file = mock(MultipartFile.class);
         assertDoesNotThrow(() -> expenseService.attachPhoto("id123", file));
-        verify(invoiceService).createInvoice(eq("2026-JUL-AUG"), eq(LocalDate.of(2026, 7, 25)), eq(file));
+        verify(invoiceService).createInvoice(eq("2026-JUL-AUG"), eq(LocalDate.of(2026, 7, 24)), eq(file));
         verify(expenseRepository).attachInvoice("id123", "inv-new");
     }
 
@@ -574,7 +578,7 @@ class ExpenseServiceTest {
         int count = expenseService.createExpenseBatch(request);
         assertEquals(2, count);
         verify(expenseRepository, times(2)).insert(anyString(), eq("2026-JUL-AUG"),
-                eq(LocalDate.of(2026, 7, 25)), eq(LocalDateTime.of(2026, 8, 6, 14, 30)), anyLong(), any(), anyString(),
+                eq(LocalDate.of(2026, 7, 24)), eq(LocalDateTime.of(2026, 8, 6, 14, 30)), anyLong(), any(), anyString(),
                 anyLong(), any());
         verify(expenseRepository, times(2)).attachInvoice(anyString(), eq("inv-1"));
         verify(budgetRepository).adjustBalance("Alana", -50000L);
@@ -592,7 +596,7 @@ class ExpenseServiceTest {
         assertDoesNotThrow(() -> expenseService.createExpenseBatch(request));
         verify(invoiceService).updatePeriod("inv-9", LocalDate.of(2026, 8, 6));
         verify(expenseRepository).insert(anyString(), eq("2026-JUL-AUG"),
-                eq(LocalDate.of(2026, 7, 25)), eq(LocalDateTime.of(2026, 8, 6, 14, 30)), eq(2L), eq(null), eq("Kopi"),
+                eq(LocalDate.of(2026, 7, 24)), eq(LocalDateTime.of(2026, 8, 6, 14, 30)), eq(2L), eq(null), eq("Kopi"),
                 eq(15000L), eq(null));
     }
 
@@ -647,7 +651,7 @@ class ExpenseServiceTest {
         when(categoryRepository.findIdByBudgetAndName(1L, "Coffee")).thenReturn(9L);
         ExpenseRequest request = new ExpenseRequest("2026-08-06 14:30", "Kopi", "Daily", "Coffee", 35000L, null, null);
         assertDoesNotThrow(() -> expenseService.createExpense(request));
-        verify(expenseRepository).insert(anyString(), eq("2026-JUL-AUG"), eq(LocalDate.of(2026, 7, 25)),
+        verify(expenseRepository).insert(anyString(), eq("2026-JUL-AUG"), eq(LocalDate.of(2026, 7, 24)),
                 eq(LocalDateTime.of(2026, 8, 6, 14, 30)), eq(1L), eq(9L), eq("Kopi"), eq(35000L), eq(null));
     }
 

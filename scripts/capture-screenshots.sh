@@ -3,14 +3,13 @@
 #
 # Contoh:
 #   ./scripts/capture-screenshots.sh
-#   DEMO_URL=https://frmnjn.my.id/expense-tracker-demo/ DEMO_PIN=2026 ./scripts/capture-screenshots.sh
+#   DEMO_URL=https://frmnjn.my.id/expense-tracker-demo/ ./scripts/capture-screenshots.sh
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_ROOT="$(cd "${SCRIPT_DIR}/.." && pwd)"
 
 DEMO_URL="${DEMO_URL:-https://frmnjn.my.id/expense-tracker-demo/}"
-DEMO_PIN="${DEMO_PIN:-2026}"
 OUT_DIR="${OUT_DIR:-${PROJECT_ROOT}/docs/screenshots}"
 PLAYWRIGHT_IMAGE="${PLAYWRIGHT_IMAGE:-mcr.microsoft.com/playwright:v1.55.0-noble}"
 PLAYWRIGHT_VERSION="${PLAYWRIGHT_VERSION:-1.64.1}"
@@ -34,6 +33,6 @@ docker run --rm \
     -v "${TMP_DIR}:/pw" \
     -w /pw \
     "${PLAYWRIGHT_IMAGE}" \
-    sh -c "npm init -y >/dev/null && npm i playwright@${PLAYWRIGHT_VERSION} >/dev/null 2>&1 && cp /capture.mjs /pw/capture.mjs && DEMO_URL='${DEMO_URL}' DEMO_PIN='${DEMO_PIN}' OUT_DIR=/out node /pw/capture.mjs"
+    sh -c "npm init -y >/dev/null && npm i playwright@${PLAYWRIGHT_VERSION} >/dev/null 2>&1 && cp /capture.mjs /pw/capture.mjs && DEMO_URL='${DEMO_URL}' OUT_DIR=/out node /pw/capture.mjs"
 
 echo "==> Selesai. Screenshot tersimpan di: ${OUT_DIR}"

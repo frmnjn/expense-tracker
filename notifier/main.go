@@ -4,12 +4,18 @@ import (
 	"bytes"
 	"crypto/rand"
 	"crypto/subtle"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
+	"mime"
+	"mime/multipart"
 	"net/http"
 	"net/mail"
 	"net/smtp"
+	"net/textproto"
 	"os"
+	"path/filepath"
 	"strings"
 	"time"
 )
@@ -92,10 +98,60 @@ func logError(message, traceID, errMsg string, n *ecsLogNotifier) {
 }
 
 type sendRequest struct {
-	To          []string `json:"to"`
-	Subject     string   `json:"subject"`
-	Body        string   `json:"body"`
-	ContentType string   `json:"contentType"`
+	To          []string     `json:"to"`
+	Subject     string       `json:"subject"`
+	Body        string       `json:"body"`
+	ContentType string       `json:"contentType"`
+	Attachments []attachment `json:"attachments"`
+}
+
+type attachment struct {
+	Filename      string `json:"filename"`
+	ContentBase64 string `json:"contentBase64"`
+}
+
+type decodedAttachment struct {
+	filename    string
+	contentType string
+	data        []byte
+}
+
+const (
+	maxRequestBytes         = 20 << 20
+	maxAttachmentBytes      = 10 << 20
+	maxTotalAttachmentBytes = 15 << 20
+	maxAttachments          = 5
+)
+
+func decodeAttachments(raw []attachment) ([]decodedAttachment, error) {
+	if len(raw) == 0 {
+		return nil, nil
+	}
+	if len(raw) > maxAttachments {
+		return nil, fmt.Errorf("too many attachments")
+	}
+	result := make([]decodedAttachment, 0, len(raw))
+	total := 0
+	for _, item := range raw {
+		filename := filepath.Base(strings.TrimSpace(item.Filename))
+		if filename == "" || filename == "." || filename == ".." || strings.ContainsAny(filename, "\r\n\"") {
+			return nil, fmt.Errorf("invalid attachment filename")
+		}
+		data, err := base64.StdEncoding.DecodeString(item.ContentBase64)
+		if err != nil {
+			return nil, fmt.Errorf("invalid attachment content")
+		}
+		total += len(data)
+		if len(data) == 0 || len(data) > maxAttachmentBytes || total > maxTotalAttachmentBytes {
+			return nil, fmt.Errorf("attachment too large")
+		}
+		contentType := mime.TypeByExtension(strings.ToLower(filepath.Ext(filename)))
+		if contentType == "" {
+			contentType = "application/octet-stream"
+		}
+		result = append(result, decodedAttachment{filename: filename, contentType: contentType, data: data})
+	}
+	return result, nil
 }
 
 type resendError struct {
@@ -164,7 +220,7 @@ func main() {
 			return
 		}
 
-		r.Body = http.MaxBytesReader(w, r.Body, 1<<20)
+		r.Body = http.MaxBytesReader(w, r.Body, maxRequestBytes)
 		var req sendRequest
 		if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 			logWarn("send validation error", traceID, err.Error(), nil)
@@ -191,20 +247,25 @@ func main() {
 			}
 			req.To[i] = address.Address
 		}
+		attachments, err := decodeAttachments(req.Attachments)
+		if err != nil {
+			logWarn("send validation error", traceID, err.Error(), nil)
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
 
 		n := &ecsLogNotifier{Subject: req.Subject, To: req.To, Provider: provider}
 		logInfo("send request", traceID, n)
 
-		var err error
 		// Urutan provider: primer = MAIL_PROVIDER; jika gagal dan RESEND_FALLBACK=true,
 		// coba Resend (asalkan terkonfigurasi).
 		switch provider {
 		case "resend":
-			err = resendSend(req)
+			err = resendSend(req, attachments)
 		default: // smtp
-			err = smtpSend(req)
+			err = smtpSend(req, attachments)
 			if err != nil && env("RESEND_FALLBACK", "false") == "true" {
-				err = resendSend(req)
+				err = resendSend(req, attachments)
 			}
 		}
 
@@ -244,7 +305,7 @@ func sanitizeHeader(value string) string {
 	return strings.TrimSpace(value)
 }
 
-func smtpSend(req sendRequest) error {
+func smtpSend(req sendRequest, attachments []decodedAttachment) error {
 	host := env("SMTP_HOST", "smtp.gmail.com")
 	addr := host + ":" + env("SMTP_PORT", "587")
 	user := os.Getenv("SMTP_USER")
@@ -255,19 +316,66 @@ func smtpSend(req sendRequest) error {
 	if ct == "" {
 		ct = "text/html"
 	}
-	msg := "From: " + from + "\r\n" +
-		"To: " + strings.Join(req.To, ", ") + "\r\n" +
-		"Subject: " + req.Subject + "\r\n" +
-		"MIME-Version: 1.0\r\n" +
-		"Content-Type: " + ct + "; charset=UTF-8\r\n" +
-		"\r\n" +
-		req.Body
+
+	var msg bytes.Buffer
+	msg.WriteString("From: " + from + "\r\n")
+	msg.WriteString("To: " + strings.Join(req.To, ", ") + "\r\n")
+	msg.WriteString("Subject: " + req.Subject + "\r\n")
+	msg.WriteString("MIME-Version: 1.0\r\n")
+
+	if len(attachments) == 0 {
+		msg.WriteString("Content-Type: " + ct + "; charset=UTF-8\r\n\r\n")
+		msg.WriteString(req.Body)
+	} else {
+		mw := multipart.NewWriter(&msg)
+		msg.WriteString("Content-Type: multipart/mixed; boundary=\"" + mw.Boundary() + "\"\r\n\r\n")
+
+		htmlHeader := textproto.MIMEHeader{}
+		htmlHeader.Set("Content-Type", ct+"; charset=UTF-8")
+		htmlHeader.Set("Content-Transfer-Encoding", "base64")
+		part, err := mw.CreatePart(htmlHeader)
+		if err != nil {
+			return err
+		}
+		if err := writeBase64Lines(part, []byte(req.Body)); err != nil {
+			return err
+		}
+
+		for _, item := range attachments {
+			header := textproto.MIMEHeader{}
+			header.Set("Content-Type", item.contentType+"; name=\""+item.filename+"\"")
+			header.Set("Content-Disposition", "attachment; filename=\""+item.filename+"\"")
+			header.Set("Content-Transfer-Encoding", "base64")
+			part, err := mw.CreatePart(header)
+			if err != nil {
+				return err
+			}
+			if err := writeBase64Lines(part, item.data); err != nil {
+				return err
+			}
+		}
+		if err := mw.Close(); err != nil {
+			return err
+		}
+	}
 
 	auth := smtp.PlainAuth("", user, pass, host)
-	return smtp.SendMail(addr, auth, from, req.To, []byte(msg))
+	return smtp.SendMail(addr, auth, from, req.To, msg.Bytes())
 }
 
-func resendSend(req sendRequest) error {
+func writeBase64Lines(w io.Writer, data []byte) error {
+	encoded := base64.StdEncoding.EncodeToString(data)
+	for len(encoded) > 76 {
+		if _, err := io.WriteString(w, encoded[:76]+"\r\n"); err != nil {
+			return err
+		}
+		encoded = encoded[76:]
+	}
+	_, err := io.WriteString(w, encoded+"\r\n")
+	return err
+}
+
+func resendSend(req sendRequest, attachments []decodedAttachment) error {
 	key := os.Getenv("RESEND_API_KEY")
 	from := os.Getenv("RESEND_FROM")
 	if key == "" || from == "" {
@@ -287,6 +395,16 @@ func resendSend(req sendRequest) error {
 		"to":      req.To,
 		"subject": req.Subject,
 		field:     req.Body,
+	}
+	if len(attachments) > 0 {
+		list := make([]map[string]string, 0, len(attachments))
+		for _, item := range attachments {
+			list = append(list, map[string]string{
+				"filename": item.filename,
+				"content":  base64.StdEncoding.EncodeToString(item.data),
+			})
+		}
+		payload["attachments"] = list
 	}
 	body, err := json.Marshal(payload)
 	if err != nil {

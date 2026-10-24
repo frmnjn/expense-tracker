@@ -21,3 +21,8 @@ backups/
 uploads-demo/
 __pycache__/
 *.pyc
+
+# demo generated (jalankan scripts/generate_demo.sh)
+frontend/public/demo/data.json
+frontend/public/demo/reports.json
+frontend/public/demo/reports/

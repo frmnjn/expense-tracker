@@ -1,9 +1,12 @@
 import axios from 'axios'
 import { clearAccessCode, getAccessCode } from '../utils/access'
+import { isDemoMode } from '../utils/demo'
+import { demoAdapter } from '../demo/adapter'
 import { newIdempotencyKey } from '../utils/idempotency'
 
 const apiClient = axios.create({
   baseURL: import.meta.env.VITE_API_URL ?? '/api',
+  ...(isDemoMode ? { adapter: demoAdapter } : {}),
 })
 
 apiClient.interceptors.request.use((config) => {

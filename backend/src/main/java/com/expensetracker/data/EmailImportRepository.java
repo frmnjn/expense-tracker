@@ -31,7 +31,7 @@ public class EmailImportRepository {
                         + "merchant, amount, description, suggested_budget, suggested_category, parse_method, status, error_message, "
                         + "expense_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?)",
                 id, messageId, sender, subject,
-                Timestamp.valueOf(receivedAt), transactionAt == null ? null : Timestamp.valueOf(transactionAt),
+                Timestamp.valueOf(receivedAt), transactionAt,
                 merchant, amount, description, suggestedBudget, suggestedCategory, parseMethod, status, errorMessage,
                 Timestamp.valueOf(LocalDateTime.now()));
     }
@@ -71,7 +71,7 @@ public class EmailImportRepository {
                 "UPDATE email_imports SET status = 'IMPORTED', expense_id = ?, error_message = NULL, "
                         + "merchant = ?, amount = ?, transaction_at = ? WHERE id = ?",
                 expenseId, merchant, amount,
-                transactionAt == null ? null : Timestamp.valueOf(transactionAt), id);
+                transactionAt, id);
     }
 
     public void markDiscarded(String id) {
@@ -93,7 +93,7 @@ public class EmailImportRepository {
                 "UPDATE email_imports SET transaction_at = ?, merchant = ?, amount = ?, description = ?, "
                         + "suggested_budget = ?, suggested_category = ?, parse_method = ?, status = ?, "
                         + "error_message = ? WHERE id = ?",
-                transactionAt == null ? null : Timestamp.valueOf(transactionAt),
+                transactionAt,
                 merchant, amount, description, suggestedBudget, suggestedCategory, parseMethod, status, safe, id);
     }
 
@@ -111,7 +111,7 @@ public class EmailImportRepository {
                 rs.getString("sender"),
                 rs.getString("subject"),
                 toLocalDateTimeString(rs.getTimestamp("received_at")),
-                toLocalDateTimeString(rs.getTimestamp("transaction_at")),
+                toLocalDateTimeString(rs.getObject("transaction_at", LocalDateTime.class)),
                 rs.getString("merchant"),
                 rs.getObject("amount") == null ? null : rs.getLong("amount"),
                 rs.getString("description"),
@@ -126,5 +126,9 @@ public class EmailImportRepository {
 
     private static String toLocalDateTimeString(Timestamp timestamp) {
         return timestamp == null ? null : timestamp.toLocalDateTime().toString();
+    }
+
+    private static String toLocalDateTimeString(LocalDateTime dateTime) {
+        return dateTime == null ? null : dateTime.toString();
     }
 }
