@@ -3,18 +3,18 @@
 # deploy-stb.sh
 #
 # Deploy microservice notifier ke STB (Armbian) yang menyala 24/7.
-# Mengakses STB lewat WireGuard (10.0.0.4) dan menjalankan notifier via
+# Mengakses STB lewat WireGuard (10.8.0.4) dan menjalankan notifier via
 # docker-compose.stb.yml (build image arm64 langsung di STB).
 #
 # Prasyarat:
 #   - Perubahan sudah di-commit & push ke origin/master.
-#   - SSH key root@10.0.0.4 terdaftar.
+#   - SSH key root@10.8.0.4 terdaftar.
 #   - STB sudah punya repo (git clone) + file .env (SMTP/Resend, gitignored).
 
 set -euo pipefail
 
-STB_HOST="${STB_HOST:?set STB_HOST (IP WireGuard STB)}"
-STB_DIR="${STB_DIR:-/opt/expense-tracker}"
+STB_HOST="${STB_HOST:-10.8.0.4}"
+STB_DIR="${STB_DIR:-/root/expense-tracker}"
 
 if ! ssh -o BatchMode=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=10 "root@${STB_HOST}" 'true' >/dev/null 2>&1; then
     echo "ERROR: SSH key ke root@${STB_HOST} tidak berfungsi." >&2

@@ -264,7 +264,7 @@ Pemicu realtime (selain report periode terjadwal):
 
 Konfigurasi (env): di sisi backend `NOTIFIER_URL`, `NOTIFIER_TOKEN`, `NOTIFY_EMAILS`; di sisi notifier `MAIL_PROVIDER` (`smtp`/`resend`) + kredensial provider. Notifier mendukung dua jalur pengiriman:
 * **Autentikasi**: backend mengirim header `X-Notifier-Token`; notifier menolak request tanpa token yang cocok (`NOTIFIER_TOKEN`).
-* **SMTP (Gmail)** — `SMTP_HOST/PORT/USER/APP_PASSWORD/FROM`. Di produksi, notifier berjalan di **STB Armbian** (menyala 24/7) dan diakses backend via **WireGuard** (`10.0.0.4:8081`), karena SMTP keluar dari VPS (Linode) diblokir.
+* **SMTP (Gmail)** — `SMTP_HOST/PORT/USER/APP_PASSWORD/FROM`. Di produksi, notifier berjalan di **STB Armbian** (menyala 24/7) dan diakses backend via **WireGuard** (`10.8.0.4:8081`), karena SMTP keluar dari VPS (Linode) diblokir.
 * **Resend** — `RESEND_API_KEY`/`RESEND_FROM`, dipakai sebagai **fallback** (`RESEND_FALLBACK=true`) bila SMTP gagal. Jika limit Resend tercapai (respons `429`), email **dilewati** (tidak dikirim, tidak retry).
 
 Email dikirim sebagai **HTML** (inline-style, aksen `#863bff`), dengan nominal terformat Rupiah (mis. `Rp35.000`), body menampilkan sisa saldo budget, dan bahasa **Inggris**. Subjek singkat dengan emoji subtil per jenis notifikasi. Pengiriman dijalankan **async** (thread pool) sehingga tidak memperlambat request.
@@ -624,7 +624,7 @@ INBOX_LOOKBACK_DAYS=3             # opsional
 INBOX_MAX_PER_POLL=50             # opsional
 INBOX_DISCARD_MERCHANTS=superindo # opsional, keyword merchant auto-discard (comma-separated)
 INBOX_SCAN_SENDERS=superindo.co.id # opsional, sender yang lampirannya auto dikirim ke Scan Struk
-NOTIFIER_URL=http://10.0.0.4:8081  # backend -> notifier (WireGuard)
+NOTIFIER_URL=http://10.8.0.4:8081  # backend -> notifier (WireGuard)
 NOTIFIER_TOKEN=<random-panjang>   # shared secret backend -> notifier
 REPORT_ENABLED=true               # opsional, aktifkan report PDF periode (default true)
 REPORT_CRON=0 5 0 * * *           # opsional, jadwal cek pergantian periode (default 00:05)

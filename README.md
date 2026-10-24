@@ -158,7 +158,7 @@ TZ=Asia/Jakarta                   # zona waktu container
 
 ### Notifier (STB Armbian, `docker-compose.stb.yml`)
 
-Di produksi, microservice notifier dijalankan di **perangkat STB (Armbian)** yang menyala 24/7, diakses VPS lewat **WireGuard** (`10.0.0.4:8081`). Jalankan di STB:
+Di produksi, microservice notifier dijalankan di **perangkat STB (Armbian)** yang menyala 24/7, diakses VPS lewat **WireGuard** (`10.8.0.4:8081`). Jalankan di STB:
 
 ```bash
 git clone https://github.com/your-user/expense-tracker.git
@@ -210,7 +210,7 @@ Script di VPS (membaca kredensial dari `backend/.env`).
 
 ```bash
 # backup (mysqldump + gzip + simpan 14 terakhir)
-cd /opt/expense-tracker
+cd /root/expense-tracker
 ./scripts/backup_mysql.sh
 
 # restore (menimpa DB saat ini!)
@@ -244,13 +244,13 @@ Build & deploy hanya dari PC lokal (butuh RAM ~7GB untuk build native).
 ```bash
 ./build-native.sh       # build image native lokal (~6 menit)
 ./deploy-native.sh      # deploy penuh: export native image -> scp -> VPS git pull -> up -d -> prune
-VPS_HOST=<host-vps> VPS_DIR=/opt/expense-tracker ./deploy-vps.sh  # deploy penuh produksi
-STB_HOST=<ip-wireguard-stb> STB_DIR=/opt/expense-tracker ./deploy-stb.sh  # deploy notifier ke STB
+VPS_HOST=<host-vps> VPS_DIR=/root/expense-tracker ./deploy-vps.sh  # deploy penuh produksi
+STB_HOST=10.8.0.4 STB_DIR=/root/expense-tracker ./deploy-stb.sh  # deploy notifier ke STB
 ```
 
 * Regenerasi native config saat menambah endpoint/model: `./backend/generate-native-config.sh`
 * Cleanup data (expense/invoice/topup/idempotency + folder upload, **tabel budget dipertahankan**): `scripts/clean_data.sh`
-* `deploy-native.sh` / `deploy-vps.sh` mengasumsikan SSH key `root@example.com` terdaftar; `deploy-stb.sh` mengasumsikan SSH key `root@10.0.0.4` (WireGuard) terdaftar.
+* `deploy-native.sh` / `deploy-vps.sh` mengasumsikan SSH key `root@example.com` terdaftar; `deploy-stb.sh` mengasumsikan SSH key `root@10.8.0.4` (WireGuard) terdaftar.
 
 ---
 
@@ -265,6 +265,6 @@ scripts/    # backup, restore, seed, clean_data
 docker-compose.yml       # lokal (dengan mysql + notifier service, backend JVM default)
 docker-compose.local.yml # override dev: backend JVM (build dari backend/Dockerfile)
 docker-compose.prod.yml  # produksi (MySQL VPS, backend JVM)
-docker-compose.stb.yml   # notifier di STB Armbian (WireGuard 10.0.0.4)
+docker-compose.stb.yml   # notifier di STB Armbian (WireGuard 10.8.0.4)
 uploads/                 # foto/PDF invoice (bind mount)
 ```

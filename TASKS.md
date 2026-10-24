@@ -734,7 +734,7 @@ Mengganti `spring.sql.init` (schema.sql) dengan Flyway versioned migrations agar
 * [x] Resend: jika limit tercapai (`429`) → lewati kirim (tanpa retry)
 * [x] `GET /health`
 * [x] `Dockerfile` multi-stage (Go → alpine, ca-certificates + tzdata)
-* [x] Produksi: notifier dijalankan di **STB Armbian** (`docker-compose.stb.yml`), diakses backend VPS via **WireGuard** `10.0.0.4:8081` (karena SMTP dari Linode diblokir)
+* [x] Produksi: notifier dijalankan di **STB Armbian** (`docker-compose.stb.yml`), diakses backend VPS via **WireGuard** `10.8.0.4:8081` (karena SMTP dari Linode diblokir)
 
 ### Backend
 
