@@ -335,7 +335,7 @@ public class PeriodReportPdfRenderer {
                 items.add(item);
             }
         }
-        return items.size() >= 3 ? items : List.of();
+        return items.size() >= 2 ? items : List.of();
     }
 
     private static String summaryRow(String label, String value) {

@@ -241,14 +241,15 @@ class PeriodReportPdfRendererTest {
     }
 
     @Test
-    void descriptionItems_shouldSplitWhenAtLeastThreeCommaSeparatedItems() {
+    void descriptionItems_shouldSplitWhenAtLeastTwoCommaSeparatedItems() {
+        assertEquals(List.of("Kopi", "Roti"),
+                PeriodReportPdfRenderer.descriptionItems("Kopi, Roti"));
         assertEquals(List.of("Kopi", "Roti", "Susu"),
                 PeriodReportPdfRenderer.descriptionItems("Kopi, Roti, Susu"));
     }
 
     @Test
-    void descriptionItems_shouldNotSplitWhenFewerThanThreeItems() {
-        assertTrue(PeriodReportPdfRenderer.descriptionItems("Kopi, Roti").isEmpty());
+    void descriptionItems_shouldNotSplitSingleItem() {
         assertTrue(PeriodReportPdfRenderer.descriptionItems("Nasi padang & es teh").isEmpty());
     }
 

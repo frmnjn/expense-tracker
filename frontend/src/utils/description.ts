@@ -4,5 +4,5 @@ export function splitDescriptionItems(description: string): string[] | null {
     .map((item) => item.trim())
     .filter((item) => item !== '')
 
-  return items.length >= 3 ? items : null
+  return items.length >= 2 ? items : null
 }
