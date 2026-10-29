@@ -152,16 +152,22 @@ class InvoiceAnalysisServiceTest {
     }
 
     @Test
-    void analyze_permanent400_shouldNotRetry() throws Exception {
+    void analyze_permanentGeminiFailure_fallsBackToDeepSeek() throws Exception {
         String id = "inv-3";
         stubInvoice(id);
         service.responses = new String[]{"400"};
+        service.deepseekResponse =
+                "{\"storeName\":\"Indomaret\",\"total\":1000,\"dateTime\":\"2026-09-05 13:31:00\","
+                        + "\"items\":[{\"name\":\"Air\",\"amount\":1000,\"suggestedBudget\":\"Makan\"}]}";
 
         service.analyzeForTest(id);
 
-        // Gagal permanen -> tidak boleh increment retry
+        // Gagal permanen tidak di-retry ke Gemini, tetapi harus fallback ke DeepSeek.
         verify(invoiceRepository, never()).incrementRetry(id);
-        verify(invoiceRepository).updateError(eq(id), anyString());
+        verify(invoiceRepository).setProvider(id, "DEEPSEEK");
+        verify(invoiceRepository).initRetry(eq(id), eq(1));
+        verify(invoiceRepository).updateAnalysis(eq(id), eq(InvoiceStatus.TO_REVIEW.value()), anyString());
+        assertEquals(1, service.call);
     }
 
     @Test

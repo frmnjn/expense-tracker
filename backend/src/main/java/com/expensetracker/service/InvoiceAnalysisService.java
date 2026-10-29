@@ -194,8 +194,10 @@ public class InvoiceAnalysisService implements ApplicationRunner {
             String raw;
             try {
                 raw = callGeminiWithRetry(invoiceId, bytes, mime, prompt);
-            } catch (RetryableException | IOException geminiFailure) {
-                LOGGER.warn("Gemini exhausted for {}: {}; falling back to DeepSeek",
+            } catch (Exception geminiFailure) {
+                // Termasuk kegagalan permanen (mis. HTTP 403/400) yang tidak di-retry,
+                // karena provider utama yang tidak bisa dipakai harus tetap fallback.
+                LOGGER.warn("Gemini failed for {}: {}; falling back to DeepSeek",
                         invoiceId, geminiFailure.getMessage());
                 raw = callDeepSeekFallback(invoiceId, bytes, mime, prompt);
             }
