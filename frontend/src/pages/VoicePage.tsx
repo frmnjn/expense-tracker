@@ -14,6 +14,7 @@ import {
 } from '@mantine/core'
 import { IconMicrophone, IconSend, IconTrash } from '@tabler/icons-react'
 import dayjs from 'dayjs'
+import { useSelectedPeriod } from '../context/SelectedPeriodContext'
 import { PageHeader } from '../components/PageHeader'
 import { VoiceRecorder } from '../components/VoiceRecorder'
 import { VoiceNoteCard } from '../components/VoiceNoteCard'
@@ -22,8 +23,6 @@ import VoiceReviewModal from '../components/VoiceReviewModal'
 import VoiceNoteDetailModal from '../components/VoiceNoteDetailModal'
 import { useToast } from '../components/Toast'
 import { useDeleteVoiceNote, useRetryVoiceNote, useUploadVoiceNote, useVoiceNotes } from '../hooks/useVoiceNotes'
-import { usePeriods } from '../hooks/useExpenses'
-import { currentPeriod as fallbackCurrentPeriod } from '../utils/period'
 import { getErrorMessage } from '../utils/error'
 import type { VoiceNote } from '../types/expense'
 
@@ -36,10 +35,7 @@ interface PendingRecording {
 }
 
 function VoicePage() {
-  const { data: periodsData } = usePeriods()
-  const runningPeriod = periodsData?.currentPeriod || fallbackCurrentPeriod()
-  const [period, setPeriod] = useState<string | null>(null)
-  const activePeriod = period ?? runningPeriod
+  const { period: activePeriod, setPeriod, periodOptions: periodValues } = useSelectedPeriod()
   const { data, isPending, isError, refetch } = useVoiceNotes(activePeriod)
   const upload = useUploadVoiceNote()
   const retry = useRetryVoiceNote()
@@ -57,10 +53,10 @@ function VoicePage() {
     }
   }, [pending])
 
-  const periodOptions = useMemo(() => {
-    const set = new Set<string>([runningPeriod, ...(periodsData?.periods ?? [])])
-    return Array.from(set).map((value) => ({ value, label: value }))
-  }, [periodsData, runningPeriod])
+  const periodOptions = useMemo(
+    () => periodValues.map((value) => ({ value, label: value })),
+    [periodValues],
+  )
 
   const handleRecorded = (file: File, durationMs: number) => {
     const url = URL.createObjectURL(file)

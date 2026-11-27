@@ -3,7 +3,6 @@ import {
   Button,
   Container,
   Group,
-  Image,
   Loader,
   Modal,
   Paper,
@@ -17,15 +16,15 @@ import { useMediaQuery } from '@mantine/hooks'
 import { IconCamera, IconFileTypePdf, IconPhoto, IconReceipt } from '@tabler/icons-react'
 import dayjs from 'dayjs'
 import { useScanInvoices, useUploadInvoice, useRetryAnalysis } from '../hooks/useScan'
-import { usePeriods } from '../hooks/useExpenses'
 import { getInvoicePhotoUrl } from '../services/expense'
-import { currentPeriod as fallbackCurrentPeriod } from '../utils/period'
 import { getErrorMessage } from '../utils/error'
 import { toUploadableImage } from '../utils/image'
+import { useSelectedPeriod } from '../context/SelectedPeriodContext'
 import { PageHeader } from '../components/PageHeader'
 import { InvoiceCard } from '../components/InvoiceCard'
 import ReviewModal from '../components/ReviewModal'
 import DeleteInvoiceModal from '../components/DeleteInvoiceModal'
+import { ImageViewerModal } from '../components/ImageViewerModal'
 import SubmittedExpensesModal from '../components/SubmittedExpensesModal'
 import { AppPagination } from '../components/AppPagination'
 import { ErrorState } from '../components/ErrorState'
@@ -45,21 +44,18 @@ function ScanPage() {
   const galleryRef = useRef<HTMLInputElement>(null)
   const isMobile = useMediaQuery('(max-width: 48em)')
 
-  // Periode berjalan (default). Tanggal belanja diambil otomatis dari struk oleh AI (fallback ke waktu sistem).
-  const { data: periodsData } = usePeriods()
-  const currentPeriod = periodsData?.currentPeriod || fallbackCurrentPeriod()
-  const [period, setPeriod] = useState<string | null>(null)
-  const activePeriod = period ?? currentPeriod
+  // Tanggal belanja diambil otomatis dari struk oleh AI (fallback ke waktu sistem).
+  const { period: activePeriod, setPeriod, periodOptions: periodValues } = useSelectedPeriod()
   const { data, isPending, isError, refetch } = useScanInvoices(activePeriod)
   const upload = useUploadInvoice()
   const retry = useRetryAnalysis()
   const toast = useToast()
   const invoices = data?.invoices ?? []
 
-  const periodOptions = useMemo(() => {
-    const set = new Set<string>([currentPeriod, ...(periodsData?.periods ?? [])])
-    return Array.from(set).map((p) => ({ value: p, label: p }))
-  }, [periodsData, currentPeriod])
+  const periodOptions = useMemo(
+    () => periodValues.map((p) => ({ value: p, label: p })),
+    [periodValues],
+  )
 
   const [statusFilter, setStatusFilter] = useState<string>('all')
   const [sortBy, setSortBy] = useState<string>('newest')
@@ -275,35 +271,42 @@ function ScanPage() {
         />
       )}
 
+      {viewingInvoice && viewingInvoice.type !== 'pdf' && (
+        <ImageViewerModal
+          opened
+          onClose={() => setViewingInvoice(null)}
+          src={getInvoicePhotoUrl(viewingInvoice.id)}
+          alt={viewingInvoice.name ?? 'Invoice'}
+          title={viewingInvoice.name ?? 'Invoice'}
+        />
+      )}
+
       <Modal
-        opened={!!viewingInvoice}
+        opened={!!viewingInvoice && viewingInvoice.type === 'pdf'}
         onClose={() => setViewingInvoice(null)}
         title={viewingInvoice?.name ?? 'Invoice'}
         size="md"
         centered
       >
-        {viewingInvoice &&
-          (viewingInvoice.type === 'pdf' ? (
-            <Stack align="center" gap="sm">
-              <IconFileTypePdf size={48} aria-hidden />
-              <Button
-                onClick={() => {
-                  const invoice = viewingInvoice
-                  setViewingInvoice(null)
-                  openPdf({
-                    url: getInvoicePhotoUrl(invoice.id),
-                    title: invoice.name ?? 'Invoice',
-                    fileName: invoice.name ?? undefined,
-                  })
-                }}
-                variant="light"
-              >
-                Buka PDF
-              </Button>
-            </Stack>
-          ) : (
-            <Image src={getInvoicePhotoUrl(viewingInvoice.id)} alt={viewingInvoice.name ?? 'Invoice'} fit="contain" mah="70vh" />
-          ))}
+        {viewingInvoice?.type === 'pdf' && (
+          <Stack align="center" gap="sm">
+            <IconFileTypePdf size={48} aria-hidden />
+            <Button
+              onClick={() => {
+                const invoice = viewingInvoice
+                setViewingInvoice(null)
+                openPdf({
+                  url: getInvoicePhotoUrl(invoice.id),
+                  title: invoice.name ?? 'Invoice',
+                  fileName: invoice.name ?? undefined,
+                })
+              }}
+              variant="light"
+            >
+              Buka PDF
+            </Button>
+          </Stack>
+        )}
       </Modal>
     </Container>
   )

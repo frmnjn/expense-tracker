@@ -1,10 +1,13 @@
-import { Badge, Divider, Group, Loader, Modal, Paper, Stack, Text } from '@mantine/core'
+import { useState } from 'react'
+import { Badge, Button, Divider, Group, Loader, Modal, Paper, Stack, Text } from '@mantine/core'
+import { IconMail } from '@tabler/icons-react'
 import { useMediaQuery } from '@mantine/hooks'
 import dayjs from 'dayjs'
 import type { ReactNode } from 'react'
 import { useExpense } from '../hooks/useExpenses'
 import { formatCurrency } from '../utils/currency'
 import type { EmailImport } from '../types/emailImport'
+import { EmailPreviewModal } from './EmailPreviewModal'
 import { ExpenseDescription } from './ExpenseDescription'
 
 const DATE_TIME_FORMAT = 'DD MMM YYYY HH:mm'
@@ -25,6 +28,7 @@ function DetailRow({ label, children }: { label: string; children: ReactNode }) 
 function EmailRincianModal({ item, onClose }: { item: EmailImport; onClose: () => void }) {
   const { data: expense, isPending } = useExpense(item.expenseId ?? null)
   const isMobile = useMediaQuery('(max-width: 48em)')
+  const [previewOpen, setPreviewOpen] = useState(false)
 
   return (
     <Modal
@@ -83,6 +87,14 @@ function EmailRincianModal({ item, onClose }: { item: EmailImport; onClose: () =
 
           <Divider label="Email" labelPosition="left" />
 
+          <Button
+            variant="light"
+            leftSection={<IconMail size={16} />}
+            onClick={() => setPreviewOpen(true)}
+          >
+            Lihat email asli
+          </Button>
+
           <Paper withBorder p="sm" radius="md">
             <Stack gap={8}>
               <DetailRow label="Diterima">{dayjs(item.receivedAt).format(DATE_TIME_FORMAT)}</DetailRow>
@@ -98,6 +110,16 @@ function EmailRincianModal({ item, onClose }: { item: EmailImport; onClose: () =
         <Text size="sm" c="dimmed">
           Pengeluaran tidak ditemukan.
         </Text>
+      )}
+
+      {previewOpen && (
+        <EmailPreviewModal
+          opened
+          emailId={item.id}
+          subject={item.subject}
+          sender={item.sender}
+          onClose={() => setPreviewOpen(false)}
+        />
       )}
     </Modal>
   )

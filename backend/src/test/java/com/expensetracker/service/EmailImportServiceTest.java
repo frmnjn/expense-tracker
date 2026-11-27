@@ -1,5 +1,6 @@
 package com.expensetracker.service;
 
+import com.expensetracker.data.EmailBodyData;
 import com.expensetracker.data.EmailImportData;
 import com.expensetracker.data.EmailImportRepository;
 import com.expensetracker.data.ExpenseData;
@@ -66,6 +67,42 @@ class EmailImportServiceTest {
     private static ExpenseData existingExpense() {
         return new ExpenseData("x1", "2026-AUG-SEP", "2026-09-20 11:00", "TOTAL BUAH SEGAR",
                 "Belanja", 57_500L, "", false, false, null, null, null);
+    }
+
+    @Test
+    void getBody_existingStoredBody_shouldNotFetchImap() {
+        when(emailImportRepository.findById("e1")).thenReturn(importRow("IMPORTED"));
+        when(emailImportRepository.findBodyById("e1"))
+                .thenReturn(new EmailBodyData("<p>stored</p>", "HTML"));
+
+        var response = service.getBody("e1");
+
+        assertEquals("<p>stored</p>", response.body());
+        assertEquals("HTML", response.format());
+        verify(emailInboxService, never()).fetchByMessageId(anyString());
+    }
+
+    @Test
+    void getBody_missingBody_shouldFetchAndCache() {
+        when(emailImportRepository.findById("e1")).thenReturn(importRow("IMPORTED"));
+        when(emailImportRepository.findBodyById("e1")).thenReturn(new EmailBodyData(null, null));
+        when(emailInboxService.fetchByMessageId("<msg-1@danamon>"))
+                .thenReturn(new FetchedEmail("dbank.app@danamon.co.id", "Notifikasi", "<p>fresh</p>", true));
+
+        var response = service.getBody("e1");
+
+        assertEquals("<p>fresh</p>", response.body());
+        assertEquals("HTML", response.format());
+        verify(emailImportRepository).updateBody("e1", "<p>fresh</p>", "HTML");
+    }
+
+    @Test
+    void getBody_emailNotFoundInInbox_shouldThrowNotFound() {
+        when(emailImportRepository.findById("e1")).thenReturn(importRow("IMPORTED"));
+        when(emailImportRepository.findBodyById("e1")).thenReturn(new EmailBodyData(null, null));
+        when(emailInboxService.fetchByMessageId("<msg-1@danamon>")).thenReturn(null);
+
+        assertThrows(NotFoundException.class, () -> service.getBody("e1"));
     }
 
     @Test

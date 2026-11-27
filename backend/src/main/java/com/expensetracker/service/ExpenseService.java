@@ -6,6 +6,7 @@ import com.expensetracker.data.CategoryRepository;
 import com.expensetracker.data.ExpenseData;
 import com.expensetracker.data.ExpenseRepository;
 import com.expensetracker.data.InvoiceData;
+import com.expensetracker.data.TopUpData;
 import com.expensetracker.data.TopUpRepository;
 import com.expensetracker.data.VoiceNoteData;
 import com.expensetracker.model.BatchExpenseItem;
@@ -481,6 +482,18 @@ public class ExpenseService {
                 request.description());
         budgetRepository.adjustBalance(request.budget(), request.amount());
         notificationService.sendTopUp(request.budget(), request.amount(), budgetRepository.getBalance(request.budget()));
+    }
+
+    @Transactional
+    public void deleteTopUp(String id) {
+        TopUpData topUp = topUpRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Top-up not found"));
+        String topUpPeriod = periodService.forDate(topUp.dateTime().toLocalDate());
+        if (!topUpPeriod.equals(periodService.currentPeriod())) {
+            throw new ConflictException("Top-up can only be deleted in the current period");
+        }
+        budgetRepository.adjustBalance(topUp.budgetName(), -topUp.amount());
+        topUpRepository.deleteById(id);
     }
 
     @Transactional

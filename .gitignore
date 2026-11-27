@@ -16,6 +16,9 @@ scripts/run-backend-local.sh
 *.backup*
 backups/
 
+# hasil export data pribadi
+exports/
+
 # demo environment
 .env.demo
 uploads-demo/

@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { ActionIcon, Button, Group, Modal, Paper, Stack, Text, TextInput } from '@mantine/core'
+import { ActionIcon, Button, Group, Modal, Paper, Stack, Text, Textarea, TextInput } from '@mantine/core'
 import { IconPencil, IconTrash } from '@tabler/icons-react'
 import { useOptions } from '../hooks/useOptions'
 import { useCreateCategory, useDeleteCategory, useUpdateCategory } from '../hooks/useCategories'
@@ -77,7 +77,11 @@ function ManageCategoriesModal({ budget, onClose }: { budget: string; onClose: (
                     {c.name}
                   </Text>
                   {c.description && (
-                    <Text size="xs" c="dimmed" truncate>
+                    <Text
+                      size="xs"
+                      c="dimmed"
+                      style={{ whiteSpace: 'pre-wrap', overflowWrap: 'break-word' }}
+                    >
                       {c.description}
                     </Text>
                   )}
@@ -113,12 +117,15 @@ function ManageCategoriesModal({ budget, onClose }: { budget: string; onClose: (
           maxLength={255}
           size="md"
         />
-        <TextInput
+        <Textarea
           label="Deskripsi (opsional)"
           placeholder="Dipakai AI untuk memilih kategori"
           value={description}
           onChange={(e) => setDescription(e.currentTarget.value)}
           maxLength={500}
+          autosize
+          minRows={3}
+          maxRows={8}
           size="md"
         />
         <Group justify="flex-end">

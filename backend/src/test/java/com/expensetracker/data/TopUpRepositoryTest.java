@@ -13,8 +13,10 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -46,5 +48,35 @@ class TopUpRepositoryTest {
 
         assertEquals("2026-09-25 06:11", topUps.get(0).dateTime());
         verify(resultSet).getObject("date_time", LocalDateTime.class);
+    }
+
+    @Test
+    void findById_shouldMapBudgetAndAmount() throws Exception {
+        when(resultSet.getString("id")).thenReturn("t1");
+        when(resultSet.getString("budget_name")).thenReturn("Daily");
+        when(resultSet.getLong("amount")).thenReturn(50_000L);
+        when(resultSet.getObject("date_time", LocalDateTime.class))
+                .thenReturn(LocalDateTime.of(2026, 10, 24, 10, 0));
+
+        when(jdbcTemplate.query(anyString(), any(RowMapper.class), eq("t1")))
+                .thenAnswer(invocation -> {
+                    @SuppressWarnings("unchecked")
+                    RowMapper<TopUpData> mapper = (RowMapper<TopUpData>) invocation.getArgument(1);
+                    return List.of(mapper.mapRow(resultSet, 0));
+                });
+
+        var topUp = new TopUpRepository(jdbcTemplate).findById("t1");
+
+        assertTrue(topUp.isPresent());
+        assertEquals("Daily", topUp.get().budgetName());
+        assertEquals(50_000L, topUp.get().amount());
+        assertEquals(LocalDateTime.of(2026, 10, 24, 10, 0), topUp.get().dateTime());
+    }
+
+    @Test
+    void deleteById_shouldDeleteRow() {
+        new TopUpRepository(jdbcTemplate).deleteById("t1");
+
+        verify(jdbcTemplate).update("DELETE FROM top_ups WHERE id = ?", "t1");
     }
 }

@@ -369,6 +369,24 @@ public class ExpenseController {
         }
     }
 
+    @DeleteMapping("/topups/{id}")
+    public ResponseEntity<ApiResponse> deleteTopUp(@PathVariable String id) {
+        try {
+            expenseService.deleteTopUp(id);
+            return ResponseEntity.ok(ApiResponse.ok());
+        } catch (NotFoundException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.NOT_FOUND.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(e.getMessage()));
+        } catch (ConflictException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.CONFLICT.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.CONFLICT).body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            LOGGER.error("internal error deleting top up", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Internal server error"));
+        }
+    }
+
     @PostMapping("/expenses")
     public ResponseEntity<ApiResponse> createExpense(@RequestBody ExpenseRequest request,
                                                      @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {

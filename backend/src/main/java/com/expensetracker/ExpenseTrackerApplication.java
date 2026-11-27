@@ -9,6 +9,7 @@ import com.expensetracker.model.BudgetCreateRequest;
 import com.expensetracker.model.BudgetOption;
 import com.expensetracker.model.BudgetUpdateRequest;
 import com.expensetracker.model.BudgetSummary;
+import com.expensetracker.model.EmailBodyResponse;
 import com.expensetracker.model.EmailImportResponse;
 import com.expensetracker.model.EmailImportsResponse;
 import com.expensetracker.model.ExpenseRequest;
@@ -53,6 +54,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
         ExpenseResponse.class,
         ExpenseResponse[].class,
         ExpensesResponse.class,
+        EmailBodyResponse.class,
         EmailImportResponse.class,
         EmailImportResponse[].class,
         EmailImportsResponse.class,

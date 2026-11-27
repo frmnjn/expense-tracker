@@ -13,7 +13,7 @@ import type {
   VoiceNoteDetail,
   VoiceNotesResponse,
 } from '../types/expense'
-import type { EmailImportsResponse } from '../types/emailImport'
+import type { EmailBodyResponse, EmailImportsResponse } from '../types/emailImport'
 import type { PeriodReportsResponse } from '../types/report'
 
 interface DemoData {
@@ -29,6 +29,7 @@ interface DemoData {
   voiceNotes: Array<VoiceNotesResponse['voiceNotes'][number] & { period: string }>
   voiceNoteDetails: Record<string, VoiceNoteDetail>
   emailImports: EmailImportsResponse['imports']
+  emailBodies: Record<string, EmailBodyResponse>
 }
 
 const BASE = import.meta.env.BASE_URL
@@ -194,6 +195,14 @@ export async function demoAdapter(config: InternalAxiosRequestConfig): Promise<A
       ? data.voiceNotes.filter((note) => note.period === period)
       : data.voiceNotes
     return response(config, { voiceNotes } satisfies VoiceNotesResponse)
+  }
+  const emailBodyMatch = /^\/email-imports\/([^/]+)\/body$/.exec(path)
+  if (emailBodyMatch) {
+    const id = decodeURIComponent(emailBodyMatch[1])
+    const body = data.emailBodies[id]
+    return body
+      ? response(config, body)
+      : failure(config, 404, 'Email asli tidak ditemukan di inbox')
   }
   if (path === '/email-imports') {
     const status = params.get('status')

@@ -304,7 +304,7 @@ def build_data(days: int, seed: int) -> dict:
 
     invoices, invoice_details = build_invoices(today, raw_expenses)
     voice_notes, voice_note_details = build_voice_notes(today, raw_expenses)
-    email_imports = build_email_imports(today, submitted_date)
+    email_imports, email_bodies = build_email_imports(today, submitted_date)
     report_inputs = build_report_inputs(current, raw_expenses, raw_topups, options)
 
     return {
@@ -321,6 +321,7 @@ def build_data(days: int, seed: int) -> dict:
         'voiceNotes': voice_notes,
         'voiceNoteDetails': voice_note_details,
         'emailImports': email_imports,
+        'emailBodies': email_bodies,
         'reportsInput': report_inputs,
     }
 
@@ -521,7 +522,7 @@ def build_voice_notes(today: datetime.date, raw_expenses: list[dict]) -> tuple[l
     return voice_notes, details
 
 
-def build_email_imports(today: datetime.date, submitted_date: datetime.date) -> list[dict]:
+def build_email_imports(today: datetime.date, submitted_date: datetime.date) -> tuple[list[dict], dict]:
     rows = [
         ('email-demo-qris', '<demo-qris@demo-bank.example>', 'notifikasi@demo-bank.example',
          'Pembayaran QRIS Berhasil', f'{today:%Y-%m-%d} 08:10:00', f'{today:%Y-%m-%d} 08:00:00',
@@ -566,7 +567,55 @@ def build_email_imports(today: datetime.date, submitted_date: datetime.date) -> 
             'expenseId': expense_id,
         })
     imports.sort(key=lambda item: item['receivedAt'], reverse=True)
-    return imports
+    bodies = {
+        item['id']: {'body': demo_email_html(item), 'format': 'HTML'}
+        for item in imports
+    }
+    return imports, bodies
+
+
+def demo_email_html(item: dict) -> str:
+    amount = item.get('amount')
+    amount_text = f"Rp{amount:,}".replace(',', '.') if amount is not None else '-'
+    return f'''<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<style>
+  body {{ margin: 0; padding: 24px; background: #f4f6f8; color: #1f2937; font-family: Arial, sans-serif; }}
+  .card {{ max-width: 560px; margin: 0 auto; background: #ffffff; border-radius: 12px; overflow: hidden; }}
+  .header {{ background: #0b5ed7; color: #ffffff; padding: 20px 24px; font-size: 18px; font-weight: 700; }}
+  .content {{ padding: 24px; }}
+  .label {{ color: #6b7280; font-size: 13px; }}
+  .value {{ font-size: 16px; font-weight: 600; margin-top: 4px; }}
+  .trx {{ display: block; margin-top: 20px; padding-top: 16px; border-top: 1px solid #e5e7eb; }}
+  .amount {{ font-size: 24px; font-weight: 800; color: #111827; margin-top: 4px; }}
+  .footer {{ padding: 16px 24px; color: #9ca3af; font-size: 12px; border-top: 1px solid #e5e7eb; }}
+</style>
+</head>
+<body>
+  <div class="card">
+    <div class="header">Demo Bank</div>
+    <div class="content">
+      <div class="label">Notifikasi transaksi</div>
+      <div class="value">{item.get('subject') or 'Transaksi'}</div>
+      <div class="trx">
+        <div class="label">Merchant</div>
+        <div class="value">{item.get('merchant') or '-'}</div>
+      </div>
+      <div class="trx">
+        <div class="label">Nominal</div>
+        <div class="amount">{amount_text}</div>
+      </div>
+      <p style="margin-top: 24px; color: #4b5563; font-size: 13px;">
+        Ini adalah preview email demo. Email asli dari bank biasanya berisi HTML,
+        logo, tabel transaksi, dan informasi tambahan lainnya.
+      </p>
+    </div>
+    <div class="footer">Email demo — tidak ada transaksi nyata.</div>
+  </div>
+</body>
+</html>'''
 
 
 def build_report_inputs(current: str, raw_expenses: list[dict], raw_topups: list[dict], options: dict) -> list[dict]:

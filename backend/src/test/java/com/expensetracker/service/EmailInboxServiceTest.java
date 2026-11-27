@@ -95,7 +95,7 @@ class EmailInboxServiceTest {
         verify(invoiceAnalysisService).trigger("inv-1");
         verify(emailImportRepository).insert(anyString(), anyString(), anyString(), anyString(), any(),
                 isNull(), isNull(), isNull(), anyString(), isNull(), isNull(), eq("SCAN"),
-                eq(EmailImportStatus.SCANNED.value()), anyString());
+                eq(EmailImportStatus.SCANNED.value()), anyString(), anyString(), anyString());
         verify(emailParserService, never()).parse(anyString(), anyString(), anyString());
         org.junit.jupiter.api.Assertions.assertTrue(stored);
     }
@@ -133,7 +133,8 @@ class EmailInboxServiceTest {
         org.junit.jupiter.api.Assertions.assertFalse(stored);
         verify(invoiceService, never()).createInvoiceForAi(anyString(), any(), any(byte[].class), anyString());
         verify(emailImportRepository, never()).insert(anyString(), anyString(), anyString(), anyString(), any(),
-                any(), any(), any(), anyString(), any(), any(), anyString(), anyString(), anyString());
+                any(), any(), any(), anyString(), any(), any(), anyString(), anyString(), anyString(),
+                anyString(), anyString());
     }
 
     @Test

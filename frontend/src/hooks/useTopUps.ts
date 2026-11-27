@@ -1,11 +1,22 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { createTopUp, getTopUps } from '../services/expense'
+import { createTopUp, deleteTopUp, getTopUps } from '../services/expense'
 import type { TopUpRequest } from '../types/expense'
 
 export function useTopUps() {
   return useQuery({
     queryKey: ['topups'],
     queryFn: getTopUps,
+  })
+}
+
+export function useDeleteTopUp() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (id: string) => deleteTopUp(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['topups'] })
+      queryClient.invalidateQueries({ queryKey: ['options'] })
+    },
   })
 }
 

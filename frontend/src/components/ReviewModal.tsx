@@ -25,6 +25,7 @@ import type { BudgetOption } from '../types/expense'
 import { formatCurrency } from '../utils/currency'
 import { getErrorMessage } from '../utils/error'
 import { InvoiceThumb } from './InvoiceThumb'
+import { ImageViewerModal } from './ImageViewerModal'
 import { useToast } from './Toast'
 
 interface EditItem {
@@ -92,6 +93,7 @@ function ReviewModal({
   const summaryRef = useRef<HTMLDivElement | null>(null)
   const [flashSummary, setFlashSummary] = useState(false)
   const [showBack, setShowBack] = useState(false)
+  const [viewingPhoto, setViewingPhoto] = useState(false)
 
   const indexById = useMemo(() => {
     const map = new Map<string, number>()
@@ -332,6 +334,7 @@ function ReviewModal({
                   type={data?.type ?? 'image'}
                   url={getInvoicePhotoUrl(invoiceId)}
                   h={80}
+                  onClick={data?.type === 'pdf' ? undefined : () => setViewingPhoto(true)}
                 />
               </Box>
               <Stack gap={2} flex={1}>
@@ -438,9 +441,10 @@ function ReviewModal({
                   size="xs"
                   label="Nama pengeluaran"
                   value={groupName(key)}
-                  onChange={(e) =>
-                    setGroupNames((prev) => ({ ...prev, [key]: e.currentTarget.value }))
-                  }
+                  onChange={(e) => {
+                    const value = e.currentTarget.value
+                    setGroupNames((prev) => ({ ...prev, [key]: value }))
+                  }}
                 />
                 <Group gap={6} mt={6}>
                   {group.items.map((it) => (
@@ -621,6 +625,16 @@ function ReviewModal({
             Buat {groups.length} Pengeluaran
           </Button>
         </Stack>
+      )}
+
+      {viewingPhoto && (
+        <ImageViewerModal
+          opened
+          onClose={() => setViewingPhoto(false)}
+          src={getInvoicePhotoUrl(invoiceId)}
+          alt={data?.name ?? 'Invoice'}
+          title={data?.name ?? 'Invoice'}
+        />
       )}
     </Modal>
   )

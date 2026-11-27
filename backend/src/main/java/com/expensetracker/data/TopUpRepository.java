@@ -9,6 +9,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Repository
 public class TopUpRepository {
@@ -30,6 +31,22 @@ public class TopUpRepository {
                 "SELECT t.id, t.date_time, b.name AS budget_name, t.amount, t.description "
                         + "FROM top_ups t JOIN budgets b ON b.id = t.budget_id ORDER BY t.date_time DESC",
                 this::mapRow);
+    }
+
+    public Optional<TopUpData> findById(String id) {
+        return jdbcTemplate.query(
+                "SELECT t.id, b.name AS budget_name, t.amount, t.date_time FROM top_ups t "
+                        + "JOIN budgets b ON b.id = t.budget_id WHERE t.id = ?",
+                (rs, rowNum) -> new TopUpData(
+                        rs.getString("id"),
+                        rs.getString("budget_name"),
+                        rs.getLong("amount"),
+                        rs.getObject("date_time", LocalDateTime.class)),
+                id).stream().findFirst();
+    }
+
+    public void deleteById(String id) {
+        jdbcTemplate.update("DELETE FROM top_ups WHERE id = ?", id);
     }
 
     public List<TopUpResponse> findByDateRange(LocalDateTime from, LocalDateTime toExclusive) {

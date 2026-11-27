@@ -7,6 +7,7 @@ import com.expensetracker.data.ExpenseData;
 import com.expensetracker.data.ExpenseRepository;
 import com.expensetracker.data.InvoiceData;
 import com.expensetracker.data.PaydayOverrideRepository;
+import com.expensetracker.data.TopUpData;
 import com.expensetracker.data.TopUpRepository;
 import com.expensetracker.data.VoiceNoteData;
 import com.expensetracker.model.BatchExpenseItem;
@@ -30,6 +31,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.List;
+import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -334,6 +336,41 @@ class ExpenseServiceTest {
         ValidationException ex = assertThrows(ValidationException.class,
                 () -> expenseService.createTopUp(new TopUpRequest(null, "Daily", 0L, null)));
         assertEquals("Amount must be greater than 0", ex.getMessage());
+    }
+
+    @Test
+    void deleteTopUp_currentPeriod_shouldDecreaseBalanceAndDelete() {
+        when(topUpRepository.findById("t1"))
+                .thenReturn(Optional.of(new TopUpData("t1", "Daily", 50000L,
+                        LocalDateTime.of(2026, 10, 24, 10, 0))));
+
+        assertDoesNotThrow(() -> expenseService.deleteTopUp("t1"));
+
+        verify(budgetRepository).adjustBalance("Daily", -50000L);
+        verify(topUpRepository).deleteById("t1");
+    }
+
+    @Test
+    void deleteTopUp_pastPeriod_shouldReject() {
+        when(topUpRepository.findById("t1"))
+                .thenReturn(Optional.of(new TopUpData("t1", "Daily", 50000L,
+                        LocalDateTime.of(2026, 8, 7, 10, 0))));
+
+        ConflictException ex = assertThrows(ConflictException.class,
+                () -> expenseService.deleteTopUp("t1"));
+        assertEquals("Top-up can only be deleted in the current period", ex.getMessage());
+        verify(topUpRepository, never()).deleteById(anyString());
+        verify(budgetRepository, never()).adjustBalance(anyString(), anyLong());
+    }
+
+    @Test
+    void deleteTopUp_missing_shouldThrowNotFound() {
+        when(topUpRepository.findById("missing")).thenReturn(Optional.empty());
+
+        NotFoundException ex = assertThrows(NotFoundException.class,
+                () -> expenseService.deleteTopUp("missing"));
+        assertEquals("Top-up not found", ex.getMessage());
+        verify(topUpRepository, never()).deleteById(anyString());
     }
 
     @Test

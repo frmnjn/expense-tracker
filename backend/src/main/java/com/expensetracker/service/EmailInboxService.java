@@ -191,7 +191,8 @@ public class EmailInboxService {
             }
             Message message = found[0];
             String subject = message.getSubject() == null ? "" : message.getSubject();
-            return new FetchedEmail(senderOf(message), subject, extractBody(message));
+            EmailBody body = extractBody(message);
+            return new FetchedEmail(senderOf(message), subject, body.content(), body.html());
         } catch (Exception e) {
             LOGGER.warn("fetch by message-id failed: {}", e.getMessage());
             return null;
@@ -244,7 +245,9 @@ public class EmailInboxService {
             }
             String subject = message.getSubject() == null ? "(tanpa subjek)" : message.getSubject();
             LocalDateTime receivedAt = receivedAtOf(message);
-            String body = extractBody(message);
+            EmailBody body = extractBody(message);
+            String bodyContent = body.content();
+            String bodyFormat = body.html() ? "HTML" : "TEXT";
 
             String id = UUID.randomUUID().toString();
 
@@ -262,7 +265,8 @@ public class EmailInboxService {
                         emailImportRepository.insert(id, messageId, sender, subject, receivedAt,
                                 null, null, null, subject, null, null, "SCAN",
                                 EmailImportStatus.SCANNED.value(),
-                                "Auto-scan: " + attachment.filename() + " dikirim ke Scan Struk");
+                                "Auto-scan: " + attachment.filename() + " dikirim ke Scan Struk",
+                                bodyContent, bodyFormat);
                         LOGGER.info("email auto-scanned: sender={} file={} invoice={}",
                                 sender, attachment.filename(), invoiceId);
                         return true;
@@ -273,36 +277,36 @@ public class EmailInboxService {
             }
 
             try {
-                ParsedTransaction parsed = emailParserService.parse(sender, subject, body);
+                ParsedTransaction parsed = emailParserService.parse(sender, subject, bodyContent);
                 String description = descriptionWithNote(subject, parsed);
                 if (merchantDiscardRule.shouldDiscard(parsed.merchant())) {
                     emailImportRepository.insert(id, messageId, sender, subject, receivedAt,
                             parsed.transactionAt(), parsed.merchant(), parsed.amount(),
                             description, parsed.suggestedBudget(), parsed.suggestedCategory(), parsed.parseMethod(),
                             EmailImportStatus.DISCARDED.value(),
-                            "Auto-discard: merchant " + parsed.merchant());
+                            "Auto-discard: merchant " + parsed.merchant(), bodyContent, bodyFormat);
                     LOGGER.info("email auto-discarded: sender={} merchant={}", sender, parsed.merchant());
                 } else {
                     emailImportRepository.insert(id, messageId, sender, subject, receivedAt,
                             parsed.transactionAt(), parsed.merchant(), parsed.amount(),
                             description, parsed.suggestedBudget(), parsed.suggestedCategory(), parsed.parseMethod(),
-                            EmailImportStatus.PENDING_REVIEW.value(), null);
+                            EmailImportStatus.PENDING_REVIEW.value(), null, bodyContent, bodyFormat);
                     LOGGER.info("email imported for review: sender={} merchant={}", sender, parsed.merchant());
                 }
             } catch (NotExpenseException e) {
                 emailImportRepository.insert(id, messageId, sender, subject, receivedAt,
                         null, null, null, subject, null, null, "AI",
-                        EmailImportStatus.DISCARDED.value(), e.getMessage());
+                        EmailImportStatus.DISCARDED.value(), e.getMessage(), bodyContent, bodyFormat);
                 LOGGER.info("email skipped (not expense): sender={}", sender);
             } catch (AiParseException e) {
                 emailImportRepository.insert(id, messageId, sender, subject, receivedAt,
                         null, null, null, subject, null, null, "AI",
-                        EmailImportStatus.FAILED.value(), e.getMessage());
+                        EmailImportStatus.FAILED.value(), e.getMessage(), bodyContent, bodyFormat);
                 LOGGER.warn("email AI parse failed: sender={} reason={}", sender, e.getMessage());
             } catch (ValidationException e) {
                 emailImportRepository.insert(id, messageId, sender, subject, receivedAt,
                         null, null, null, subject, null, null, "REGEX",
-                        EmailImportStatus.FAILED.value(), e.getMessage());
+                        EmailImportStatus.FAILED.value(), e.getMessage(), bodyContent, bodyFormat);
                 LOGGER.warn("email parse failed: sender={} reason={}", sender, e.getMessage());
             }
             return true;
@@ -372,13 +376,13 @@ public class EmailInboxService {
                 : LocalDateTime.ofInstant(date.toInstant(), ZoneId.systemDefault());
     }
 
-    private static String extractBody(Part part) throws Exception {
+    static EmailBody extractBody(Part part) throws Exception {
         String html = findPart(part, "text/html");
         if (html != null) {
-            return html;
+            return new EmailBody(html, true);
         }
         String plain = findPart(part, "text/plain");
-        return plain == null ? "" : plain;
+        return new EmailBody(plain == null ? "" : plain, false);
     }
 
     private static String findPart(Part part, String mimeType) throws Exception {

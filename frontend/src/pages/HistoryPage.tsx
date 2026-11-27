@@ -18,11 +18,10 @@ import {
   Text,
   Textarea,
   TextInput,
-  Title,
 } from '@mantine/core'
 import { useMediaQuery } from '@mantine/hooks'
+import { DateTimePicker } from '@mantine/dates'
 import {
-  IconArrowLeft,
   IconFileTypePdf,
   IconPhoto,
   IconMicrophone,
@@ -37,10 +36,12 @@ import { PageHeader } from '../components/PageHeader'
 import { useDeleteExpense, useExpenses, usePeriods, useUpdateExpense } from '../hooks/useExpenses'
 import { useDeletePhoto, useUploadPhoto } from '../hooks/useCreateExpense'
 import { useOptions } from '../hooks/useOptions'
+import { useSelectedPeriod } from '../context/SelectedPeriodContext'
 import PhotoInput, { type PhotoSelection } from '../components/PhotoInput'
 import { TransactionCard } from '../components/TransactionCard'
 import { AppPagination } from '../components/AppPagination'
 import { ErrorState } from '../components/ErrorState'
+import { ImageViewerModal } from '../components/ImageViewerModal'
 import { usePdfViewer } from '../components/PdfViewerContext'
 import { useToast } from '../components/Toast'
 import { getPhotoUrl } from '../services/expense'
@@ -66,16 +67,13 @@ const SORT_OPTIONS = Object.entries(SORT_LABELS).map(([value, label]) => ({ valu
 const balanceColor = (value: number) => (value < 0 ? 'red' : undefined)
 
 function HistoryPage() {
-  const { data: periodsData, isPending: periodsLoading } = usePeriods()
+  const { isPending: periodsLoading } = usePeriods()
   const { data: options } = useOptions()
-  const [periodSelection, setPeriodSelection] = useState<string | null>(null)
   const isMobile = useMediaQuery('(max-width: 48em)')
-
-  const period = periodSelection ?? periodsData?.periods[0] ?? null
-  const setPeriod = setPeriodSelection
+  const { period, setPeriod, periodOptions } = useSelectedPeriod()
   const { data: expensesData, isPending: expensesLoading, isError: expensesError, refetch: refetchExpenses } = useExpenses(period)
 
-  const periods = useMemo(() => (periodsData?.periods ?? []).map((p) => ({ value: p, label: p })), [periodsData])
+  const periods = useMemo(() => periodOptions.map((p) => ({ value: p, label: p })), [periodOptions])
   const expenses = expensesData?.expenses ?? []
   const budgetOptions = useMemo(
     () => (options?.budgets ?? []).map((b) => ({ value: b.name, label: b.name })),
@@ -247,7 +245,7 @@ function HistoryPage() {
           }
         />
 
-        {period && !(isMobile && editing) && (
+        {period && (
           <Stack gap="xs">
             <Group wrap="nowrap" align="center">
               <TextInput
@@ -362,10 +360,7 @@ function HistoryPage() {
           </Stack>
         )}
 
-        {isMobile && editing ? (
-          <EditExpenseForm expense={editing} onClose={() => setEditing(null)} inline />
-        ) : (
-          <AppPagination
+        <AppPagination
             data={visibleExpenses}
             key={`${search}|${budgetFilters.join(',')}|${categoryFilters.join(',')}|${sortBy}|${period}`}
           >
@@ -465,72 +460,31 @@ function HistoryPage() {
           )}
         </Paper>
             )}
-          </AppPagination>
-        )}
+        </AppPagination>
 
-        {editing && !isMobile && (
+        {editing && (
           <Modal
             opened
             onClose={() => setEditing(null)}
             title="Ubah pengeluaran"
             centered
+            fullScreen={isMobile}
             size="md"
-            zIndex={1200}
+            styles={{ body: { maxHeight: isMobile ? undefined : 'calc(100dvh - 140px)', overflowY: 'auto' } }}
           >
             <EditExpenseForm expense={editing} onClose={() => setEditing(null)} />
           </Modal>
         )}
 
-        <Modal
-          opened={!!viewingPhoto}
-          onClose={() => setViewingPhoto(null)}
-          title={viewingPhoto?.name ?? viewingPhoto?.photoName ?? 'Invoice'}
-          centered={!isMobile}
-          fullScreen={isMobile}
-          size="md"
-          zIndex={1200}
-        >
-          {viewingPhoto &&
-            (viewingPhoto.photoType === 'pdf' ? (
-              <Stack align="center" gap="sm">
-                <IconFileTypePdf size={48} aria-hidden />
-                <Button
-                  onClick={() => {
-                    const expense = viewingPhoto
-                    setViewingPhoto(null)
-                    openPdf({
-                      url: getPhotoUrl(expense.id),
-                      title: expense.photoName || expense.name,
-                      fileName: expense.photoName || undefined,
-                    })
-                  }}
-                  variant="light"
-                >
-                  Buka PDF
-                </Button>
-              </Stack>
-            ) : (
-              <Stack align="center" gap="sm">
-                <Image
-                  src={getPhotoUrl(viewingPhoto.id)}
-                  alt={viewingPhoto.name}
-                  fit="contain"
-                  mah="60vh"
-                  style={{ maxWidth: '100%' }}
-                />
-                {viewingPhoto.photoName && (
-                  <Text size="xs" c="dimmed" ta="center" truncate style={{ maxWidth: '100%' }}>
-                    {viewingPhoto.photoName}
-                  </Text>
-                )}
-              </Stack>
-            ))}
-          {viewingPhoto?.photoType === 'pdf' && viewingPhoto?.photoName && (
-            <Text size="xs" c="dimmed" ta="center" mt="sm" truncate>
-              {viewingPhoto.photoName}
-            </Text>
-          )}
-        </Modal>
+        {viewingPhoto && (
+          <ImageViewerModal
+            opened
+            onClose={() => setViewingPhoto(null)}
+            src={getPhotoUrl(viewingPhoto.id)}
+            alt={viewingPhoto.name}
+            title={viewingPhoto.photoName || viewingPhoto.name}
+          />
+        )}
 
         <Modal
           opened={!!viewingVoice}
@@ -611,11 +565,9 @@ function HistoryPage() {
 function EditExpenseForm({
   expense,
   onClose,
-  inline = false,
 }: {
   expense: Expense
   onClose: () => void
-  inline?: boolean
 }) {
   const { data: options } = useOptions()
   const updateExpense = useUpdateExpense()
@@ -701,16 +653,18 @@ function EditExpenseForm({
 
   return (
     <Stack gap="md">
-      {inline && (
-        <Group justify="space-between" align="center">
-          <Button variant="subtle" leftSection={<IconArrowLeft size={16} />} onClick={onClose}>
-            Kembali
-          </Button>
-          <Title order={3}>Ubah pengeluaran</Title>
-        </Group>
-      )}
-
-      <TextInput label="Waktu" value={dateTime} onChange={(e) => setDateTime(e.currentTarget.value)} required size="md" />
+        <DateTimePicker
+          label="Waktu"
+          value={dateTime}
+          onChange={(v) =>
+            setDateTime(v ? dayjs(v).format(DATE_TIME_FORMAT) : dayjs().format(DATE_TIME_FORMAT))
+          }
+          valueFormat={DISPLAY_DATE_TIME_FORMAT}
+          dropdownType="modal"
+          modalProps={{ zIndex: 1300 }}
+          required
+          size="md"
+        />
         <TextInput label="Nama" value={name} onChange={(e) => setName(e.currentTarget.value)} maxLength={255} required size="md" />
         <Select label="Budget" data={budgetOptions} value={budget} onChange={(v) => { setBudget(v); setCategory(null) }} searchable required size="md" comboboxProps={{ withinPortal: false }} />
         <Select
@@ -843,6 +797,9 @@ function EditExpenseForm({
         />
 
         <Group justify="flex-end" mt="md">
+          <Button variant="default" onClick={onClose}>
+            Batal
+          </Button>
           <Button onClick={handleSubmit} loading={updateExpense.isPending} disabled={submitDisabled}>
             Simpan
           </Button>

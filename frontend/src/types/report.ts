@@ -8,3 +8,8 @@ export interface PeriodReport {
 export interface PeriodReportsResponse {
   reports: PeriodReport[]
 }
+
+export interface PeriodReportRegenerationResponse {
+  regenerated: string[]
+  failed: string[]
+}

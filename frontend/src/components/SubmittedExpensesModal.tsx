@@ -7,6 +7,7 @@ import { getInvoicePhotoUrl } from '../services/expense'
 import { formatCurrency } from '../utils/currency'
 import { ExpenseDescription } from './ExpenseDescription'
 import { InvoiceThumb } from './InvoiceThumb'
+import { ImageViewerModal } from './ImageViewerModal'
 import { usePdfViewer } from './PdfViewerContext'
 
 function SubmittedExpensesModal({ invoiceId, type, onClose }: { invoiceId: string; type: 'image' | 'pdf'; onClose: () => void }) {
@@ -84,8 +85,18 @@ function SubmittedExpensesModal({ invoiceId, type, onClose }: { invoiceId: strin
         </Stack>
       )}
 
+      {viewingPhoto && type !== 'pdf' && (
+        <ImageViewerModal
+          opened
+          onClose={() => setViewingPhoto(false)}
+          src={getInvoicePhotoUrl(invoiceId)}
+          alt="Struk"
+          title={data?.name ?? 'Struk'}
+        />
+      )}
+
       <Modal
-        opened={viewingPhoto}
+        opened={viewingPhoto && type === 'pdf'}
         onClose={() => setViewingPhoto(false)}
         title={data?.name ?? 'Struk'}
         size="md"
@@ -93,7 +104,7 @@ function SubmittedExpensesModal({ invoiceId, type, onClose }: { invoiceId: strin
         fullScreen={isMobile}
         zIndex={1300}
       >
-        {viewingPhoto && (type === 'pdf' ? (
+        {viewingPhoto && type === 'pdf' && (
           <Stack align="center" gap="sm">
             <IconFileTypePdf size={48} aria-hidden />
             <Button
@@ -110,13 +121,7 @@ function SubmittedExpensesModal({ invoiceId, type, onClose }: { invoiceId: strin
               Buka PDF
             </Button>
           </Stack>
-        ) : (
-          <img
-            src={getInvoicePhotoUrl(invoiceId)}
-            alt="Struk"
-            style={{ display: 'block', marginInline: 'auto', maxWidth: '100%', maxHeight: '70vh', objectFit: 'contain' }}
-          />
-        ))}
+        )}
       </Modal>
     </Modal>
   )

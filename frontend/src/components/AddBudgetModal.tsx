@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Button, Group, Modal, NumberInput, Stack, TextInput } from '@mantine/core'
+import { Button, Group, Modal, NumberInput, Stack, Textarea, TextInput } from '@mantine/core'
 import { useCreateBudget } from '../hooks/useBudgets'
 import { useToast } from '../components/Toast'
 
@@ -78,12 +78,15 @@ function AddBudgetModal({ opened, onClose }: { opened: boolean; onClose: () => v
           decimalSeparator=","
           size="md"
         />
-        <TextInput
+        <Textarea
           label="Deskripsi (opsional)"
           placeholder="Budget ini untuk apa?"
           value={description}
           onChange={(e) => setDescription(e.currentTarget.value)}
           maxLength={500}
+          autosize
+          minRows={3}
+          maxRows={8}
           size="md"
         />
         <Group justify="flex-end" mt="md">

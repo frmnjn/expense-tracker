@@ -1,9 +1,11 @@
 package com.expensetracker.service;
 
+import com.expensetracker.data.EmailBodyData;
 import com.expensetracker.data.EmailImportData;
 import com.expensetracker.data.EmailImportRepository;
 import com.expensetracker.data.ExpenseData;
 import com.expensetracker.data.ExpenseRepository;
+import com.expensetracker.model.EmailBodyResponse;
 import com.expensetracker.model.ExpenseRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -55,6 +57,25 @@ public class EmailImportService {
             return emailImportRepository.findAll();
         }
         return emailImportRepository.findByStatus(normalizeStatus(status));
+    }
+
+    public EmailBodyResponse getBody(String id) {
+        EmailImportData data = require(id);
+        EmailBodyData stored = emailImportRepository.findBodyById(id);
+        if (stored != null && stored.body() != null && !stored.body().isBlank()) {
+            return new EmailBodyResponse(stored.body(), normalizeBodyFormat(stored.format()));
+        }
+        FetchedEmail fetched = emailInboxService.fetchByMessageId(data.messageId());
+        if (fetched == null) {
+            throw new NotFoundException("Email asli tidak ditemukan di inbox");
+        }
+        String format = fetched.html() ? "HTML" : "TEXT";
+        emailImportRepository.updateBody(id, fetched.body(), format);
+        return new EmailBodyResponse(fetched.body(), format);
+    }
+
+    private static String normalizeBodyFormat(String format) {
+        return "TEXT".equalsIgnoreCase(format) ? "TEXT" : "HTML";
     }
 
     private static String normalizeStatus(String status) {

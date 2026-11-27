@@ -1,12 +1,19 @@
 import apiClient from './api'
 import type { ApiResponse, ExpenseRequest } from '../types/expense'
-import type { EmailImportsResponse } from '../types/emailImport'
+import type { EmailBodyResponse, EmailImportsResponse } from '../types/emailImport'
 
 export async function getEmailImports(status?: string): Promise<EmailImportsResponse> {
   const response = await apiClient.get<ApiResponse<EmailImportsResponse>>('/email-imports', {
     params: status ? { status } : undefined,
   })
   return response.data.data ?? { imports: [] }
+}
+
+export async function getEmailImportBody(id: string): Promise<EmailBodyResponse> {
+  const response = await apiClient.get<ApiResponse<EmailBodyResponse>>(
+    `/email-imports/${encodeURIComponent(id)}/body`,
+  )
+  return response.data.data ?? { body: '', format: 'TEXT' }
 }
 
 export async function importEmail(

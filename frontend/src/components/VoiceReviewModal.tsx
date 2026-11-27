@@ -406,9 +406,10 @@ function VoiceReviewModal({
                   size="xs"
                   label="Nama pengeluaran"
                   value={groupName(key)}
-                  onChange={(event) =>
-                    setGroupNames((prev) => ({ ...prev, [key]: event.currentTarget.value }))
-                  }
+                  onChange={(event) => {
+                    const value = event.currentTarget.value
+                    setGroupNames((prev) => ({ ...prev, [key]: value }))
+                  }}
                 />
                 <Group gap={6} mt={6}>
                   {group.items.map((item) => (

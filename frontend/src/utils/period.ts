@@ -45,6 +45,20 @@ export function parsePeriodStart(period: string, calendar: PeriodRange[] = []): 
   return defaultPayday(Number(match[1]), month)
 }
 
+/** Cek apakah sebuah tanggal/jam berada di dalam periode tertentu. */
+export function isDateInPeriod(
+  value: string | Date,
+  period: string,
+  calendar: PeriodRange[] = [],
+): boolean {
+  const date = typeof value === 'string' ? new Date(value.replace(' ', 'T')) : value
+  if (Number.isNaN(date.getTime())) return false
+  const start = parsePeriodStart(period, calendar)
+  const end = periodEnd(period, calendar)
+  if (!start || !end) return false
+  return date >= start && date < end
+}
+
 /** Nama periode sebelumnya dari sebuah periode. */
 export function previousPeriod(period: string): string {
   const match = /^(\d{4})-([A-Za-z]{3})-([A-Za-z]{3})$/.exec(period.trim())

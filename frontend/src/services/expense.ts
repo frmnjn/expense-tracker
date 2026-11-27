@@ -224,6 +224,11 @@ export async function createTopUp(request: TopUpRequest): Promise<ApiResponse<vo
   return response.data
 }
 
+export async function deleteTopUp(id: string): Promise<ApiResponse<void>> {
+  const response = await apiClient.delete<ApiResponse<void>>(`/topups/${encodeURIComponent(id)}`)
+  return response.data
+}
+
 export async function getTrend(months = 3): Promise<TrendResponse> {
   const response = await apiClient.get<ApiResponse<TrendResponse>>('/trend', {
     params: { months },

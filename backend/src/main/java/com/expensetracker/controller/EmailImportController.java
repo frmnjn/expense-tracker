@@ -2,6 +2,7 @@ package com.expensetracker.controller;
 
 import com.expensetracker.data.EmailImportData;
 import com.expensetracker.model.ApiResponse;
+import com.expensetracker.model.EmailBodyResponse;
 import com.expensetracker.model.EmailImportResponse;
 import com.expensetracker.model.EmailImportsResponse;
 import com.expensetracker.model.ExpenseRequest;
@@ -55,6 +56,24 @@ public class EmailImportController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error(e.getMessage()));
         } catch (Exception e) {
             LOGGER.error("internal error getting email imports", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(ApiResponse.error("Internal server error"));
+        }
+    }
+
+    @GetMapping("/email-imports/{id}/body")
+    public ResponseEntity<ApiResponse> getEmailBody(@PathVariable String id) {
+        try {
+            EmailBodyResponse response = emailImportService.getBody(id);
+            return ResponseEntity.ok(ApiResponse.ok(response));
+        } catch (NotFoundException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.NOT_FOUND.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ApiResponse.error(e.getMessage()));
+        } catch (ValidationException e) {
+            LOGGER.warn("response error: status={} message={}", HttpStatus.BAD_REQUEST.value(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ApiResponse.error(e.getMessage()));
+        } catch (Exception e) {
+            LOGGER.error("internal error getting email body", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body(ApiResponse.error("Internal server error"));
         }

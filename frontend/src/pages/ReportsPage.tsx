@@ -9,13 +9,16 @@ import {
   Text,
 } from '@mantine/core'
 import { useMediaQuery } from '@mantine/hooks'
-import { IconDownload, IconEye, IconFileText } from '@tabler/icons-react'
+import { IconDownload, IconEye, IconFileText, IconRefresh } from '@tabler/icons-react'
 import dayjs from 'dayjs'
 import { PageHeader } from '../components/PageHeader'
 import { AppPagination } from '../components/AppPagination'
 import { ErrorState } from '../components/ErrorState'
-import { useReports } from '../hooks/useReports'
+import { useRegenerateReports, useReports } from '../hooks/useReports'
 import { usePdfViewer } from '../components/PdfViewerContext'
+import { useToast } from '../components/Toast'
+import { getErrorMessage } from '../utils/error'
+import { isDemoMode } from '../utils/demo'
 import { getReportDownloadUrl, getReportViewUrl } from '../services/reports'
 import type { PeriodReport } from '../types/report'
 
@@ -55,9 +58,28 @@ function ReportActions({ report, onView }: { report: PeriodReport; onView: () =>
 
 function ReportsPage() {
   const { data, isPending, isError, refetch } = useReports()
+  const regenerate = useRegenerateReports()
   const { openPdf } = usePdfViewer()
+  const toast = useToast()
   const isMobile = useMediaQuery('(max-width: 48em)')
   const reports = data?.reports ?? []
+
+  const handleRegenerate = () => {
+    regenerate.mutate(undefined, {
+      onSuccess: (result) => {
+        const done = result.regenerated.length
+        if (result.failed.length === 0) {
+          toast.success(`${done} laporan berhasil dibuat ulang`, { title: 'Berhasil' })
+        } else {
+          toast.warning(
+            `${done} berhasil, ${result.failed.length} gagal: ${result.failed.join(', ')}`,
+            { title: 'Sebagian gagal' },
+          )
+        }
+      },
+      onError: (error) => toast.error(getErrorMessage(error), { title: 'Gagal' }),
+    })
+  }
 
   const viewReport = (report: PeriodReport) => {
     openPdf({
@@ -79,6 +101,19 @@ function ReportsPage() {
           eyebrow="Laporan"
           title="Laporan Periode"
           subtitle="Semua report PDF periode yang sudah dibuat."
+          right={
+            !isDemoMode && reports.length > 0 ? (
+              <Button
+                variant="light"
+                leftSection={<IconRefresh size={16} />}
+                loading={regenerate.isPending}
+                onClick={handleRegenerate}
+                style={{ width: isMobile ? '100%' : undefined }}
+              >
+                Regenerate semua
+              </Button>
+            ) : undefined
+          }
         />
 
         {isPending ? (

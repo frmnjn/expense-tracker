@@ -25,17 +25,32 @@ public class EmailImportRepository {
     public void insert(String id, String messageId, String sender, String subject,
                        LocalDateTime receivedAt, LocalDateTime transactionAt, String merchant,
                        Long amount, String description, String suggestedBudget, String suggestedCategory,
-                       String parseMethod, String status, String errorMessage) {
+                       String parseMethod, String status, String errorMessage,
+                       String body, String bodyFormat) {
         jdbcTemplate.update(
                 "INSERT INTO email_imports (id, message_id, sender, subject, received_at, transaction_at, "
                         + "merchant, amount, description, suggested_budget, suggested_category, parse_method, status, error_message, "
-                        + "expense_id, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?)",
+                        + "expense_id, created_at, body, body_format) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NULL, ?, ?, ?)",
                 id, messageId, truncate(sender, 320), truncate(subject, 512),
                 Timestamp.valueOf(receivedAt), transactionAt,
                 truncate(merchant, 255), amount, truncate(description, 10000),
                 truncate(suggestedBudget, 255), truncate(suggestedCategory, 255), parseMethod, status,
                 truncate(errorMessage, 500),
-                Timestamp.valueOf(LocalDateTime.now()));
+                Timestamp.valueOf(LocalDateTime.now()), body, bodyFormat);
+    }
+
+    public EmailBodyData findBodyById(String id) {
+        List<EmailBodyData> rows = jdbcTemplate.query(
+                "SELECT body, body_format FROM email_imports WHERE id = ?",
+                (rs, rowNum) -> new EmailBodyData(rs.getString("body"), rs.getString("body_format")),
+                id);
+        return rows.isEmpty() ? null : rows.get(0);
+    }
+
+    public void updateBody(String id, String body, String format) {
+        jdbcTemplate.update(
+                "UPDATE email_imports SET body = ?, body_format = ? WHERE id = ?",
+                body, format, id);
     }
 
     public boolean existsByMessageId(String messageId) {

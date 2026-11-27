@@ -1,10 +1,12 @@
 import { useState } from 'react'
 import { Alert, Button, Group, Modal, NumberInput, Select, Stack, Text, TextInput } from '@mantine/core'
+import { IconMail } from '@tabler/icons-react'
 import { DateTimePicker } from '@mantine/dates'
 import dayjs from 'dayjs'
 import { useImportEmail } from '../hooks/useEmailImports'
 import { useOptions } from '../hooks/useOptions'
 import { useToast } from '../components/Toast'
+import { EmailPreviewModal } from './EmailPreviewModal'
 import { getErrorMessage } from '../utils/error'
 import { formatCurrency } from '../utils/currency'
 import type { EmailImport } from '../types/emailImport'
@@ -24,6 +26,7 @@ function ImportEmailModal({ item, onClose }: { item: EmailImport; onClose: () =>
   )
   const [description, setDescription] = useState(item.description ?? '')
   const [duplicateMessage, setDuplicateMessage] = useState<string | null>(null)
+  const [previewOpen, setPreviewOpen] = useState(false)
 
   const budgets = options?.budgets ?? []
   const defaultBudget =
@@ -91,9 +94,20 @@ function ImportEmailModal({ item, onClose }: { item: EmailImport; onClose: () =>
   return (
     <Modal opened onClose={onClose} title="Impor Transaksi" centered>
       <Stack>
-        <Text size="xs" c="dimmed">
-          {item.merchant ?? item.subject} · {formatCurrency(item.amount ?? 0)}
-        </Text>
+        <Group justify="space-between" align="center" wrap="nowrap" gap="sm">
+          <Text size="xs" c="dimmed" truncate>
+            {item.merchant ?? item.subject} · {formatCurrency(item.amount ?? 0)}
+          </Text>
+          <Button
+            size="compact-xs"
+            variant="light"
+            leftSection={<IconMail size={14} />}
+            onClick={() => setPreviewOpen(true)}
+            style={{ flexShrink: 0 }}
+          >
+            Lihat email asli
+          </Button>
+        </Group>
         <TextInput
           label="Nama"
           value={name}
@@ -164,6 +178,16 @@ function ImportEmailModal({ item, onClose }: { item: EmailImport; onClose: () =>
           </Button>
         </Group>
       </Stack>
+
+      {previewOpen && (
+        <EmailPreviewModal
+          opened
+          emailId={item.id}
+          subject={item.subject}
+          sender={item.sender}
+          onClose={() => setPreviewOpen(false)}
+        />
+      )}
     </Modal>
   )
 }

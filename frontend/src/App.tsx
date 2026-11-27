@@ -2,6 +2,7 @@ import { lazy } from 'react'
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import AppLayout from './components/AppLayout'
 import { PdfViewerProvider } from './components/PdfViewerProvider'
+import { SelectedPeriodProvider } from './context/SelectedPeriodProvider'
 import ExpensePage from './pages/ExpensePage'
 import LockPage from './pages/LockPage'
 import { getAccessCode } from './utils/access'
@@ -15,7 +16,14 @@ const VoicePage = lazy(() => import('./pages/VoicePage'))
 const ReportsPage = lazy(() => import('./pages/ReportsPage'))
 
 function Protected() {
-  return isDemoMode || getAccessCode() ? <AppLayout /> : <Navigate to="/lock" replace />
+  if (!isDemoMode && !getAccessCode()) {
+    return <Navigate to="/lock" replace />
+  }
+  return (
+    <SelectedPeriodProvider>
+      <AppLayout />
+    </SelectedPeriodProvider>
+  )
 }
 
 const routerBasename = import.meta.env.BASE_URL.replace(/\/$/, '') || '/'

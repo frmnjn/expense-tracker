@@ -18,3 +18,8 @@ export interface EmailImport {
 export interface EmailImportsResponse {
   imports: EmailImport[]
 }
+
+export interface EmailBodyResponse {
+  body: string
+  format: 'HTML' | 'TEXT' | string
+}

@@ -59,7 +59,7 @@ Target: sederhana, mudah dijalankan dengan Docker, mudah dikembangkan.
 * `/scan` — **Scan Struk dengan AI** (upload foto/PDF, analisis otomatis, review & assign budget, auto-create banyak expense).
 * `/voice` — **Catat dengan Suara** (rekam voice note, AI membuat draft expense, review & simpan, playback dari Riwayat).
 * `/inbox` — **Inbox Email** (transaksi dari email notifikasi bank, hasil pembacaan IMAP, review & import jadi expense).
-* `/dashboard` — ringkasan saldo per budget, top-up, riwayat top-up, dan 3 bulan terakhir.
+* `/dashboard` — ringkasan saldo per budget, top-up, riwayat top-up, dan tren hingga 24 periode terakhir.
 * `/riwayat` — daftar pengeluaran per periode, dengan filter budget & kategori multi-select, sort, pagination, edit, hapus, dan lihat foto (termasuk PDF).
 * `/laporan` — daftar semua report PDF periode yang sudah dibuat, dengan tombol unduh (diakses lewat tombol **Laporan** di Dashboard).
 * `/catat` — alias halaman Catat.
@@ -119,6 +119,7 @@ Migration saat ini:
 * `V23__payday_overrides.sql` — tabel `payday_overrides` (override tanggal gajian per periode).
 * `V24__reclassify_periods.sql` — hitung ulang `period` data lama dengan aturan tanggal gajian.
 * `V25__period_reports.sql` — tabel `period_reports` (penanda report PDF periode sudah dibuat/dikirim).
+* `V26__email_import_body.sql` — kolom `email_imports.body` (LONGTEXT) & `body_format` untuk preview email asli.
 
 Index yang ada: `budgets` PK(id) + UNIQUE(name); `expenses` PK(id), `budget_id` FK, `deleted`, `invoice_id`, `voice_note_id`, komposit `(period, deleted)`; `invoices` PK(id) + `period`; `voice_notes` PK(id) + `period` + `status`; `top_ups` PK(id) + `budget_id`; `idempotency_keys` PK(id_key) + `created_at`.
 
@@ -172,6 +173,7 @@ Alur:
 
 Detail teknis:
 
+* Preview foto struk bisa di-zoom (pinch/wheel/tombol) dan dirotasi 90°.
 * List di `/scan` hanya menampilkan invoice `scan_flow = TRUE`, dengan **filter status** (Semua/Menunggu AI/Perlu Review/Selesai/Gagal), **sort** (terbaru/terlama), dan **pagination**.
 * Satu struk dipakai sebagai `invoice_id` pada **semua** expense hasil split (satu foto untuk banyak catatan).
 * Deskripsi auto-generate bisa melebihi 255 karakter; di-truncate di frontend, dan DB `description` = `TEXT`.
@@ -209,6 +211,7 @@ Detail teknis:
 
 ### Dashboard
 
+* Periode terpilih bersifat **global dalam sesi** untuk Dashboard, Scan, Suara, dan Riwayat. Ganti periode di salah satu halaman → halaman lain ikut. Reset ke periode terbaru saat app dibuka ulang atau resume PWA setelah ≥ 30 menit background.
 * Daftar saldo per budget — tiap kartu menampilkan:
   * nama budget
   * saldo saat ini (merah jika negatif)
@@ -218,7 +221,8 @@ Detail teknis:
   * ikon `🗑` untuk hapus budget (konfirmasi)
   * saat periode dipilih: jumlah transaksi + pengeluaran periode budget tersebut
 * Tombol "+ Budget" (modal: nama + saldo awal opsional).
-* Ringkasan "3 Bulan Terakhir" (total + transaksi per periode, bar visual).
+* Tren "3 Periode per Tampilan" dengan tombol prev/next (hingga 24 periode terakhir; default di periode terbaru).
+* Section **Top Up** di bagian paling bawah: riwayat top-up pada periode yang sedang dipilih (read-only).
 
 ### Riwayat
 
@@ -229,8 +233,8 @@ Detail teknis:
 * Filter bersifat **OR dalam satu dimensi** (budget A atau B; kategori X atau Y) dan **AND antar dimensi** (budget AND kategori).
 * Section **BUDGET** dan **KATEGORI** dipisah dengan heading; chip **wrap ke bawah** di desktop maupun mobile (tanpa scroll horizontal).
 * Tabel (desktop) / kartu (mobile) daftar expense aktif.
-* Tombol lihat foto (📷) jika expense memiliki foto.
-* Tombol edit (modal) dan hapus (konfirmasi, soft delete).
+* Tombol lihat foto (📷) jika expense memiliki foto; viewer mendukung zoom (pinch/wheel/tombol) dan rotate 90°.
+* Tombol edit membuka modal (fullscreen di mobile) dengan tombol X, Batal, dan Simpan; hapus (konfirmasi, soft delete).
 * Edit bisa **ganti foto** (upload baru / pakai foto periode ini) atau **hapus foto**.
 * Preview perubahan saldo saat edit/hapus.
 
@@ -246,6 +250,7 @@ Detail teknis:
 
 * Tambah saldo budget (nominal + deskripsi), tercatat sebagai riwayat.
 * Saldo budget bertambah sebesar nominal.
+* Hapus top-up dari modal riwayat top-up per budget (konfirmasi); hanya untuk top-up pada periode berjalan. Saldo budget berkurang sebesar nominal top-up.
 
 ### Dark Mode
 
@@ -311,6 +316,7 @@ Transaksi dari email notifikasi bank dibaca **backend** via **IMAP Gmail** (App 
 * **Retry AI**: fallback Gemini di-retry untuk error transien (HTTP 429/5xx) memakai `ai.max-attempts`/`ai.retry-delay-ms` (default 5×, 2 detik, menghormati `Retry-After`), sama seperti Scan Struk. Bila semua attempt habis, fallback sekali ke DeepSeek.
 * **Status**: email transaksi → `PENDING_REVIEW`; bukan transaksi pengeluaran (mis. promo) → `DISCARDED`; gagal parse/error teknis → `FAILED`; email dengan lampiran yang di-auto-scan → `SCANNED` (terminal, lihat di `/scan`).
 * **Retry manual**: baris `FAILED` bisa diproses ulang lewat `POST /email-imports/{id}/retry` (email diambil ulang dari IMAP berdasarkan Message-ID, lalu parse lagi).
+* **Preview email asli**: body email (HTML/teks) disimpan saat ingest dan bisa dilihat dari modal Impor maupun Rincian lewat `GET /email-imports/{id}/body`. Email lama yang belum punya body diambil ulang dari IMAP (by Message-ID) lalu di-cache. HTML dirender di iframe `sandbox` tanpa script; gambar remote diizinkan.
 * **Custom discard rule**: merchant yang cocok dengan keyword di `INBOX_DISCARD_MERCHANTS` otomatis ditandai `DISCARDED` (case-insensitive, toleran spasi/tanda baca — mis. `superindo` menangkap `SUPERINDO CNE` & `SUPER INDO`).
 * **Auto-scan attachment**: email dari pengirim di `INBOX_SCAN_SENDERS` (mis. e-receipt `do-not-reply@superindo.co.id`) yang punya lampiran `pdf/jpg/jpeg/png` otomatis dibuatkan invoice scan (status `ANALYZING`, `scan_flow=TRUE`) lalu dianalisis AI — jadi struk langsung siap direview di `/scan`, tanpa lewat `/inbox`. Lampiran dideteksi dari **ekstensi nama file** (bukan content-type, karena Superindo memakai `application/octet-stream`). Bila email Superindo **tanpa** lampiran (mis. notifikasi BCA "SUPERINDO CNE"), tetap diproses seperti biasa (parse → discard). Baris dicatat di `email_imports` (status `SCANNED`, catatan "Auto-scan") untuk dedup `Message-ID`.
 
@@ -537,7 +543,7 @@ Ringkasan periode: total, jumlah transaksi, dan pengeluaran per budget (urut ter
 
 ### GET /trend?months=3
 
-Ringkasan `N` periode terakhir (default 3) dari periode berjalan, urut terlama ke terbaru. Periode tanpa transaksi tetap disertakan dengan `total=0` dan `count=0`.
+Ringkasan `N` periode terakhir (default 3, maksimal 24) dari periode berjalan, urut terlama ke terbaru. Periode tanpa transaksi tetap disertakan dengan `total=0` dan `count=0`.
 
 ### GET /topups
 
@@ -552,6 +558,10 @@ Menambah saldo budget.
 ```
 
 `dateTime` opsional (default waktu sekarang).
+
+### DELETE /topups/{id}
+
+Menghapus top-up dan mengurangi saldo budget sebesar nominal top-up. Hanya top-up pada periode berjalan yang boleh dihapus; top-up periode lain ditolak `409 Conflict`. `404` bila top-up tidak ditemukan.
 
 ### POST /budgets
 
@@ -574,6 +584,10 @@ Menghapus budget (soft delete, rename `DELETED_<nama>_<id>`, expense-nya ikut so
 ### GET /email-imports?status=PENDING_REVIEW
 
 Daftar transaksi hasil import email. `status` opsional: `PENDING_REVIEW` (default), `IMPORTED`, `DISCARDED`, `FAILED`, atau `ALL` (semua status).
+
+### GET /email-imports/{id}/body
+
+Mengembalikan `{ body, format }` untuk preview email asli (`format` = `HTML`/`TEXT`). Bila body belum tersimpan, backend mengambil ulang email dari IMAP dan menyimpannya. `404` bila email sudah tidak ada di inbox.
 
 ### POST /email-imports/{id}/import
 
@@ -603,7 +617,7 @@ Mengambil report PDF periode yang sudah dibuat (`application/pdf`). Default `Con
 
 ### POST /reports/regenerate
 
-Merender ulang seluruh PDF report yang sudah tercatat di `period_reports` memakai data terbaru, lalu menimpa file dan memperbarui `size_bytes`/`generated_at`. Tidak mengirim email ulang dan tidak membuat periode baru. Saldo budget dihitung pada akhir periode masing-masing report (transaksi periode berikutnya tidak dihitung). Respons berisi daftar periode berhasil (`regenerated`) dan gagal (`failed`).
+Merender ulang seluruh PDF report yang sudah tercatat di `period_reports` memakai data terbaru, lalu menimpa file dan memperbarui `size_bytes`/`generated_at`. Tidak mengirim email ulang dan tidak membuat periode baru. Saldo budget dihitung pada akhir periode masing-masing report (transaksi periode berikutnya tidak dihitung). Respons berisi daftar periode berhasil (`regenerated`) dan gagal (`failed`). Tombol **Regenerate semua** tersedia di halaman Laporan (disembunyikan di mode demo); regenerate tidak mengirim email ulang.
 
 ### Traceability (X-Trace-Id)
 

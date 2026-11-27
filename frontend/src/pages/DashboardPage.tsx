@@ -6,6 +6,7 @@ import { IconCalendarEvent, IconFileText } from '@tabler/icons-react'
 import { PageHeader } from '../components/PageHeader'
 import { useExpenses, usePeriods, useSummary, useTrend } from '../hooks/useExpenses'
 import { useOptions } from '../hooks/useOptions'
+import { useSelectedPeriod } from '../context/SelectedPeriodContext'
 import TopUpModal from '../components/TopUpModal'
 import TopUpHistoryModal from '../components/TopUpHistoryModal'
 import AddBudgetModal from '../components/AddBudgetModal'
@@ -18,14 +19,13 @@ import { BudgetHealth } from '../components/dashboard/BudgetHealth'
 import { SpendingTrend } from '../components/dashboard/SpendingTrend'
 import { SpendingByBudget } from '../components/dashboard/SpendingByBudget'
 import { FinancialInsights } from '../components/dashboard/FinancialInsights'
-import { RecentExpenses } from '../components/dashboard/RecentExpenses'
+import { TopUpHistory } from '../components/dashboard/TopUpHistory'
 import { previousPeriod, parsePeriodStart, elapsedDayCount } from '../utils/period'
 import { buildInsights } from '../utils/insights'
 
 function DashboardPage() {
   const { data: periodsData, isPending: periodsLoading, isError: periodsError } = usePeriods()
   const { data: options, isPending: optionsLoading, isError: optionsError } = useOptions()
-  const [periodSelection, setPeriodSelection] = useState<string | null>(null)
   const [selectedTopUpBudget, setSelectedTopUpBudget] = useState<string | null>(null)
   const [selectedTopUpHistoryBudget, setSelectedTopUpHistoryBudget] = useState<string | null>(null)
   const [addBudgetOpened, setAddBudgetOpened] = useState(false)
@@ -35,8 +35,7 @@ function DashboardPage() {
   const [paydaySettingsOpened, setPaydaySettingsOpened] = useState(false)
   const isMobile = useMediaQuery('(max-width: 48em)')
 
-  const period = periodSelection ?? periodsData?.periods[0] ?? null
-  const setPeriod = setPeriodSelection
+  const { period, setPeriod, periodOptions } = useSelectedPeriod()
 
   const calendar = useMemo(() => periodsData?.calendar ?? [], [periodsData])
   const prevPeriod = period ? previousPeriod(period) : null
@@ -46,14 +45,11 @@ function DashboardPage() {
     isPending: prevExpensesLoading,
     isError: prevExpensesError,
   } = useExpenses(prevPeriod)
-  const { data: trend, isPending: trendLoading, isError: trendError } = useTrend(3)
-  const {
-    data: expensesData,
-    isPending: expensesLoading,
-    isError: expensesError,
-  } = useExpenses(period)
+  const trendMonths = Math.min(Math.max(periodsData?.periods.length ?? 3, 1), 24)
+  const { data: trend, isPending: trendLoading, isError: trendError } = useTrend(trendMonths)
+  const { data: expensesData, isPending: expensesLoading } = useExpenses(period)
 
-  const periods = useMemo(() => (periodsData?.periods ?? []).map((p) => ({ value: p, label: p })), [periodsData])
+  const periods = useMemo(() => periodOptions.map((p) => ({ value: p, label: p })), [periodOptions])
   const budgets = useMemo(() => options?.budgets ?? [], [options])
   const byBudget = useMemo(() => summary?.byBudget ?? [], [summary])
   const selectedTopUpBalance = selectedTopUpBudget
@@ -182,6 +178,21 @@ function DashboardPage() {
           hasPeriod={!!period}
         />
 
+        <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="xl">
+          <SpendingByBudget
+            byBudget={byBudget}
+            total={summary?.total ?? 0}
+            isLoading={summaryLoading}
+            isError={summaryError}
+          />
+          <FinancialInsights
+            insights={insights}
+            isLoading={summaryLoading || expensesLoading}
+            isError={summaryError}
+            hasPeriod={!!period}
+          />
+        </SimpleGrid>
+
         <Grid gap="xl">
           <Grid.Col span={{ base: 12, sm: 8 }}>
             <BudgetHealth
@@ -207,27 +218,7 @@ function DashboardPage() {
           </Grid.Col>
         </Grid>
 
-        <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="xl">
-          <SpendingByBudget
-            byBudget={byBudget}
-            total={summary?.total ?? 0}
-            isLoading={summaryLoading}
-            isError={summaryError}
-          />
-          <FinancialInsights
-            insights={insights}
-            isLoading={summaryLoading || expensesLoading}
-            isError={summaryError}
-            hasPeriod={!!period}
-          />
-        </SimpleGrid>
-
-        <RecentExpenses
-          expenses={expensesData?.expenses ?? []}
-          isLoading={expensesLoading}
-          isError={expensesError}
-          hasPeriod={!!period}
-        />
+        <TopUpHistory period={period} calendar={calendar} />
 
         <TopUpModal
           opened={!!selectedTopUpBudget}
@@ -238,6 +229,8 @@ function DashboardPage() {
         <TopUpHistoryModal
           opened={!!selectedTopUpHistoryBudget}
           budget={selectedTopUpHistoryBudget ?? ''}
+          currentPeriod={periodsData?.currentPeriod ?? ''}
+          calendar={calendar}
           onClose={() => setSelectedTopUpHistoryBudget(null)}
         />
         <AddBudgetModal opened={addBudgetOpened} onClose={() => setAddBudgetOpened(false)} />

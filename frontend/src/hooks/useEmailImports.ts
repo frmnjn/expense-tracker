@@ -1,11 +1,27 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { discardEmail, getEmailImports, importEmail, pollEmails, retryEmailImport } from '../services/emailImports'
+import {
+  discardEmail,
+  getEmailImportBody,
+  getEmailImports,
+  importEmail,
+  pollEmails,
+  retryEmailImport,
+} from '../services/emailImports'
 import type { ExpenseRequest } from '../types/expense'
 
 export function useEmailImports(status: string) {
   return useQuery({
     queryKey: ['email-imports', status],
     queryFn: () => getEmailImports(status),
+  })
+}
+
+export function useEmailBody(id: string | null, enabled = true) {
+  return useQuery({
+    queryKey: ['email-body', id],
+    queryFn: () => getEmailImportBody(id ?? ''),
+    enabled: !!id && enabled,
+    retry: false,
   })
 }
 
